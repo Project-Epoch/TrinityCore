@@ -314,6 +314,7 @@ struct TC_GAME_API CreatureTemplate
     uint32  npcflag;
     float   speed_walk;
     float   speed_run;
+    float   detection_range;
     float   scale;
     uint32  rank;
     uint32  dmgschool;

@@ -463,90 +463,92 @@ void ObjectMgr::LoadCreatureTemplates()
         // 20
         "speed_run,"
         // 21
-        "scale,"
+        "detection_range,"
         // 22
-        "`rank`,"
+        "scale,"
         // 23
-        "dmgschool,"
+        "`rank`,"
         // 24
-        "BaseAttackTime,"
+        "dmgschool,"
         // 25
-        "RangeAttackTime,"
+        "BaseAttackTime,"
         // 26
-        "BaseVariance,"
+        "RangeAttackTime,"
         // 27
-        "RangeVariance,"
+        "BaseVariance,"
         // 28
-        "unit_class,"
+        "RangeVariance,"
         // 29
-        "unit_flags,"
+        "unit_class,"
         // 30
-        "unit_flags2,"
+        "unit_flags,"
         // 31
-        "dynamicflags,"
+        "unit_flags2,"
         // 32
-        "family,"
+        "dynamicflags,"
         // 33
-        "type,"
+        "family,"
         // 34
-        "type_flags,"
+        "type,"
         // 35
-        "lootid,"
+        "type_flags,"
         // 36
-        "pickpocketloot,"
+        "lootid,"
         // 37
-        "skinloot,"
+        "pickpocketloot,"
         // 38
-        "PetSpellDataId,"
+        "skinloot,"
         // 39
-        "VehicleId,"
+        "PetSpellDataId,"
         // 40
-        "mingold,"
+        "VehicleId,"
         // 41
-        "maxgold,"
+        "mingold,"
         // 42
-        "AIName,"
+        "maxgold,"
         // 43
-        "MovementType,"
+        "AIName,"
         // 44
-        "ctm.Ground,"
+        "MovementType,"
         // 45
-        "ctm.Swim,"
+        "ctm.Ground,"
         // 46
-        "ctm.Flight,"
+        "ctm.Swim,"
         // 47
-        "ctm.Rooted,"
+        "ctm.Flight,"
         // 48
-        "ctm.Chase,"
+        "ctm.Rooted,"
         // 49
-        "ctm.Random,"
+        "ctm.Chase,"
         // 50
-        "ctm.InteractionPauseTimer,"
+        "ctm.Random,"
         // 51
-        "HoverHeight,"
+        "ctm.InteractionPauseTimer,"
         // 52
-        "HealthModifier,"
+        "HoverHeight,"
         // 53
-        "ManaModifier,"
+        "HealthModifier,"
         // 54
-        "ArmorModifier,"
+        "ManaModifier,"
         // 55
-        "DamageModifier,"
+        "ArmorModifier,"
         // 56
-        "ExperienceModifier,"
+        "DamageModifier,"
         // 57
-        "RacialLeader,"
+        "ExperienceModifier,"
         // 58
-        "movementId,"
+        "RacialLeader,"
         // 59
-        "RegenHealth,"
+        "movementId,"
         // 60
-        "mechanic_immune_mask,"
+        "RegenHealth,"
         // 61
-        "spell_school_immune_mask,"
+        "mechanic_immune_mask,"
         // 62
-        "flags_extra,"
+        "spell_school_immune_mask,"
         // 63
+        "flags_extra,"
+        // 64
         "ScriptName"
         " FROM creature_template ct"
         " LEFT JOIN creature_template_movement ctm ON ct.entry = ctm.CreatureId");
@@ -602,23 +604,24 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     creatureTemplate.npcflag          = fields[18].GetUInt32();
     creatureTemplate.speed_walk       = fields[19].GetFloat();
     creatureTemplate.speed_run        = fields[20].GetFloat();
-    creatureTemplate.scale            = fields[21].GetFloat();
-    creatureTemplate.rank             = fields[22].GetUInt8();
-    creatureTemplate.dmgschool        = uint32(fields[23].GetInt8());
-    creatureTemplate.BaseAttackTime   = fields[24].GetUInt32();
-    creatureTemplate.RangeAttackTime  = fields[25].GetUInt32();
-    creatureTemplate.BaseVariance     = fields[26].GetFloat();
-    creatureTemplate.RangeVariance    = fields[27].GetFloat();
-    creatureTemplate.unit_class       = fields[28].GetUInt8();
-    creatureTemplate.unit_flags       = fields[29].GetUInt32();
-    creatureTemplate.unit_flags2      = fields[30].GetUInt32();
-    creatureTemplate.dynamicflags     = fields[31].GetUInt32();
-    creatureTemplate.family           = CreatureFamily(fields[32].GetUInt8());
-    creatureTemplate.type             = fields[33].GetUInt8();
-    creatureTemplate.type_flags       = fields[34].GetUInt32();
-    creatureTemplate.lootid           = fields[35].GetUInt32();
-    creatureTemplate.pickpocketLootId = fields[36].GetUInt32();
-    creatureTemplate.SkinLootId       = fields[37].GetUInt32();
+    creatureTemplate.detection_range  = fields[21].GetFloat();
+    creatureTemplate.scale            = fields[22].GetFloat();
+    creatureTemplate.rank             = fields[23].GetUInt8();
+    creatureTemplate.dmgschool        = uint32(fields[24].GetInt8());
+    creatureTemplate.BaseAttackTime   = fields[25].GetUInt32();
+    creatureTemplate.RangeAttackTime  = fields[26].GetUInt32();
+    creatureTemplate.BaseVariance     = fields[27].GetFloat();
+    creatureTemplate.RangeVariance    = fields[28].GetFloat();
+    creatureTemplate.unit_class       = fields[29].GetUInt8();
+    creatureTemplate.unit_flags       = fields[30].GetUInt32();
+    creatureTemplate.unit_flags2      = fields[31].GetUInt32();
+    creatureTemplate.dynamicflags     = fields[32].GetUInt32();
+    creatureTemplate.family           = CreatureFamily(fields[33].GetUInt8());
+    creatureTemplate.type             = fields[34].GetUInt8();
+    creatureTemplate.type_flags       = fields[35].GetUInt32();
+    creatureTemplate.lootid           = fields[36].GetUInt32();
+    creatureTemplate.pickpocketLootId = fields[37].GetUInt32();
+    creatureTemplate.SkinLootId       = fields[38].GetUInt32();
 
     for (uint8 i = SPELL_SCHOOL_HOLY; i < MAX_SPELL_SCHOOL; ++i)
         creatureTemplate.resistance[i] = 0;
@@ -626,47 +629,47 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     for (uint8 i = 0; i < MAX_CREATURE_SPELLS; ++i)
         creatureTemplate.spells[i] = 0;
 
-    creatureTemplate.PetSpellDataId = fields[38].GetUInt32();
-    creatureTemplate.VehicleId      = fields[39].GetUInt32();
-    creatureTemplate.mingold        = fields[40].GetUInt32();
-    creatureTemplate.maxgold        = fields[41].GetUInt32();
-    creatureTemplate.AIName         = fields[42].GetString();
-    creatureTemplate.MovementType   = fields[43].GetUInt8();
-    if (!fields[44].IsNull())
-        creatureTemplate.Movement.Ground = static_cast<CreatureGroundMovementType>(fields[44].GetUInt8());
-
+    creatureTemplate.PetSpellDataId = fields[39].GetUInt32();
+    creatureTemplate.VehicleId      = fields[40].GetUInt32();
+    creatureTemplate.mingold        = fields[41].GetUInt32();
+    creatureTemplate.maxgold        = fields[42].GetUInt32();
+    creatureTemplate.AIName         = fields[43].GetString();
+    creatureTemplate.MovementType   = fields[44].GetUInt8();
     if (!fields[45].IsNull())
-        creatureTemplate.Movement.Swim = fields[45].GetBool();
+        creatureTemplate.Movement.Ground = static_cast<CreatureGroundMovementType>(fields[45].GetUInt8());
 
     if (!fields[46].IsNull())
-        creatureTemplate.Movement.Flight = static_cast<CreatureFlightMovementType>(fields[46].GetUInt8());
+        creatureTemplate.Movement.Swim = fields[46].GetBool();
 
     if (!fields[47].IsNull())
-        creatureTemplate.Movement.Rooted = fields[47].GetBool();
+        creatureTemplate.Movement.Flight = static_cast<CreatureFlightMovementType>(fields[47].GetUInt8());
 
     if (!fields[48].IsNull())
-        creatureTemplate.Movement.Chase = static_cast<CreatureChaseMovementType>(fields[48].GetUInt8());
+        creatureTemplate.Movement.Rooted = fields[48].GetBool();
 
     if (!fields[49].IsNull())
-        creatureTemplate.Movement.Random = static_cast<CreatureRandomMovementType>(fields[49].GetUInt8());
+        creatureTemplate.Movement.Chase = static_cast<CreatureChaseMovementType>(fields[49].GetUInt8());
 
     if (!fields[50].IsNull())
-        creatureTemplate.Movement.InteractionPauseTimer = fields[50].GetUInt32();
+        creatureTemplate.Movement.Random = static_cast<CreatureRandomMovementType>(fields[50].GetUInt8());
 
-    creatureTemplate.HoverHeight    = fields[51].GetFloat();
-    creatureTemplate.ModHealth      = fields[52].GetFloat();
-    creatureTemplate.ModMana        = fields[53].GetFloat();
-    creatureTemplate.ModArmor       = fields[54].GetFloat();
-    creatureTemplate.ModDamage      = fields[55].GetFloat();
-    creatureTemplate.ModExperience  = fields[56].GetFloat();
-    creatureTemplate.RacialLeader   = fields[57].GetBool();
+    if (!fields[51].IsNull())
+        creatureTemplate.Movement.InteractionPauseTimer = fields[51].GetUInt32();
 
-    creatureTemplate.movementId            = fields[58].GetUInt32();
-    creatureTemplate.RegenHealth           = fields[59].GetBool();
-    creatureTemplate.MechanicImmuneMask    = fields[60].GetUInt32();
-    creatureTemplate.SpellSchoolImmuneMask = fields[61].GetUInt32();
-    creatureTemplate.flags_extra           = fields[62].GetUInt32();
-    creatureTemplate.ScriptID              = GetScriptId(fields[63].GetString());
+    creatureTemplate.HoverHeight    = fields[52].GetFloat();
+    creatureTemplate.ModHealth      = fields[53].GetFloat();
+    creatureTemplate.ModMana        = fields[54].GetFloat();
+    creatureTemplate.ModArmor       = fields[55].GetFloat();
+    creatureTemplate.ModDamage      = fields[56].GetFloat();
+    creatureTemplate.ModExperience  = fields[57].GetFloat();
+    creatureTemplate.RacialLeader   = fields[58].GetBool();
+
+    creatureTemplate.movementId            = fields[59].GetUInt32();
+    creatureTemplate.RegenHealth           = fields[60].GetBool();
+    creatureTemplate.MechanicImmuneMask    = fields[61].GetUInt32();
+    creatureTemplate.SpellSchoolImmuneMask = fields[62].GetUInt32();
+    creatureTemplate.flags_extra           = fields[63].GetUInt32();
+    creatureTemplate.ScriptID              = GetScriptId(fields[64].GetString());
 }
 
 void ObjectMgr::LoadCreatureTemplateResistances()
