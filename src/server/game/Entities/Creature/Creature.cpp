@@ -2037,7 +2037,7 @@ bool Creature::CanStartAttack(Unit const* who, bool force) const
         if (!_IsTargetAcceptable(who))
             return false;
 
-        if (IsNeutralToAll() || !IsWithinDistInMap(who, GetAttackDistance(who) + m_CombatDistance))
+        if (IsNeutralToAll() || !IsWithinDistInMap(who, GetAttackDistance(who) + m_CombatDistance, true, false, false))
             return false;
     }
 
@@ -2085,7 +2085,7 @@ float Creature::GetAttackDistance(Unit const* player) const
 
     // The aggro radius for creatures with equal level as the player is 20 yards.
     // The combatreach should not get taken into account for the distance so we drop it from the range (see Supremus as expample)
-    float baseAggroDistance = 20.0f - GetFloatValue(UNIT_FIELD_COMBATREACH);
+    float baseAggroDistance = GetDetectionRange() - GetFloatValue(UNIT_FIELD_COMBATREACH);
 
     // + - 1 yard for each level difference between player and creature
     float aggroRadius = baseAggroDistance + float(levelDifference);
@@ -3218,7 +3218,9 @@ float Creature::GetAggroRange(Unit const* target) const
             levelDiff = -25;
 
         // The base aggro radius for mob of same level
-        float aggroRadius = 20;
+        float aggroRadius = GetDetectionRange();
+        if (aggroRadius < 1)
+            return 0.0f;
 
         // Aggro Radius varies with level difference at a rate of roughly 1 yard/level
         aggroRadius -= (float)levelDiff;
