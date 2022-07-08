@@ -700,7 +700,10 @@ public:
                             for (GuidList::const_iterator itr = Patients.begin(); itr != Patients.end(); ++itr)
                             {
                                 if (Creature* patient = ObjectAccessor::GetCreature(*me, *itr))
+                                {
                                     patient->setDeathState(JUST_DIED);
+                                    patient->DespawnOrUnsummon(Seconds(2));
+                                }
                             }
                         }
 
@@ -802,6 +805,11 @@ public:
 
         void JustEngagedWith(Unit* /*who*/) override { }
 
+        void MovementInform(uint32 type, uint32 id) override
+        {
+            me->DespawnOrUnsummon(Milliseconds(2000));
+        }
+
         void SpellHit(WorldObject* caster, SpellInfo const* spellInfo) override
         {
             Player* player = caster->ToPlayer();
@@ -834,8 +842,6 @@ public:
             if (DoctorGUID)
                 if (Creature* doctor = ObjectAccessor::GetCreature(*me, DoctorGUID))
                     me->GetMotionMaster()->MoveCloserAndStop(0, doctor, 1.5f);
-
-            me->DespawnOrUnsummon(Milliseconds(2000));
         }
 
         void UpdateAI(uint32 diff) override
