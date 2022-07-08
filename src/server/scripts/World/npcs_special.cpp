@@ -535,7 +535,11 @@ public:
 
 enum Doctor
 {
-    SAY_DOC             = 0,
+    SAY_SAVED           = 0,
+    SAY_DYING           = 1,
+
+    QUEST_TRIAGE_H      = 6622,
+    QUEST_TRIAGE_A      = 6624,
 
     DOCTOR_ALLIANCE     = 12939,
     DOCTOR_HORDE        = 12920,
@@ -554,11 +558,6 @@ Position const AllianceCoords[]=
     {-3746.37f, -4525.35f, 14.16f, 5.22f},                      // Left bunk near entrance
 };
 
-//alliance run to where
-#define A_RUNTOX -3742.96f
-#define A_RUNTOY -4531.52f
-#define A_RUNTOZ 11.91f
-
 Position const HordeCoords[]=
 {
     {-1013.75f, -3492.59f, 62.62f, 4.34f},                      // Left, Behind
@@ -568,11 +567,6 @@ Position const HordeCoords[]=
     {-1017.25f, -3500.85f, 62.98f, 4.34f},                      // Left, front
     {-1020.95f, -3499.21f, 62.98f, 4.34f}                       // Right, Front
 };
-
-//horde run to where
-#define H_RUNTOX -1016.44f
-#define H_RUNTOY -3508.48f
-#define H_RUNTOZ 62.96f
 
 uint32 const AllianceSoldierId[3] =
 {
@@ -607,7 +601,9 @@ public:
         {
             PlayerGUID.Clear();
 
-            SummonPatientTimer = 10000;
+            FirstWaveSummoned = false;
+            SummonFirstWaveTimer = 3000;
+            SummonPatientTimer = 13000;
             SummonPatientCount = 0;
             PatientDiedCount = 0;
             PatientSavedCount = 0;
@@ -620,11 +616,12 @@ public:
 
         ObjectGuid PlayerGUID;
 
+        uint32 SummonFirstWaveTimer;
         uint32 SummonPatientTimer;
         uint32 SummonPatientCount;
         uint32 PatientDiedCount;
         uint32 PatientSavedCount;
-
+        bool FirstWaveSummoned;
         bool Event;
 
         GuidList Patients;
@@ -640,7 +637,9 @@ public:
         {
             PlayerGUID = player->GetGUID();
 
-            SummonPatientTimer = 10000;
+            FirstWaveSummoned = false;
+            SummonFirstWaveTimer = 3000;
+            SummonPatientTimer = 13000;
             SummonPatientCount = 0;
             PatientDiedCount = 0;
             PatientSavedCount = 0;
@@ -664,16 +663,16 @@ public:
         void PatientDied(Position const* point)
         {
             Player* player = ObjectAccessor::GetPlayer(*me, PlayerGUID);
-            if (player && ((player->GetQuestStatus(6624) == QUEST_STATUS_INCOMPLETE) || (player->GetQuestStatus(6622) == QUEST_STATUS_INCOMPLETE)))
+            if (player && ((player->GetQuestStatus(QUEST_TRIAGE_A) == QUEST_STATUS_INCOMPLETE) || (player->GetQuestStatus(QUEST_TRIAGE_H) == QUEST_STATUS_INCOMPLETE)))
             {
                 ++PatientDiedCount;
 
                 if (PatientDiedCount > 5 && Event)
                 {
-                    if (player->GetQuestStatus(6624) == QUEST_STATUS_INCOMPLETE)
-                        player->FailQuest(6624);
-                    else if (player->GetQuestStatus(6622) == QUEST_STATUS_INCOMPLETE)
-                        player->FailQuest(6622);
+                    if (player->GetQuestStatus(QUEST_TRIAGE_A) == QUEST_STATUS_INCOMPLETE)
+                        player->FailQuest(QUEST_TRIAGE_A);
+                    else if (player->GetQuestStatus(QUEST_TRIAGE_H) == QUEST_STATUS_INCOMPLETE)
+                        player->FailQuest(QUEST_TRIAGE_H);
 
                     Reset();
                     return;
@@ -690,7 +689,7 @@ public:
         {
             if (player && PlayerGUID == player->GetGUID())
             {
-                if ((player->GetQuestStatus(6624) == QUEST_STATUS_INCOMPLETE) || (player->GetQuestStatus(6622) == QUEST_STATUS_INCOMPLETE))
+                if ((player->GetQuestStatus(QUEST_TRIAGE_A) == QUEST_STATUS_INCOMPLETE) || (player->GetQuestStatus(QUEST_TRIAGE_H) == QUEST_STATUS_INCOMPLETE))
                 {
                     ++PatientSavedCount;
 
@@ -705,10 +704,10 @@ public:
                             }
                         }
 
-                        if (player->GetQuestStatus(6624) == QUEST_STATUS_INCOMPLETE)
-                            player->AreaExploredOrEventHappens(6624);
-                        else if (player->GetQuestStatus(6622) == QUEST_STATUS_INCOMPLETE)
-                            player->AreaExploredOrEventHappens(6622);
+                        if (player->GetQuestStatus(QUEST_TRIAGE_A) == QUEST_STATUS_INCOMPLETE)
+                            player->AreaExploredOrEventHappens(QUEST_TRIAGE_A);
+                        else if (player->GetQuestStatus(QUEST_TRIAGE_H) == QUEST_STATUS_INCOMPLETE)
+                            player->AreaExploredOrEventHappens(QUEST_TRIAGE_H);
 
                         Reset();
                         return;
@@ -719,13 +718,15 @@ public:
             }
         }
 
+        void SummonPatient();
+
         void UpdateAI(uint32 diff) override;
 
         void JustEngagedWith(Unit* /*who*/) override { }
 
         void OnQuestAccept(Player* player, Quest const* quest) override
         {
-            if ((quest->GetQuestId() == 6624) || (quest->GetQuestId() == 6622))
+            if ((quest->GetQuestId() == QUEST_TRIAGE_A) || (quest->GetQuestId() == QUEST_TRIAGE_H))
                 BeginEvent(player);
         }
     };
@@ -756,10 +757,16 @@ public:
         {
             DoctorGUID.Clear();
             Coord = nullptr;
+            Saved = false;
+            Complained = false;
+            HealthTimer = 2000;
         }
 
         ObjectGuid DoctorGUID;
         Position const* Coord;
+        bool Saved;
+        bool Complained;
+        uint32 HealthTimer;
 
         void Reset() override
         {
@@ -801,10 +808,13 @@ public:
             if (!player || !me->IsAlive() || spellInfo->Id != 20804)
                 return;
 
-            if (player->GetQuestStatus(6624) == QUEST_STATUS_INCOMPLETE || player->GetQuestStatus(6622) == QUEST_STATUS_INCOMPLETE)
+            if (player->GetQuestStatus(QUEST_TRIAGE_A) == QUEST_STATUS_INCOMPLETE || player->GetQuestStatus(QUEST_TRIAGE_H) == QUEST_STATUS_INCOMPLETE)
                 if (DoctorGUID)
                     if (Creature* doctor = ObjectAccessor::GetCreature(*me, DoctorGUID))
                         ENSURE_AI(npc_doctor::npc_doctorAI, doctor->AI())->PatientSaved(me, player, Coord);
+
+            // mark as saved
+            Saved = true;
 
             //make uninteractible
             me->SetUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
@@ -815,42 +825,52 @@ public:
             //stand up
             me->SetStandState(UNIT_STAND_STATE_STAND);
 
-            Talk(SAY_DOC);
+            Talk(SAY_SAVED);
 
             uint32 mobId = me->GetEntry();
             me->SetWalk(false);
 
-            switch (mobId)
-            {
-                case 12923:
-                case 12924:
-                case 12925:
-                    me->GetMotionMaster()->MovePoint(0, H_RUNTOX, H_RUNTOY, H_RUNTOZ);
-                    break;
-                case 12936:
-                case 12937:
-                case 12938:
-                    me->GetMotionMaster()->MovePoint(0, A_RUNTOX, A_RUNTOY, A_RUNTOZ);
-                    break;
-            }
+            // run to doctor
+            if (DoctorGUID)
+                if (Creature* doctor = ObjectAccessor::GetCreature(*me, DoctorGUID))
+                    me->GetMotionMaster()->MoveCloserAndStop(0, doctor, 1.5f);
+
+            me->DespawnOrUnsummon(Milliseconds(2000));
         }
 
-        void UpdateAI(uint32 /*diff*/) override
+        void UpdateAI(uint32 diff) override
         {
-            //lower HP on every world tick makes it a useful counter, not officlone though
-            if (me->IsAlive() && me->GetHealth() > 6)
-                me->ModifyHealth(-5);
+            if (HealthTimer > diff)
+            {
+                HealthTimer -= diff;
+                return;
+            }
+            HealthTimer = 2000;
 
-            if (me->IsAlive() && me->GetHealth() <= 6)
+            // Don't reduce health if already healed
+            if (Saved || ! me->IsAlive())
+                return;
+
+            if (me->GetHealth() <= 50)
             {
                 me->RemoveUnitFlag(UNIT_FLAG_IN_COMBAT);
                 me->SetUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
                 me->setDeathState(JUST_DIED);
-                me->SetDynamicFlag(32);
+                me->SetDynamicFlag(UNIT_DYNFLAG_DEAD);
 
                 if (DoctorGUID)
                     if (Creature* doctor = ObjectAccessor::GetCreature((*me), DoctorGUID))
                         ENSURE_AI(npc_doctor::npc_doctorAI, doctor->AI())->PatientDied(Coord);
+
+                me->DespawnOrUnsummon(Milliseconds(1500));
+            }
+            else
+                me->SetHealth(uint32(me->GetHealth() - 50));
+
+            // Complain if low health
+            if (! Complained && me->GetHealthPct() <= 20 && urand(0, 1)) {
+                Complained = true;
+                Talk(SAY_DYING);
             }
         }
     };
@@ -860,6 +880,44 @@ public:
         return new npc_injured_patientAI(creature);
     }
 };
+
+void npc_doctor::npc_doctorAI::SummonPatient()
+{
+    if (Coordinates.empty())
+        return;
+
+    uint32 patientEntry = 0;
+
+    switch (me->GetEntry())
+    {
+        case DOCTOR_ALLIANCE:
+            patientEntry = AllianceSoldierId[rand32() % 3];
+            break;
+        case DOCTOR_HORDE:
+            patientEntry = HordeSoldierId[rand32() % 3];
+            break;
+        default:
+            TC_LOG_ERROR("scripts", "Invalid entry for Triage doctor. Please check your database");
+            return;
+    }
+
+    std::vector<Position const*>::iterator point = Coordinates.begin();
+    std::advance(point, urand(0, Coordinates.size() - 1));
+
+    if (Creature* Patient = me->SummonCreature(patientEntry, **point, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 5s))
+    {
+        //303, this flag appear to be required for client side item->spell to work (TARGET_SINGLE_FRIEND)
+        Patient->SetUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED);
+
+        Patients.push_back(Patient->GetGUID());
+        ENSURE_AI(npc_injured_patient::npc_injured_patientAI, Patient->AI())->DoctorGUID = me->GetGUID();
+        ENSURE_AI(npc_injured_patient::npc_injured_patientAI, Patient->AI())->Coord = *point;
+
+        Coordinates.erase(point);
+    }
+
+    ++SummonPatientCount;
+}
 
 void npc_doctor::npc_doctorAI::UpdateAI(uint32 diff)
 {
@@ -871,43 +929,27 @@ void npc_doctor::npc_doctorAI::UpdateAI(uint32 diff)
 
     if (Event)
     {
+        // First Group.
+        if (! FirstWaveSummoned) {
+            if (SummonFirstWaveTimer <= diff)
+            {
+                FirstWaveSummoned = true;
+                SummonFirstWaveTimer = 0;
+
+                for (int i = 0; i <= 2; i++)
+                {
+                    SummonPatient();
+                }
+            }
+            else 
+                SummonFirstWaveTimer -= diff;
+        }
+
+        // Add 1 more Patient.
         if (SummonPatientTimer <= diff)
         {
-            if (Coordinates.empty())
-                return;
-
-            uint32 patientEntry = 0;
-
-            switch (me->GetEntry())
-            {
-                case DOCTOR_ALLIANCE:
-                    patientEntry = AllianceSoldierId[rand32() % 3];
-                    break;
-                case DOCTOR_HORDE:
-                    patientEntry = HordeSoldierId[rand32() % 3];
-                    break;
-                default:
-                    TC_LOG_ERROR("scripts", "Invalid entry for Triage doctor. Please check your database");
-                    return;
-            }
-
-            std::vector<Position const*>::iterator point = Coordinates.begin();
-            std::advance(point, urand(0, Coordinates.size() - 1));
-
-            if (Creature* Patient = me->SummonCreature(patientEntry, **point, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 5s))
-            {
-                //303, this flag appear to be required for client side item->spell to work (TARGET_SINGLE_FRIEND)
-                Patient->SetUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED);
-
-                Patients.push_back(Patient->GetGUID());
-                ENSURE_AI(npc_injured_patient::npc_injured_patientAI, Patient->AI())->DoctorGUID = me->GetGUID();
-                ENSURE_AI(npc_injured_patient::npc_injured_patientAI, Patient->AI())->Coord = *point;
-
-                Coordinates.erase(point);
-            }
-
+            SummonPatient();
             SummonPatientTimer = 10000;
-            ++SummonPatientCount;
         }
         else
             SummonPatientTimer -= diff;
