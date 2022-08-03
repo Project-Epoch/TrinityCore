@@ -364,6 +364,12 @@ bool GameObject::Create(ObjectGuid::LowType guidlow, uint32 name_id, Map* map, u
 
     switch (goinfo->type)
     {
+        /** @epoch-start */
+        case GAMEOBJECT_TYPE_CHEST:
+            SetGoAnimProgress(animprogress);
+            m_goValue.Chest.MaxUses = urand(GetGOInfo()->chest.minSuccessOpens, GetGOInfo()->chest.maxSuccessOpens);
+            break;
+        /** @epoch-end */
         case GAMEOBJECT_TYPE_FISHINGHOLE:
             SetGoAnimProgress(animprogress);
             m_goValue.FishingHole.MaxOpens = urand(GetGOInfo()->fishinghole.minSuccessOpens, GetGOInfo()->fishinghole.maxSuccessOpens);
@@ -614,6 +620,11 @@ void GameObject::Update(uint32 diff)
                                 // Initialize a new max fish count on respawn
                                 m_goValue.FishingHole.MaxOpens = urand(GetGOInfo()->fishinghole.minSuccessOpens, GetGOInfo()->fishinghole.maxSuccessOpens);
                                 break;
+                            /** @epoch-start */
+                            case GAMEOBJECT_TYPE_CHEST:
+                                m_goValue.Chest.MaxUses = urand(GetGOInfo()->chest.minSuccessOpens, GetGOInfo()->chest.maxSuccessOpens);
+                                break;
+                            /** @epoch-end */
                             default:
                                 break;
                         }
