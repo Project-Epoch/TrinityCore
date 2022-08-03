@@ -280,6 +280,7 @@ void WorldSession::DoLootRelease(ObjectGuid lguid)
         }
         else if (loot->isLooted() || go->GetGoType() == GAMEOBJECT_TYPE_FISHINGNODE)
         {
+            /** @epoch-start */
             if (go->GetGoType() == GAMEOBJECT_TYPE_FISHINGHOLE)
             {                                               // The fishing hole used once more
                 go->AddUse();                               // if the max usage is reached, will be despawned in next tick
@@ -287,11 +288,53 @@ void WorldSession::DoLootRelease(ObjectGuid lguid)
                     go->SetLootState(GO_JUST_DEACTIVATED);
                 else
                     go->SetLootState(GO_READY);
+
+                loot->clear();
+            }
+            else if (go->GetGoType() == GAMEOBJECT_TYPE_CHEST)
+            {
+                uint32 go_min = go->GetGOInfo()->chest.minSuccessOpens;
+                uint32 go_max = go->GetGOInfo()->chest.maxSuccessOpens;
+                bool refill = false;
+
+                // only vein pass this check
+                if (go_min != 0 && go_max > go_min)
+                {
+                    go->AddUse();
+                    float uses = float(go->GetUseCount());
+                    if (uses < go_max)
+                    {
+                        if (uses >= go_min)
+                        {
+                            int32 ReqValue = 175;
+                            LockEntry const* lockInfo = sLockStore.LookupEntry(go->GetGOInfo()->chest.lockId);
+                            if (lockInfo)
+                                ReqValue = lockInfo->Skill[0];
+                            float skill = float(player->GetSkillValue(SKILL_MINING)) / (ReqValue + 25);
+                            double chance = pow(0.8, 4.0 * (1.0 / double(go_max)) * double(uses));
+                            if (roll_chance_f(float(100.0f * chance + skill)))
+                                refill = true;
+                        }
+                        else
+                            refill = true;  // 100% chance until min uses
+                    }
+                }
+
+                if (refill)
+                {
+                    loot->clear();
+                    loot->FillLoot(go->GetGOInfo()->GetLootId(), LootTemplates_Gameobject, player, false);
+                    go->SetLootState(GO_READY);
+                }
+                else
+                    go->SetLootState(GO_JUST_DEACTIVATED);
             }
             else
+            {
                 go->SetLootState(GO_JUST_DEACTIVATED);
-
-            loot->clear();
+                loot->clear();
+            }
+            /** @epoch-end */
         }
         else
         {
