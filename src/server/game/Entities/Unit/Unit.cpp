@@ -8738,6 +8738,7 @@ void Unit::UpdateSpeed(UnitMoveType mtype)
             break;
     }
 
+    int32 healthSlow = 0;
     if (Creature* creature = ToCreature())
     {
         if (creature->HasUnitTypeMask(UNIT_MASK_MINION) && !creature->IsInCombat())
@@ -8754,6 +8755,15 @@ void Unit::UpdateSpeed(UnitMoveType mtype)
                 }
             }
         }
+
+        if (!IsPet() && !(IsControlledByPlayer() && IsVehicle()) && !(creature->HasMechanicTemplateImmunity(MECHANIC_SNARE)) && !(creature->IsDungeonBoss())) {
+            slowFromHealth = (int32) std::min(0.0f, (1.66f * (GetHealthPct() - 30.0f)));
+        }
+    }
+
+    if (healthSlow)
+    {
+        AddPct(speed, healthSlow);
     }
 
     // Apply strongest slow aura mod to speed
@@ -9479,7 +9489,14 @@ void Unit::SetHealth(uint32 val)
             val = maxHealth;
     }
 
+    float prevHealthPct = GetHealthPct();
+
     SetUInt32Value(UNIT_FIELD_HEALTH, val);
+
+    if (GetTypeId() == TYPEID_UNIT && (prevHealthPct < 30.0 || HealthBelowPct(30)))
+    {
+        UpdateSpeed(MOVE_RUN, false);
+    }
 
     // group update
     if (Player* player = ToPlayer())

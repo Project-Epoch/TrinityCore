@@ -2153,7 +2153,10 @@ void Creature::setDeathState(DeathState s)
 
         setActive(false);
 
-        SetNoSearchAssistance(false);
+        if (HasSearchedAssistance())
+        {
+            SetNoSearchAssistance(false);
+        }
 
         //Dismiss group if is leader
         if (m_formation && m_formation->GetLeader() == this)
