@@ -8756,8 +8756,9 @@ void Unit::UpdateSpeed(UnitMoveType mtype)
             }
         }
 
-        if (!IsPet() && !(IsControlledByPlayer() && IsVehicle()) && !(creature->HasMechanicTemplateImmunity(MECHANIC_SNARE)) && !(creature->IsDungeonBoss())) {
-            slowFromHealth = (int32) std::min(0.0f, (1.66f * (GetHealthPct() - 30.0f)));
+        uint32 immuneMask = creature->GetCreatureTemplate()->MechanicImmuneMask;
+        if (!IsPet() && !(IsControlledByPlayer() && IsVehicle()) && !(immuneMask & (1 << (MECHANIC_SNARE - 1))) && !(creature->IsDungeonBoss())) {
+            healthSlow = (int32) std::min(0.0f, (1.66f * (GetHealthPct() - 30.0f)));
         }
     }
 
@@ -9495,7 +9496,7 @@ void Unit::SetHealth(uint32 val)
 
     if (GetTypeId() == TYPEID_UNIT && (prevHealthPct < 30.0 || HealthBelowPct(30)))
     {
-        UpdateSpeed(MOVE_RUN, false);
+        UpdateSpeed(MOVE_RUN);
     }
 
     // group update
