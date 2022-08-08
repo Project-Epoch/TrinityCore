@@ -2153,10 +2153,12 @@ void Creature::setDeathState(DeathState s)
 
         setActive(false);
 
+        /** @epoch-start */
         if (HasSearchedAssistance())
         {
             SetNoSearchAssistance(false);
         }
+        /** @epoch-end */
 
         //Dismiss group if is leader
         if (m_formation && m_formation->GetLeader() == this)
