@@ -445,19 +445,6 @@ void CreatureAI::SetBoundary(CreatureBoundary const* boundary, bool negateBounda
     me->DoImmediateBoundaryCheck();
 }
 
-void CreatureAI::CheckMeleeRepositionRequirements()
-{
-    if (Unit* victim = me->GetVictim())
-    {
-        Position victimPos;
-        victimPos.Relocate(victim->GetPosition());
-
-        // If we are closer than 50% of the combat reach we are going to reposition ourself
-        if (me->GetDistance(victimPos) < CalculatePct(me->GetCombatReach(), 30))
-            me->MoveAdvanceTo(victim);
-    }
-}
-
 Creature* CreatureAI::DoSummon(uint32 entry, Position const& pos, Milliseconds despawnTime, TempSummonType summonType)
 {
     return me->SummonCreature(entry, pos, summonType, despawnTime);
