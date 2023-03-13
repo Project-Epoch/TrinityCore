@@ -1220,6 +1220,49 @@ namespace Trinity
             float i_range;
     };
 
+    class NearestMovableUnitInCombatGroup
+    {
+        public:
+            NearestMovableUnitInCombatGroup(Creature* obj, Unit* enemy, float range)
+                : i_obj(obj), i_enemy(enemy), i_range(range) { }
+
+            bool operator()(Creature* u)
+            {
+                if (u == i_obj)
+                    return false;
+
+                if (u->isMoving())
+                    return false;
+
+                if (u->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNINTERACTIBLE))
+                    return false;
+
+                if (! u->GetVictim() || u->GetVictim() != i_enemy)
+                    return false;
+                
+                if (! u->CanAssistTo(i_obj, i_enemy))
+                    return false;
+
+                if (! i_obj->IsWithinDistInMap(u, i_range, true, false, false))
+                    return false;
+
+                if (! i_obj->IsWithinLOSInMap(u))
+                    return false;
+
+                i_range = i_obj->GetDistance(u);
+
+                return true;
+            }
+
+        private:
+            Creature* const i_obj;
+            Unit* const i_enemy;
+            float i_range;
+
+            // prevent clone this object
+            NearestMovableUnitInCombatGroup(NearestMovableUnitInCombatGroup const&) = delete;
+    };
+
     // Success at unit in range, range update for next check (this can be use with UnitLastSearcher to find nearest unit)
     class NearestAttackableUnitInObjectRangeCheck
     {

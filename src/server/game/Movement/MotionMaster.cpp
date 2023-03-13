@@ -23,6 +23,7 @@
 #include "DBCStores.h"
 #include "Errors.h"
 #include "G3DPosition.hpp"
+#include "GridNotifiers.h"
 #include "Log.h"
 #include "Map.h"
 #include "MoveSpline.h"
@@ -665,9 +666,22 @@ void MotionMaster::MoveBackpedal(Unit* target, float dist)
     init.Launch();
 }
 
+const float fanningRadius = 1.f;
+const float fanAngleMin = float(M_PI) / 5;
+const float fanAngleMax = float(M_PI) / 4;
+
 void MotionMaster::MoveEncircle(Unit* target)
 {
+    if (! target)
+        return;
 
+    Creature* creature = nullptr;
+    Trinity::NearestAssistCreatureInCreatureRangeCheck u_check(_owner->ToCreature(), target, fanningRadius);
+    Trinity::CreatureLastSearcher<Trinity::NearestAssistCreatureInCreatureRangeCheck> searcher(_owner->ToCreature(), creature, u_check);
+    Cell::VisitGridObjects(_owner->ToCreature(), searcher, fanningRadius);
+
+    if (! creature)
+        return;
 }
 
 void MotionMaster::MoveFleeing(Unit* enemy, uint32 time)
