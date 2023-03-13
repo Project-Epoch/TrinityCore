@@ -680,20 +680,16 @@ void MotionMaster::MoveEncircle(Unit* target)
     const uint32 attackers = target->getAttackers().size();
 
     /** Limit in dungeons. */
-    float radius = fanningRadius;
-    float min = fanAngleMin;
-    float max = fanAngleMax;
+    float radiusReduction = 1.0f;
+    float angleReduction = 1.0f;
 
     if (instanced) {
-        radius = radius / 5;
-        min = min / 3;
-        max = max / 3;
+        radiusReduction = 3.0f;
+        angleReduction = 3.0f;
     }
 
     if (! instanced && target->getAttackers().size() > 10) {
-        radius = radius / 5;
-        min = min / 3;
-        max = max / 3;
+        radiusReduction = 2.0f;
     }
 
     /** Check for Collision.*/
@@ -701,9 +697,9 @@ void MotionMaster::MoveEncircle(Unit* target)
     Trinity::AnyUnitFulfillingConditionInRangeCheck collisionCheck(_owner, [&](Unit* unit)->bool
     {
         return _owner != unit && unit->GetVictim() && unit->GetVictim() == target && !unit->isMoving() && !unit->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNINTERACTIBLE);
-    }, radius * radius);
+    }, (fanningRadius / radiusReduction) * (fanningRadius / radiusReduction));
     Trinity::UnitSearcher<Trinity::AnyUnitFulfillingConditionInRangeCheck> checker(_owner, collider, collisionCheck);
-    Cell::VisitAllObjects(_owner, checker, radius);
+    Cell::VisitAllObjects(_owner, checker, (fanningRadius / radiusReduction));
 
     if (! collider) {
         return;
@@ -714,7 +710,7 @@ void MotionMaster::MoveEncircle(Unit* target)
     if (direction == 0) direction = -1;
 
     /** Get Position. */
-    float ori = _owner->NormalizeOrientation(_owner->GetOrientation() + float(M_PI) + frand(min, max) * direction);
+    float ori = _owner->NormalizeOrientation(_owner->GetOrientation() + float(M_PI) + frand(fanAngleMin / angleReduction, fanAngleMax / angleReduction) * direction);
     float x, y, z;
     float targetDist = 0.05f;
     target->GetNearPoint(_owner, x, y, z, targetDist, ori);
