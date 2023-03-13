@@ -649,6 +649,11 @@ void MotionMaster::MoveBackpedal(Unit* target, float dist)
     point.y = pos.m_positionY + dist * sinf(angle);
     point.z = pos.m_positionZ;
 
+    if (!_owner->GetMap()->CanReachPositionAndGetValidCoords(_owner, point.x, point.y, point.z, true, true))
+    {
+        return;
+    }
+
     Movement::MoveSplineInit init(_owner);
     init.MoveTo(point.x, point.y, point.z, false);
     init.SetFacing(target);

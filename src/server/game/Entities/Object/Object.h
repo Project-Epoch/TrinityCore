@@ -327,6 +327,8 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
         void GetRandomPoint(Position const& srcPos, float distance, float& rand_x, float& rand_y, float& rand_z) const;
         Position GetRandomPoint(Position const& srcPos, float distance) const;
 
+        float GetObjectSize() const;
+
         uint32 GetInstanceId() const { return m_InstanceId; }
 
         // @tswow-begin
@@ -544,6 +546,8 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
 
         float GetFloorZ() const;
         virtual float GetCollisionHeight() const { return 0.0f; }
+        virtual float GetCollisionWidth() const { return GetObjectSize(); }
+        virtual float GetCollisionRadius() const { return GetObjectSize() / 2; }
 
         float GetMapWaterOrGroundLevel(float x, float y, float z, float* ground = nullptr) const;
         float GetMapHeight(float x, float y, float z, bool vmap = true, float distanceToSearch = 50.0f) const; // DEFAULT_HEIGHT_SEARCH in map.h

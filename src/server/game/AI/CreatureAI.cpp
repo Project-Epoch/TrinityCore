@@ -477,11 +477,10 @@ void CreatureAI::DoCombatMovements()
         return;
     }
 
-    /** If we are closer than 50% of the combat reach we are going to reposition ourself. */
-    Position targetPosition;
-    targetPosition.Relocate(target->GetPosition());
-    if (me->GetDistance(targetPosition) < CalculatePct(me->GetCombatReach() + target->GetCombatReach(), 50)) {
-        me->GetMotionMaster()->MoveBackpedal(target, me->GetMeleeRange(target) / 2);
+    /** If we are too close we are going to reposition ourself. */
+    float MaxRange = me->GetCollisionRadius() + target->GetCollisionRadius();
+    if (me->IsInDist(target, MaxRange)) {
+        me->GetMotionMaster()->MoveBackpedal(target, me->GetMeleeRange(target) / 1.5);
         return;
     }
 
