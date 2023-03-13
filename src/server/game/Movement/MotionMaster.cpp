@@ -673,36 +673,59 @@ const float fanAngleMax = float(M_PI) / 4;
 
 void MotionMaster::MoveEncircle(Unit* target)
 {
-    TC_LOG_INFO("server.worldserver", "MotionMaster::MoveEncircle");
-
     if (! target)
         return;
 
+    const bool instanced = (target->GetMap()->IsDungeon() || target->GetMap()->IsRaid());
+    const uint32 attackers = target->getAttackers().size();
+
+    /** Limit in dungeons. */
+    float radius = fanningRadius;
+    float min = fanAngleMin;
+    float max = fanAngleMax;
+
+    if (instanced) {
+        radius = radius / 5;
+        min = min / 3;
+        max = max / 3;
+    }
+
+    if (! instanced && target->getAttackers().size() > 10) {
+        radius = radius / 5;
+        min = min / 3;
+        max = max / 3;
+    }
+
+    /** Check for Collision.*/
     Unit* collider = nullptr;
     Trinity::AnyUnitFulfillingConditionInRangeCheck collisionCheck(_owner, [&](Unit* unit)->bool
     {
         return _owner != unit && unit->GetVictim() && unit->GetVictim() == target && !unit->isMoving() && !unit->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNINTERACTIBLE);
-    }, fanningRadius * fanningRadius);
+    }, radius * radius);
     Trinity::UnitSearcher<Trinity::AnyUnitFulfillingConditionInRangeCheck> checker(_owner, collider, collisionCheck);
-    Cell::VisitAllObjects(_owner, checker, fanningRadius);
+    Cell::VisitAllObjects(_owner, checker, radius);
 
     if (! collider) {
-        TC_LOG_INFO("server.worldserver", "NearestMovableUnitInCombatGroup - Failed!");
         return;
     }
 
-    TC_LOG_INFO("server.worldserver", "NearestMovableUnitInCombatGroup - Pass!");
-
-    /** First Movement Pass */
-    int32 direction = irand(0, 1); // blizzlike behaviour
+    /** Get Direction. */
+    int32 direction = irand(0, 1);
     if (direction == 0) direction = -1;
-    float ori = _owner->NormalizeOrientation(_owner->GetOrientation() + float(M_PI) + frand(fanAngleMin, fanAngleMax) * direction);
+
+    /** Get Position. */
+    float ori = _owner->NormalizeOrientation(_owner->GetOrientation() + float(M_PI) + frand(min, max) * direction);
     float x, y, z;
-    // float targetDist = target->GetCombinedCombatReach(_owner, false);
     float targetDist = 0.05f;
     target->GetNearPoint(_owner, x, y, z, targetDist, ori);
 
+    /** Validate. */
+    if (!_owner->GetMap()->CanReachPositionAndGetValidCoords(_owner, x, y, z, true, true))
+    {
+        return;
+    }
 
+    /** Execute Movement. */
     Movement::MoveSplineInit init(_owner);
     init.MoveTo(x, y, z, false, true);
     init.SetWalk(true);

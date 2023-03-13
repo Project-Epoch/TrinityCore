@@ -105,7 +105,8 @@ class TC_GAME_API CreatureAI : public UnitAI
 
         void Talk(uint8 id, WorldObject const* whisperTarget = nullptr);
 
-        void DoCombatMovements();
+        void Encircle();
+        void Backpedal();
 
         /// == Reactions At =================================
 

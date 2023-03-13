@@ -463,7 +463,7 @@ Creature* CreatureAI::DoSummonFlyer(uint32 entry, WorldObject* obj, float flight
     return me->SummonCreature(entry, pos, summonType, despawnTime);
 }
 
-void CreatureAI::DoCombatMovements()
+void CreatureAI::Encircle()
 {
     Unit *target = me->GetVictim();
 
@@ -474,13 +474,6 @@ void CreatureAI::DoCombatMovements()
         (target->GetTypeId() != TYPEID_PLAYER && !target->IsPet())
     )
     {
-        return;
-    }
-
-    /** If we are too close we are going to reposition ourself. */
-    float MaxRange = me->GetCollisionRadius() + target->GetCollisionRadius();
-    if (me->IsInDist(target, MaxRange)) {
-        me->GetMotionMaster()->MoveBackpedal(target, me->GetMeleeRange(target) / 1.5);
         return;
     }
 
@@ -498,4 +491,26 @@ void CreatureAI::DoCombatMovements()
         return;
 
     me->GetMotionMaster()->MoveEncircle(target);
+}
+
+void CreatureAI::Backpedal()
+{
+    Unit *target = me->GetVictim();
+
+    /** Check Movement Allowed. */
+    if (
+        !target ||
+        !me->IsFreeToMove() || me->HasUnitMovementFlag(MOVEMENTFLAG_ROOT) ||
+        (target->GetTypeId() != TYPEID_PLAYER && !target->IsPet())
+    )
+    {
+        return;
+    }
+
+    /** If we are too close we are going to reposition ourself. */
+    float MaxRange = me->GetCollisionRadius() + target->GetCollisionRadius();
+    if (! me->IsInDist(target, MaxRange))
+        return;
+    
+    me->GetMotionMaster()->MoveBackpedal(target, me->GetMeleeRange(target) / 1.5);
 }
