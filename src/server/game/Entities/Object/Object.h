@@ -362,6 +362,7 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
         float GetDistance(WorldObject const* obj) const;
         float GetDistance(Position const& pos) const;
         float GetDistance(float x, float y, float z) const;
+        float GetRawDistance(const WorldObject* obj, bool is3D) const;
         float GetDistance2d(WorldObject const* obj) const;
         float GetDistance2d(float x, float y) const;
         float GetDistanceZ(WorldObject const* obj) const;

@@ -23,9 +23,11 @@
 #include "DBCStores.h"
 #include "Errors.h"
 #include "G3DPosition.hpp"
-#include "GridNotifiers.h"
 #include "Log.h"
 #include "Map.h"
+#include "CellImpl.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "MoveSpline.h"
 #include "MoveSplineInit.h"
 #include "PathGenerator.h"
@@ -35,7 +37,6 @@
 #include "WaypointDefines.h"
 #include <algorithm>
 #include <iterator>
-
 #include "ChaseMovementGenerator.h"
 #include "ConfusedMovementGenerator.h"
 #include "FleeingMovementGenerator.h"
@@ -672,16 +673,40 @@ const float fanAngleMax = float(M_PI) / 4;
 
 void MotionMaster::MoveEncircle(Unit* target)
 {
+    TC_LOG_INFO("server.worldserver", "MotionMaster::MoveEncircle");
+
     if (! target)
         return;
 
-    Creature* creature = nullptr;
-    Trinity::NearestAssistCreatureInCreatureRangeCheck u_check(_owner->ToCreature(), target, fanningRadius);
-    Trinity::CreatureLastSearcher<Trinity::NearestAssistCreatureInCreatureRangeCheck> searcher(_owner->ToCreature(), creature, u_check);
-    Cell::VisitGridObjects(_owner->ToCreature(), searcher, fanningRadius);
+    Unit* collider = nullptr;
+    Trinity::AnyUnitFulfillingConditionInRangeCheck collisionCheck(_owner, [&](Unit* unit)->bool
+    {
+        return _owner != unit && unit->GetVictim() && unit->GetVictim() == target && !unit->isMoving() && !unit->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNINTERACTIBLE);
+    }, fanningRadius * fanningRadius);
+    Trinity::UnitSearcher<Trinity::AnyUnitFulfillingConditionInRangeCheck> checker(_owner, collider, collisionCheck);
+    Cell::VisitAllObjects(_owner, checker, fanningRadius);
 
-    if (! creature)
+    if (! collider) {
+        TC_LOG_INFO("server.worldserver", "NearestMovableUnitInCombatGroup - Failed!");
         return;
+    }
+
+    TC_LOG_INFO("server.worldserver", "NearestMovableUnitInCombatGroup - Pass!");
+
+    /** First Movement Pass */
+    int32 direction = irand(0, 1); // blizzlike behaviour
+    if (direction == 0) direction = -1;
+    float ori = _owner->NormalizeOrientation(_owner->GetOrientation() + float(M_PI) + frand(fanAngleMin, fanAngleMax) * direction);
+    float x, y, z;
+    // float targetDist = target->GetCombinedCombatReach(_owner, false);
+    float targetDist = 0.05f;
+    target->GetNearPoint(_owner, x, y, z, targetDist, ori);
+
+
+    Movement::MoveSplineInit init(_owner);
+    init.MoveTo(x, y, z, false, true);
+    init.SetWalk(true);
+    init.Launch();
 }
 
 void MotionMaster::MoveFleeing(Unit* enemy, uint32 time)

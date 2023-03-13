@@ -25,6 +25,7 @@
 #include "GameObject.h"
 #include "Group.h"
 #include "Player.h"
+#include "Log.h"
 #include "Spell.h"
 #include "SpellInfo.h"
 #include "UnitAI.h"
@@ -1220,47 +1221,20 @@ namespace Trinity
             float i_range;
     };
 
-    class NearestMovableUnitInCombatGroup
+    class AnyUnitFulfillingConditionInRangeCheck
     {
         public:
-            NearestMovableUnitInCombatGroup(Creature* obj, Unit* enemy, float range)
-                : i_obj(obj), i_enemy(enemy), i_range(range) { }
-
-            bool operator()(Creature* u)
+            AnyUnitFulfillingConditionInRangeCheck(WorldObject const* obj, std::function<bool(Unit*)> functor, float radius)
+                    : i_obj(obj), i_functor(functor), i_range(radius) {}
+            WorldObject const& GetFocusObject() const { return *i_obj; }
+            bool operator()(Unit* u)
             {
-                if (u == i_obj)
-                    return false;
-
-                if (u->isMoving())
-                    return false;
-
-                if (u->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNINTERACTIBLE))
-                    return false;
-
-                if (! u->GetVictim() || u->GetVictim() != i_enemy)
-                    return false;
-                
-                if (! u->CanAssistTo(i_obj, i_enemy))
-                    return false;
-
-                if (! i_obj->IsWithinDistInMap(u, i_range, true, false, false))
-                    return false;
-
-                if (! i_obj->IsWithinLOSInMap(u))
-                    return false;
-
-                i_range = i_obj->GetDistance(u);
-
-                return true;
+                return i_functor(u) && i_obj->GetRawDistance(u, true) <= i_range;
             }
-
         private:
-            Creature* const i_obj;
-            Unit* const i_enemy;
+            WorldObject const* i_obj;
+            std::function<bool(Unit*)> i_functor;
             float i_range;
-
-            // prevent clone this object
-            NearestMovableUnitInCombatGroup(NearestMovableUnitInCombatGroup const&) = delete;
     };
 
     // Success at unit in range, range update for next check (this can be use with UnitLastSearcher to find nearest unit)
