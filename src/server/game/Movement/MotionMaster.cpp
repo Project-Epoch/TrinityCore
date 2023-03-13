@@ -637,6 +637,34 @@ void MotionMaster::MoveConfused()
     }
 }
 
+void MotionMaster::MoveBackpedal(Unit* target, float dist)
+{
+    if (! target)
+        return;
+
+    Position const& pos = target->GetPosition();
+    float angle = target->GetAbsoluteAngle(_owner);
+    G3D::Vector3 point;
+    point.x = pos.m_positionX + dist * cosf(angle);
+    point.y = pos.m_positionY + dist * sinf(angle);
+    point.z = pos.m_positionZ;
+
+    Movement::MoveSplineInit init(_owner);
+    init.MoveTo(point.x, point.y, point.z, false);
+    init.SetFacing(target);
+
+    /** Beasts move backwards instead of turning around */
+    if (_owner->ToCreature() && _owner->ToCreature()->GetCreatureTemplate()->type == CREATURE_TYPE_BEAST)
+        init.SetOrientationFixed(true);
+
+    init.Launch();
+}
+
+void MotionMaster::MoveEncircle(Unit* target)
+{
+
+}
+
 void MotionMaster::MoveFleeing(Unit* enemy, uint32 time)
 {
     if (!enemy)
