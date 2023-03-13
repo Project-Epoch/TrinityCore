@@ -3439,6 +3439,26 @@ void WorldObject::MovePositionToFirstCollision(Position &pos, float dist, float 
     }
 }
 
+float WorldObject::GetCombinedCombatReach(WorldObject const* pVictim, bool forMeleeRange, float flat_mod) const
+{
+    return GetCombinedCombatReach(forMeleeRange, flat_mod + pVictim->GetCombatReach());
+}
+
+float WorldObject::GetCombinedCombatReach(bool forMeleeRange, float flat_mod) const
+{
+    // The measured values show BASE_MELEE_OFFSET in (1.3224, 1.342)
+    float reach = GetCombatReach() + flat_mod;
+
+    if (forMeleeRange)
+    {
+        reach += BASE_MELEERANGE_OFFSET;
+        if (reach < ATTACK_DISTANCE)
+            reach = ATTACK_DISTANCE;
+    }
+
+    return reach;
+}
+
 // @tswow-begin
 void WorldObject::SetPhaseMask(uint32 newPhaseMask, bool update, uint64 newPhaseId)
 {
