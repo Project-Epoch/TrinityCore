@@ -471,6 +471,7 @@ void CreatureAI::Encircle()
     if (
         !target ||
         !me->IsFreeToMove() || me->HasUnitMovementFlag(MOVEMENTFLAG_ROOT) ||
+        me->IsUnderWater() ||
         (target->GetTypeId() != TYPEID_PLAYER && !target->IsPet())
     )
     {
@@ -501,6 +502,7 @@ void CreatureAI::Backpedal()
     if (
         !target ||
         !me->IsFreeToMove() || me->HasUnitMovementFlag(MOVEMENTFLAG_ROOT) ||
+        me->IsUnderWater() ||
         (target->GetTypeId() != TYPEID_PLAYER && !target->IsPet())
     )
     {
