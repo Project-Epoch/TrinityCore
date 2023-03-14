@@ -651,7 +651,7 @@ void MotionMaster::MoveBackpedal(Unit* target, float dist)
     point.y = pos.m_positionY + dist * sinf(angle);
     point.z = pos.m_positionZ;
 
-    if (!_owner->GetMap()->CanReachPositionAndGetValidCoords(_owner, point.x, point.y, point.z, true, true))
+    if (!_owner->GetMap()->CanReachPositionAndGetValidCoords(_owner, point.x, point.y, point.z, true))
     {
         return;
     }
@@ -716,7 +716,7 @@ void MotionMaster::MoveEncircle(Unit* target)
     target->GetNearPoint(_owner, x, y, z, targetDist, ori);
 
     /** Validate. */
-    if (!_owner->GetMap()->CanReachPositionAndGetValidCoords(_owner, x, y, z, true, true))
+    if (!_owner->GetMap()->CanReachPositionAndGetValidCoords(_owner, x, y, z, true))
     {
         return;
     }

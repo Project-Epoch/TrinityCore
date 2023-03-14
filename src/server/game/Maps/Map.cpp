@@ -4703,7 +4703,7 @@ time_t Map::GetLinkedRespawnTime(ObjectGuid guid) const
  * overloaded method with the start coords when you need to do a quick check on small segments
  *
  */
-bool Map::CanReachPositionAndGetValidCoords(WorldObject const* source, PathGenerator *path, float &destX, float &destY, float &destZ, bool failOnCollision, bool failOnSlopes) const
+bool Map::CanReachPositionAndGetValidCoords(WorldObject const* source, PathGenerator *path, float &destX, float &destY, float &destZ, bool failOnCollision) const
 {
     G3D::Vector3 prevPath = path->GetStartPosition();
     for (auto & vector : path->GetPath())
@@ -4712,7 +4712,7 @@ bool Map::CanReachPositionAndGetValidCoords(WorldObject const* source, PathGener
         float y = vector.y;
         float z = vector.z;
 
-        if (!CanReachPositionAndGetValidCoords(source, prevPath.x, prevPath.y, prevPath.z, x, y, z, failOnCollision, failOnSlopes))
+        if (!CanReachPositionAndGetValidCoords(source, prevPath.x, prevPath.y, prevPath.z, x, y, z, failOnCollision))
         {
             destX = x;
             destY = y;
@@ -4737,18 +4737,17 @@ bool Map::CanReachPositionAndGetValidCoords(WorldObject const* source, PathGener
  * NOTE: use this method with small segments.
  *
  * @param failOnCollision if true, the methods will return false when a collision occurs
- * @param failOnSlopes if true, the methods will return false when a non walkable slope is found
  *
  * @return true if the destination is valid, false otherwise
  *
  *
 */
-bool Map::CanReachPositionAndGetValidCoords(WorldObject const* source, float& destX, float& destY, float& destZ, bool failOnCollision, bool failOnSlopes) const
+bool Map::CanReachPositionAndGetValidCoords(WorldObject const* source, float& destX, float& destY, float& destZ, bool failOnCollision) const
 {
-    return CanReachPositionAndGetValidCoords(source, source->GetPositionX(), source->GetPositionY(), source->GetPositionZ(), destX, destY, destZ, failOnCollision, failOnSlopes);
+    return CanReachPositionAndGetValidCoords(source, source->GetPositionX(), source->GetPositionY(), source->GetPositionZ(), destX, destY, destZ, failOnCollision);
 }
 
-bool Map::CanReachPositionAndGetValidCoords(WorldObject const* source, float startX, float startY, float startZ, float &destX, float &destY, float &destZ, bool failOnCollision, bool failOnSlopes) const
+bool Map::CanReachPositionAndGetValidCoords(WorldObject const* source, float startX, float startY, float startZ, float &destX, float &destY, float &destZ, bool failOnCollision) const
 {
     if (! CheckCollisionAndGetValidCoords(source, startX, startY, startZ, destX, destY, destZ, failOnCollision))
         return false;
