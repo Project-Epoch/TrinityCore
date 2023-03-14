@@ -659,6 +659,7 @@ void MotionMaster::MoveBackpedal(Unit* target, float dist)
     Movement::MoveSplineInit init(_owner);
     init.MoveTo(point.x, point.y, point.z, false);
     init.SetFacing(target);
+    init.SetWalk(true);
 
     /** Beasts move backwards instead of turning around */
     if (_owner->ToCreature() && _owner->ToCreature()->GetCreatureTemplate()->type == CREATURE_TYPE_BEAST)
