@@ -2795,7 +2795,11 @@ uint32 Creature::GetShieldBlockValue() const                  //dunno mob block 
 
 bool Creature::HasSpell(uint32 spellID) const
 {
-    return std::find(std::begin(m_spells), std::end(m_spells), spellID) != std::end(m_spells);
+    bool has_spell = std::find(std::begin(m_spells), std::end(m_spells), spellID) != std::end(m_spells);
+
+    FIRE_ID(GetCreatureTemplate()->events.id,Creature,OnCheckHasSpell,TSCreature(const_cast<Creature*>(this)), spellID, TSMutable<bool,bool>(&has_spell));
+
+    return has_spell;
 }
 
 time_t Creature::GetRespawnTimeEx() const

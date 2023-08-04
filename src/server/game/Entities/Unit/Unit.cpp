@@ -10017,6 +10017,9 @@ void CharmInfo::InitPossessCreateSpells()
         for (uint8 i = 0; i < MAX_CREATURE_SPELLS; ++i)
         {
             uint32 spellId = _unit->ToCreature()->m_spells[i];
+
+            FIRE(Unit,OnInitPossessCreateSpells, TSUnit(_unit), i, &spellId);
+
             SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
             if (spellInfo)
             {
@@ -10044,6 +10047,9 @@ void CharmInfo::InitCharmCreateSpells()
     for (uint32 x = 0; x < MAX_SPELL_CHARM; ++x)
     {
         uint32 spellId = _unit->ToCreature()->m_spells[x];
+
+        FIRE(Unit,OnInitCharmCreateSpells, TSUnit(_unit), x, &spellId);
+
         SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
 
         if (!spellInfo)
