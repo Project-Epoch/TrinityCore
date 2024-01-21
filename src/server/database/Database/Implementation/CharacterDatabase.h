@@ -510,6 +510,11 @@ enum CharacterDatabaseStatements : uint32
 
     CHAR_INS_DESERTER_TRACK,
 
+    // @epoch-begin
+    CHAR_INS_ANTICHEAT_LUA_CHEATERS,
+    CHAR_SEL_ANTICHEAT_LUA_CHEATERS,
+    // @epoch-end
+
     // @tswow-begin
     CHAR_UPD_CUSTOM_ITEM,
     CHAR_UPD_JSON_DATA,

@@ -118,6 +118,9 @@
 #include "TSGameObject.h"
 #include "TSCorpse.h"
 // @tswow-end
+// @epoch-begin
+#include "AnticheatMgr.h"
+// @epoch-end
 
 #define ZONE_UPDATE_INTERVAL (1*IN_MILLISECONDS)
 
