@@ -34,6 +34,9 @@
 #include "AuctionHouseMgr.h"
 #include "BattlefieldMgr.h"
 #include "BattlegroundMgr.h"
+// @epoch-begin
+#include "AnticheatMgr.h"
+// @epoch-end
 #include "CalendarMgr.h"
 #include "ChannelMgr.h"
 #include "CharacterCache.h"
