@@ -25,6 +25,9 @@
 #include "TSCustomPacket.h"
 #include "Tracy.hpp"
 // @tswow-end
+// @epoch-begin
+#include "AnticheatMgr.h"
+// @epoch-end
 #include "WorldSession.h"
 #include "AccountMgr.h"
 #include "AddonMgr.h"
@@ -157,6 +160,9 @@ WorldSession::WorldSession(uint32 id, std::string&& name, std::shared_ptr<WorldS
         LoginDatabase.PExecute("UPDATE account SET online = 1 WHERE id = {};", GetAccountId());     // One-time query
     }
 
+    // @epoch-begin
+    _isLuaCheater = false;
+    // @epoch-end
 }
 
 /// WorldSession destructor
@@ -812,6 +818,19 @@ void WorldSession::LoadAccountData(PreparedQueryResult result, uint32 mask)
         m_accountData[type].Data = fields[2].GetString();
     }
     while (result->NextRow());
+
+    // @epoch-begin
+    bool cheater = sAnticheatMgr->CheckIsLuaCheater(GetAccountId());
+    if (!cheater)
+    {
+        cheater = sAnticheatMgr->CheckBlockedLuaFunctions(m_accountData, _player);
+    }
+
+    if (!_isLuaCheater)
+    {
+        _isLuaCheater = cheater;
+    }
+    // @epoch-end
 }
 
 void WorldSession::SetAccountData(AccountDataType type, time_t tm, std::string const& data)

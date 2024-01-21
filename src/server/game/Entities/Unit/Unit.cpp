@@ -12998,6 +12998,14 @@ void Unit::ExitVehicle(Position const* /*exitPosition*/)
         return;
 
     GetVehicleBase()->RemoveAurasByType(SPELL_AURA_CONTROL_VEHICLE, GetGUID());
+
+    // @epoch-begin
+    if (Player* player = ToPlayer())
+    {
+        player->SetCanTeleport(true);
+    }
+    // @epoch-end
+
     //! The following call would not even be executed successfully as the
     //! SPELL_AURA_CONTROL_VEHICLE unapply handler already calls _ExitVehicle without
     //! specifying an exitposition. The subsequent call below would return on if (!m_vehicle).
@@ -13081,8 +13089,13 @@ void Unit::_ExitVehicle(Position const* exitPosition)
     };
     GetMotionMaster()->LaunchMoveSpline(std::move(initializer), EVENT_VEHICLE_EXIT, MOTION_PRIORITY_HIGHEST);
 
+    // @epoch-begin
     if (player)
+    {
+        player->SetCanTeleport(true);
         player->ResummonPetTemporaryUnSummonedIfAny();
+    }
+    // @epoch-end
 
     if (vehicle->GetBase()->HasUnitTypeMask(UNIT_MASK_MINION) && vehicle->GetBase()->GetTypeId() == TYPEID_UNIT)
         if (((Minion*)vehicle->GetBase())->GetOwner() == this)
@@ -13198,6 +13211,13 @@ void Unit::SendTeleportPacket(Position const& pos, bool teleportingTransport /*=
             transportPos.Relocate(x, y, z, o);
         }
     }
+
+    // @epoch-begin
+    if (GetTypeId() == TYPEID_PLAYER)
+    {
+        ToPlayer()->SetCanTeleport(true);
+    }
+    // @epoch-end
 
     WorldPacket moveUpdateTeleport(MSG_MOVE_TELEPORT, 38);
     moveUpdateTeleport << GetPackGUID();

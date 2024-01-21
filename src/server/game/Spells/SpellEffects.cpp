@@ -1045,6 +1045,13 @@ void Spell::EffectJumpDest()
     float speedXY, speedZ;
     CalculateJumpSpeeds(*effectInfo, unitCaster->GetExactDist2d(destTarget), speedXY, speedZ);
     unitCaster->GetMotionMaster()->MoveJump(*destTarget, speedXY, speedZ, EVENT_JUMP, !m_targets.GetObjectTargetGUID().IsEmpty());
+
+    // @epoch-begin
+    if (Player* player = m_caster->ToPlayer())
+    {
+        player->SetCanTeleport(true);
+    }
+    // @epoch-end
 }
 
 void Spell::EffectTeleportUnits()
@@ -1061,6 +1068,13 @@ void Spell::EffectTeleportUnits()
         TC_LOG_ERROR("spells", "Spell::EffectTeleportUnits - does not have a destination for spellId {}.", m_spellInfo->Id);
         return;
     }
+
+    // @epoch-begin
+    if (Player* player = m_caster->ToPlayer())
+    {
+        player->SetCanTeleport(true);
+    }
+    // @epoch-end
 
     // Init dest coordinates
     WorldLocation targetDest(*destTarget);
@@ -3496,6 +3510,22 @@ void Spell::EffectInterruptCast()
     {
         if (Spell* spell = unitTarget->GetCurrentSpell(CurrentSpellTypes(i)))
         {
+            // @epoch-begin
+            // if player is lua cheater dont interrupt cast until timer reached 600ms
+            if (auto player = m_caster->ToPlayer())
+            {
+                if (player->GetSession()->IsLuaCheater())
+                {
+                    if (spell->GetCastTime() - spell->GetTimer() < 600)
+                    {
+                        std::string goXYZ = ".go xyz " + std::to_string(player->GetPositionX()) + " " + std::to_string(player->GetPositionY()) + " " + std::to_string(player->GetPositionZ() + 1.0f) + " " + std::to_string(player->GetMap()->GetId()) + " " + std::to_string(player->GetOrientation());
+                        TC_LOG_INFO("anticheat", "ANTICHEAT COUNTER MEASURE::Played {} attempted repeat LUA spell Casting - IP: {} - Flagged at: {}", player->GetName(), player->GetSession()->GetRemoteAddress(), goXYZ);
+                        return;
+                    }
+                }
+            }
+            // @epoch-end
+
             SpellInfo const* curSpellInfo = spell->m_spellInfo;
             // check if we can interrupt spell
             if ((spell->getState() == SPELL_STATE_CASTING
@@ -4968,6 +4998,13 @@ void Spell::EffectTransmitted()
 
         ExecuteLogEffectSummonObject(effectInfo->EffectIndex, linkedTrap);
     }
+
+    // @epoch-begin
+    if (Player* player = m_caster->ToPlayer())
+    {
+        player->SetCanTeleport(true);
+    }
+    // @epoch-end
 }
 
 void Spell::EffectProspecting()

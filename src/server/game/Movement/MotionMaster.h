@@ -186,6 +186,9 @@ class TC_GAME_API MotionMaster
         void MoveAlongSplineChain(uint32 pointId, std::vector<SplineChainLink> const& chain, bool walk);
         void ResumeSplineChain(SplineChainResumeInfo const& info);
         void MoveFall(uint32 id = 0);
+        // @epoch-begin
+        void MoveFallPlayer(uint32 id = 0);
+        // @epoch-end
         void MoveSeekAssistance(float x, float y, float z);
         void MoveSeekAssistanceDistract(uint32 timer);
         void MoveTaxiFlight(uint32 path, uint32 pathnode);
