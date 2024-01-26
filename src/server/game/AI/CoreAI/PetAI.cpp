@@ -76,19 +76,28 @@ void PetAI::UpdateAI(uint32 diff)
 
         if (NeedToStop())
         {
-            TC_LOG_TRACE("scripts.ai.petai", "PetAI::UpdateAI: AI stopped attacking %s", me->GetGUID().ToString().c_str());
+            TC_LOG_TRACE("scripts.ai.petai", "PetAI::UpdateAI: AI stopped attacking {}", me->GetGUID().ToString());
             StopAttack();
             return;
         }
 
         // Check before attacking to prevent pets from leaving stay position
+        /** @epoch-start */
+        bool canMelee = ! (me->GetEntry() == 416 || me->GetEntry() == 510 || me->GetEntry() == 37994); // Imp / Water Ele
         if (me->GetCharmInfo()->HasCommandState(COMMAND_STAY))
         {
             if (me->GetCharmInfo()->IsCommandAttack() || (me->GetCharmInfo()->IsAtStay() && me->IsWithinMeleeRange(me->GetVictim())))
-                DoMeleeAttackIfReady();
+            {
+                if (canMelee)
+                    DoMeleeAttackIfReady();
+            }
         }
         else
-            DoMeleeAttackIfReady();
+        {
+            if (canMelee)
+                DoMeleeAttackIfReady();
+        }
+        /** @epoch-end */
     }
     else
     {
@@ -368,7 +377,7 @@ void PetAI::HandleReturnMovement()
 
     if (!me->GetCharmInfo())
     {
-        TC_LOG_WARN("scripts.ai.petai", "me->GetCharmInfo() is NULL in PetAI::HandleReturnMovement(). Debug info: %s", GetDebugInfo().c_str());
+        TC_LOG_WARN("scripts.ai.petai", "me->GetCharmInfo() is NULL in PetAI::HandleReturnMovement(). Debug info: {}", GetDebugInfo());
         return;
     }
 
@@ -498,7 +507,7 @@ bool PetAI::CanAttack(Unit* target)
 
     if (!me->GetCharmInfo())
     {
-        TC_LOG_WARN("scripts.ai.petai", "me->GetCharmInfo() is NULL in PetAI::CanAttack(). Debug info: %s", GetDebugInfo().c_str());
+        TC_LOG_WARN("scripts.ai.petai", "me->GetCharmInfo() is NULL in PetAI::CanAttack(). Debug info: {}", GetDebugInfo());
         return false;
     }
 
