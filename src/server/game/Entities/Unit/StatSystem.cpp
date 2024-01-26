@@ -1560,6 +1560,15 @@ bool Guardian::UpdateStats(Stats stat)
             ownersBonus = float(owner->GetStat(stat)) * mod;
             value += ownersBonus;
         }
+        // @epoch-start
+        FIRE_ID(
+            GetCreatureTemplate()->events.id
+            , Creature, OnUpdateStamina
+            , TSCreature(this)
+            , TSMutableNumber<float>(&value)
+            , true
+        );
+        // @epoch-end
     }
                                                             //warlock's and mage's pets gain 30% of owner's intellect
     else if (stat == STAT_INTELLECT)
@@ -1569,14 +1578,53 @@ bool Guardian::UpdateStats(Stats stat)
             ownersBonus = CalculatePct(owner->GetStat(stat), 30);
             value += ownersBonus;
         }
+        // @epoch-start
+        FIRE_ID(
+            GetCreatureTemplate()->events.id
+            , Creature, OnUpdateIntellect
+            , TSCreature(this)
+            , TSMutableNumber<float>(&value)
+            , true
+        );
+        // @epoch-end
     }
-/*
+
+    // @epoch-start
     else if (stat == STAT_STRENGTH)
     {
-        if (IsPetGhoul())
-            value += float(owner->GetStat(stat)) * 0.3f;
+        FIRE_ID(
+            GetCreatureTemplate()->events.id
+            , Creature, OnUpdateStrength
+            , TSCreature(this)
+            , TSMutableNumber<float>(&value)
+            , true
+        );
+        //if (IsPetGhoul())
+        //    value += float(owner->GetStat(stat)) * 0.3f;
     }
-*/
+
+    else if (stat == STAT_AGILITY)
+    {
+        FIRE_ID(
+            GetCreatureTemplate()->events.id
+            , Creature, OnUpdateAgility
+            , TSCreature(this)
+            , TSMutableNumber<float>(&value)
+            , true
+        );
+    }
+
+    else if (stat == STAT_SPIRIT)
+    {
+        FIRE_ID(
+            GetCreatureTemplate()->events.id
+            , Creature, OnUpdateSpirit
+            , TSCreature(this)
+            , TSMutableNumber<float>(&value)
+            , true
+        );
+    }
+    // @epoch-end
 
     SetStat(stat, int32(value));
     m_statFromOwner[stat] = ownersBonus;
@@ -1935,6 +1983,16 @@ void Guardian::UpdateDamagePhysical(WeaponAttackType attType)
 
 void Guardian::SetBonusDamage(int32 damage)
 {
+    // @epoch-start
+    FIRE_ID(
+        GetCreatureTemplate()->events.id
+        , Creature, OnUpdateSpellPower
+        , TSCreature(this)
+        , TSMutableNumber<int32>(&damage)
+        , true
+    );
+    // @epoch-end
+
     m_bonusSpellDamage = damage;
     if (GetOwner()->GetTypeId() == TYPEID_PLAYER)
         GetOwner()->SetUInt32Value(PLAYER_PET_SPELL_POWER, damage);

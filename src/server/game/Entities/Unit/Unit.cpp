@@ -1119,6 +1119,19 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
     // Script Hook For CalculateSpellDamageTaken -- Allow scripts to change the Damage post class mitigation calculations
     sScriptMgr->ModifySpellDamageTaken(damageInfo->target, damageInfo->attacker, damage);
 
+    // @epoch-start
+    FIRE_ID(
+        spellInfo->events.id
+        , Spell, OnDamage
+        , TSSpell(spell)
+        , TSMutableNumber<int32>(&damage)
+        , TSSpellDamageInfo(damageInfo)
+        , attackType
+        , crit
+        , effectMask
+    );
+    // @epoch-end
+
     // Calculate absorb resist
     if (damage < 0)
         damage = 0;
@@ -1440,6 +1453,15 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
         resilienceReduction = damageInfo->Damages[i].Damage - resilienceReduction;
         damageInfo->Damages[i].Damage -= resilienceReduction;
         damageInfo->CleanDamage += resilienceReduction;
+
+        // @epoch-start
+        FIRE(Unit, OnMeleeDamage
+            , TSMeleeDamageInfo(damageInfo)
+            , TSMutableNumber<uint32>(&damageInfo->Damages[i].Damage)
+            , attackType
+            , i
+        );
+        // @epoch-end
 
         // Calculate absorb resist
         if (int32(damageInfo->Damages[i].Damage) > 0)
@@ -7709,6 +7731,16 @@ uint32 Unit::SpellHealingBonusTaken(Unit* caster, SpellInfo const* spellProto, u
     float maxval = float(GetMaxPositiveAuraModifier(SPELL_AURA_MOD_HEALING_PCT));
     if (maxval)
         AddPct(TakenTotalMod, maxval);
+
+    // @epoch-start
+    FIRE_ID(
+          spellProto->events.id
+        , Spell,OnHealEarly
+        , spellProto
+        , TSUnit(const_cast<Unit*>(caster))
+        , TSMutableNumber<uint32>(&healamount)
+    );
+    // @epoch-end
 
     // Nourish cast
     if (spellProto->SpellFamilyName == SPELLFAMILY_DRUID && spellProto->SpellFamilyFlags[1] & 0x2000000)
