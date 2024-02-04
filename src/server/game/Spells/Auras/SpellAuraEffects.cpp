@@ -1735,6 +1735,13 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
             case FORM_FLIGHT:
             case FORM_MOONKIN:
             {
+                // @epoch-begin
+                if (Player* player = target->ToPlayer())
+                {
+                    player->SetCanTeleport(true);
+                }
+                // @epoch-end
+
                 // remove movement affects
                 target->RemoveAurasByShapeShift();
 

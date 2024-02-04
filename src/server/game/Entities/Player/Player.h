@@ -2169,6 +2169,13 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SetMap(Map* map) override;
         void ResetMap() override;
 
+        // @epoch-begin
+        bool CanTeleport() { return m_canTeleport; }
+        void SetCanTeleport(bool value) { m_canTeleport = value; }
+        bool CanKnockback() { return m_canKnockback; }
+        void SetCanKnockback(bool value) { m_canKnockback = value; }
+        // @epoch-end
+
         bool isAllowedToLoot(Creature const* creature) const;
 
         DeclinedName const* GetDeclinedNames() const { return m_declinedname; }
@@ -2551,6 +2558,10 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         uint32 m_DelayedOperations;
         bool m_bCanDelayTeleport;
         bool m_bHasDelayedTeleport;
+        // @epoch-begin
+        bool m_canTeleport;
+        bool m_canKnockback;
+        // @epoch-end
 
         std::unique_ptr<PetStable> m_petStable;
 

@@ -15,10 +15,18 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+// @epoch-begin
+#include "World.h"
+#include "AnticheatMgr.h"
+// @epoch-end
+
 // This is where scripts' loading functions should be declared:
 void AddSC_account_commandscript();
 void AddSC_achievement_commandscript();
 void AddSC_ahbot_commandscript();
+// @epoch-begin
+void AddSC_anticheat_commandscript();
+// @epoch-end
 void AddSC_arena_commandscript();
 void AddSC_ban_commandscript();
 void AddSC_bf_commandscript();
@@ -64,6 +72,9 @@ void AddCommandsScripts()
     AddSC_account_commandscript();
     AddSC_achievement_commandscript();
     AddSC_ahbot_commandscript();
+    // @epoch-begin
+    AddSC_anticheat_commandscript();
+    // @epoch-end
     AddSC_arena_commandscript();
     AddSC_ban_commandscript();
     AddSC_bf_commandscript();

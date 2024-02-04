@@ -41,6 +41,9 @@
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics.hpp>
 #include <boost/circular_buffer.hpp>
+// @epoch-begin
+#include "AnticheatMgr.h"
+// @epoch-end
 
 void WorldSession::HandleMoveWorldportAckOpcode(WorldPacket & /*recvData*/)
 {
@@ -365,6 +368,11 @@ void WorldSession::HandleMovementOpcodes(WorldPacket& recvData)
     if (opcode == MSG_MOVE_FALL_LAND || opcode == MSG_MOVE_START_SWIM)
         mover->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_LANDING); // Parachutes
 
+    // @epoch-begin
+    if (plrMover)
+        sAnticheatMgr->OnPlayerMove(plrMover, movementInfo, opcode);
+    // @epoch-end
+
     /* process position-change */
     WorldPacket data(opcode, recvData.size());
     int64 movementTime = (int64) movementInfo.time + _timeSyncClockDelta;
@@ -660,6 +668,10 @@ void WorldSession::HandleMoveKnockBackAck(WorldPacket& recvData)
 
     WorldPacket data(MSG_MOVE_KNOCK_BACK, 66);
     WriteMovementInfo(&data, &movementInfo);
+
+    // @epoch-begin
+    _player->SetCanTeleport(true);
+    // @epoch-end
 
     // knockback specific info
     data << movementInfo.jump.sinAngle;

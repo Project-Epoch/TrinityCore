@@ -118,6 +118,9 @@
 #include "TSGameObject.h"
 #include "TSCorpse.h"
 // @tswow-end
+// @epoch-begin
+#include "AnticheatMgr.h"
+// @epoch-end
 
 #define ZONE_UPDATE_INTERVAL (1*IN_MILLISECONDS)
 
@@ -254,6 +257,10 @@ Player::Player(WorldSession* session): Unit(true)
     m_bCanDelayTeleport = false;
     m_bHasDelayedTeleport = false;
     m_teleport_options = 0;
+    // @epoch-begin
+    m_canTeleport = false;
+    m_canKnockback = false;
+    // @epoch-end
 
     m_trade = nullptr;
 
@@ -1245,6 +1252,10 @@ void Player::Update(uint32 p_time)
             m_zoneUpdateTimer -= p_time;
     }
 
+    // @epoch-begin
+    sScriptMgr->OnPlayerUpdate(this, p_time);
+    // @epoch-end
+
     if (IsAlive())
     {
         m_regenTimer += p_time;
@@ -1755,8 +1766,14 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
         // at client packet MSG_MOVE_TELEPORT_ACK
         SetSemaphoreTeleportNear(true);
         // near teleport, triggering send MSG_MOVE_TELEPORT_ACK from client at landing
+        // @epoch-begin
         if (!GetSession()->PlayerLogout())
+        {
+            SetCanTeleport(true);
             SendTeleportPacket(m_teleport_dest, (options & TELE_TO_TRANSPORT_TELEPORT) != 0);
+            SendTeleportPacket(m_teleport_dest, (options & TELE_TO_TRANSPORT_TELEPORT) != 0);
+        }
+        // @epoch-end
     }
     else
     {
@@ -1863,6 +1880,9 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
 
             if (!GetSession()->PlayerLogout())
             {
+                // @epoch-begin
+                SetCanTeleport(true);
+                // @epoch-end
                 WorldPacket data(SMSG_NEW_WORLD, 4 + 4 + 4 + 4 + 4);
                 data << uint32(mapid);
                 if (GetTransport())
@@ -20007,6 +20027,11 @@ void Player::SaveToDB(CharacterDatabaseTransaction trans, bool create /* = false
     // save stats can be out of transaction
     if (m_session->isLogingOut() || !sWorld->getBoolConfig(CONFIG_STATS_SAVE_ONLY_ON_LOGOUT))
         _SaveStats(trans);
+
+    // @epoch-begin
+    // we save the data here to prevent spamming
+    sAnticheatMgr->SavePlayerData(this);
+    // @epoch-end
 
     // save pet (hunter pet level and experience and all type pets health/mana).
     if (Pet* pet = GetPet())

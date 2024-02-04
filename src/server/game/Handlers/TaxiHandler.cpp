@@ -120,6 +120,11 @@ void WorldSession::SendTaxiMenu(Creature* unit)
 
 void WorldSession::SendDoFlight(uint32 mountDisplayId, uint32 path, uint32 pathNode)
 {
+    // @epoch-begin
+    // add anticheat helper here to avoid false hits if relog during flight path travel
+    GetPlayer()->SetCanTeleport(true);
+    // @epoch-end
+
     // remove fake death
     if (GetPlayer()->HasUnitState(UNIT_STATE_DIED))
         GetPlayer()->RemoveAurasByType(SPELL_AURA_FEIGN_DEATH);
@@ -307,6 +312,10 @@ void WorldSession::HandleActivateTaxiOpcode(WorldPacket& recvData)
 
 void WorldSession::SendActivateTaxiReply(ActivateTaxiReply reply)
 {
+    // @epoch-begin
+    GetPlayer()->SetCanTeleport(true);
+    // @epoch-end
+
     WorldPacket data(SMSG_ACTIVATETAXIREPLY, 4);
     data << uint32(reply);
     SendPacket(&data);
