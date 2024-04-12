@@ -55,6 +55,9 @@ class TC_GAME_API PetAI : public CreatureAI
         void MoveInLineOfSight_Safe(Unit* /*who*/) { } // CreatureAI interferes with returning pets
         void JustAppeared() override { } // we will control following manually
         void EnterEvadeMode(EvadeReason /*why*/) override { } // For fleeing, pets don't use this type of Evade mechanic
+        // @epoch-start
+        void DoAttack(Unit* target, bool chase);
+        // @epoch-end
 
     private:
         bool NeedToStop();
@@ -62,7 +65,9 @@ class TC_GAME_API PetAI : public CreatureAI
         void UpdateAllies();
         Unit* SelectNextTarget(bool allowAutoSelect) const;
         void HandleReturnMovement();
-        void DoAttack(Unit* target, bool chase);
+        // @epoch-start
+        //void DoAttack(Unit* target, bool chase);
+        // @epoch-end
         bool CanAttack(Unit* target);
         // Quick access to set all flags to FALSE
         void ClearCharmInfoFlags();
