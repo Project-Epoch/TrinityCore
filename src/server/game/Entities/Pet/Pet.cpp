@@ -901,7 +901,12 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
 
     uint32 creature_ID = (petType == HUNTER_PET) ? 1 : cinfo->Entry;
 
-    SetMeleeDamageSchool(SpellSchools(cinfo->dmgschool));
+    /** @epoch-start */
+    if (petType == HUNTER_PET)
+        SetMeleeDamageSchool(SpellSchools(SPELL_SCHOOL_NORMAL));
+    else
+        SetMeleeDamageSchool(SpellSchools(cinfo->dmgschool));
+    /** @epoch-end */
 
     SetStatFlatModifier(UNIT_MOD_ARMOR, BASE_VALUE, float(petlevel * 50));
 
