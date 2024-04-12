@@ -2701,29 +2701,32 @@ float Unit::GetUnitDodgeChance(WeaponAttackType attType, Unit const* victim) con
     int32 const attackerWeaponSkill = GetWeaponSkillValue(attType, victim);
     int32 const victimMaxSkillValueForLevel = victim->GetMaxSkillValueForLevel(this);
     int32 const skillDiff = victimMaxSkillValueForLevel - attackerWeaponSkill;
+    /** @epoch-start */
+    uint32 const isPlayerOrPet = HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
 
     float chance = 0.0f;
-    float skillBonus = 0.0f;
+    float skillBonus = 0.04f;
+    if (victim->GetTypeId() == TYPEID_UNIT)
+        chance += 5.0f;
+
+    if (!isPlayerOrPet && skillDiff > 0) {
+        skillBonus = 0.1f;
+    }
+
     if (victim->GetTypeId() == TYPEID_PLAYER)
     {
         chance = victim->GetFloatValue(PLAYER_DODGE_PERCENTAGE);
-        skillBonus = 0.04f * skillDiff;
     }
     else
     {
         if (!victim->IsTotem())
         {
-            chance = 5.0f;
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_DODGE_PERCENT);
-
-            if (skillDiff <= 10)
-                skillBonus = skillDiff * 0.1f;
-            else
-                skillBonus = 1.0f + (skillDiff - 10) * 0.1f;
         }
     }
 
-    chance += skillBonus;
+    chance += (skillDiff * skillBonus);
+    /** @epoch-end */
 
     // Reduce enemy dodge chance by SPELL_AURA_MOD_COMBAT_RESULT_CHANCE
     chance += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_COMBAT_RESULT_CHANCE, VICTIMSTATE_DODGE);
@@ -2744,9 +2747,19 @@ float Unit::GetUnitParryChance(WeaponAttackType attType, Unit const* victim) con
     int32 const attackerWeaponSkill = GetWeaponSkillValue(attType, victim);
     int32 const victimMaxSkillValueForLevel = victim->GetMaxSkillValueForLevel(this);
     int32 const skillDiff = victimMaxSkillValueForLevel - attackerWeaponSkill;
+    /** @epoch-start */
+    uint32 const isPlayerOrPet = HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
 
     float chance = 0.0f;
-    float skillBonus = 0.0f;
+    float skillBonus = 0.04f;
+    if (!isPlayerOrPet && skillDiff > 0)
+    {
+        if (skillDiff > 10)
+            skillBonus = 0.6f;
+        else
+            skillBonus = 0.1f;
+    }
+
     if (Player const* playerVictim = victim->ToPlayer())
     {
         if (playerVictim->CanParry())
@@ -2757,8 +2770,6 @@ float Unit::GetUnitParryChance(WeaponAttackType attType, Unit const* victim) con
 
             if (tmpitem)
                 chance = playerVictim->GetFloatValue(PLAYER_PARRY_PERCENTAGE);
-
-            skillBonus = 0.04f * skillDiff;
         }
     }
     else
@@ -2767,15 +2778,11 @@ float Unit::GetUnitParryChance(WeaponAttackType attType, Unit const* victim) con
         {
             chance = 5.0f;
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_PARRY_PERCENT);
-
-            if (skillDiff <= 10)
-                skillBonus = skillDiff * 0.1f;
-            else
-                skillBonus = 1.0f + (skillDiff - 10) * 1.6f;
         }
     }
 
-    chance += skillBonus;
+    chance += (skillDiff * skillBonus);
+    /** @epoch-end */
 
     // Reduce parry chance by attacker expertise rating
     if (GetTypeId() == TYPEID_PLAYER)
@@ -2806,9 +2813,14 @@ float Unit::GetUnitBlockChance(WeaponAttackType attType, Unit const* victim) con
     int32 const attackerWeaponSkill = GetWeaponSkillValue(attType, victim);
     int32 const victimMaxSkillValueForLevel = victim->GetMaxSkillValueForLevel(this);
     int32 const skillDiff = victimMaxSkillValueForLevel - attackerWeaponSkill;
+    /** @epoch-start */
+    uint32 const isPlayerOrPet = HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
 
     float chance = 0.0f;
-    float skillBonus = 0.0f;
+    float skillBonus = 0.04f;
+    if (!isPlayerOrPet && skillDiff > 0)
+        skillBonus = 0.0f;
+
     if (Player const* playerVictim = victim->ToPlayer())
     {
         if (playerVictim->CanBlock())
@@ -2817,7 +2829,6 @@ float Unit::GetUnitBlockChance(WeaponAttackType attType, Unit const* victim) con
             if (tmpitem && !tmpitem->IsBroken() && tmpitem->GetTemplate()->Block)
             {
                 chance = playerVictim->GetFloatValue(PLAYER_BLOCK_PERCENTAGE);
-                skillBonus = 0.04f * skillDiff;
             }
         }
     }
@@ -2827,15 +2838,11 @@ float Unit::GetUnitBlockChance(WeaponAttackType attType, Unit const* victim) con
         {
             chance = 5.0f;
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT);
-
-            if (skillDiff <= 10)
-                skillBonus = skillDiff * 0.1f;
-            else
-                skillBonus = 1.0f + (skillDiff - 10) * 0.1f;
         }
     }
 
-    chance += skillBonus;
+    chance += (skillDiff * skillBonus);
+    /** @epoch-end */
     return std::max(chance, 0.0f);
 }
 
