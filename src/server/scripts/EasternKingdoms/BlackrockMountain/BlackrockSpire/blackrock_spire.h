@@ -20,7 +20,7 @@
 
 #include "CreatureAIImpl.h"
 
-uint32 const EncounterCount         = 23;
+uint32 const EncounterCount         = 24;
 
 #define BRSScriptName "instance_blackrock_spire"
 #define DataHeader    "BRS"
@@ -52,7 +52,8 @@ enum BRSDataTypes
     DATA_HALL_RUNE_6                = 21,
     DATA_HALL_RUNE_7                = 22,
     DATA_SCARSHIELD_INFILTRATOR     = 23,
-    DATA_BLACKHAND_INCARCERATOR     = 24
+    DATA_BLACKHAND_INCARCERATOR     = 24,
+    DATA_SOLAKAR_FLAMEWREATH        = 25
 };
 
 enum BRSCreaturesIds

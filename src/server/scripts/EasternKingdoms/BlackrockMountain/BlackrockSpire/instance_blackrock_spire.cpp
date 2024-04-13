@@ -263,6 +263,7 @@ public:
                 case DATA_THE_BEAST:
                 case DATA_GENERAL_DRAKKISATH:
                 case DATA_DRAGONSPIRE_ROOM:
+                case DATA_SOLAKAR_FLAMEWREATH:
                     break;
                 default:
                     break;
