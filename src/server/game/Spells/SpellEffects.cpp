@@ -622,23 +622,25 @@ void Spell::EffectSchoolDMG()
                     if (found)
                         damage += m_spellInfo->GetEffect(EFFECT_1).CalcValue();
 
-                    if (Player* caster = unitCaster->ToPlayer())
-                    {
+                    /** @epoch-start */
+                    //if (Player* caster = unitCaster->ToPlayer())
+                    //{
                         // Add Ammo and Weapon damage plus RAP * 0.1
-                        float dmg_min = 0.f;
-                        float dmg_max = 0.f;
-                        for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
-                        {
-                            dmg_min += caster->GetWeaponDamageRange(RANGED_ATTACK, MINDAMAGE, i);
-                            dmg_max += caster->GetWeaponDamageRange(RANGED_ATTACK, MAXDAMAGE, i);
-                        }
+                    //    float dmg_min = 0.f;
+                    //    float dmg_max = 0.f;
+                    //    for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+                    //    {
+                    //        dmg_min += caster->GetWeaponDamageRange(RANGED_ATTACK, MINDAMAGE, i);
+                    //        dmg_max += caster->GetWeaponDamageRange(RANGED_ATTACK, MAXDAMAGE, i);
+                    //    }
 
-                        if (dmg_max == 0.0f && dmg_min > dmg_max)
-                            damage += int32(dmg_min);
-                        else
-                            damage += irand(int32(dmg_min), int32(dmg_max));
-                        damage += int32(caster->GetAmmoDPS() * caster->GetAttackTime(RANGED_ATTACK) * 0.001f);
-                    }
+                    //    if (dmg_max == 0.0f && dmg_min > dmg_max)
+                    //        damage += int32(dmg_min);
+                    //    else
+                    //        damage += irand(int32(dmg_min), int32(dmg_max));
+                    //    damage += int32(caster->GetAmmoDPS() * caster->GetAttackTime(RANGED_ATTACK) * 0.001f);
+                    //}
+                    /** @epoch-end */
                 }
                 break;
             }
