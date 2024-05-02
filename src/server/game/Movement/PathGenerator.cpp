@@ -23,7 +23,6 @@
 #include "Log.h"
 #include "DisableMgr.h"
 #include "DetourCommon.h"
-#include "DetourNavMeshQuery.h"
 #include "Metric.h"
 
 ////////////////// PathGenerator //////////////////

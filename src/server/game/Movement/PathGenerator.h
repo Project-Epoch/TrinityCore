@@ -20,8 +20,8 @@
 
 #include "MapDefines.h"
 #include "DetourNavMesh.h"
-#include "DetourNavMeshQuery.h"
 #include "MoveSplineInitArgs.h"
+#include "Nav/DetourFilters.h"
 #include <G3D/Vector3.h>
 
 class Unit;
@@ -108,7 +108,7 @@ class TC_GAME_API PathGenerator
         dtNavMesh const* _navMesh;              // the nav mesh
         dtNavMeshQuery const* _navMeshQuery;    // the nav mesh query used to find the path
 
-        dtQueryFilter _filter;  // use single filter for all movements, update it when needed
+        dtCustomCostQueryFilter _filter;  // use single filter for all movements, update it when needed
 
         void SetStartPosition(G3D::Vector3 const& point) { _startPosition = point; }
         void SetEndPosition(G3D::Vector3 const& point) { _actualEndPosition = point; _endPosition = point; }

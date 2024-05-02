@@ -20,7 +20,7 @@
 
 #include "Define.h"
 #include "DetourNavMesh.h"
-#include "DetourNavMeshQuery.h"
+#include "DetourFilters.h"
 #include <string>
 #include <unordered_map>
 #include <vector>
