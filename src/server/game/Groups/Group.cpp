@@ -708,28 +708,6 @@ void Group::ChangeLeader(ObjectGuid newLeaderGuid)
     {
         CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
 
-        // Remove the groups permanent instance bindings
-        for (uint8 i = 0; i < MAX_DIFFICULTY; ++i)
-        {
-            for (BoundInstancesMap::iterator itr = m_boundInstances[i].begin(); itr != m_boundInstances[i].end();)
-            {
-                // Do not unbind saves of instances that already had map created (a newLeader entered)
-                // forcing a new instance with another leader requires group disbanding (confirmed on retail)
-                if (itr->second.perm && !sMapMgr->FindMap(itr->first, itr->second.save->GetInstanceId()))
-                {
-                    CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_GROUP_INSTANCE_PERM_BINDING);
-                    stmt->setUInt32(0, m_dbStoreId);
-                    stmt->setUInt32(1, itr->second.save->GetInstanceId());
-                    trans->Append(stmt);
-
-                    itr->second.save->RemoveGroup(this);
-                    m_boundInstances[i].erase(itr++);
-                }
-                else
-                    ++itr;
-            }
-        }
-
         // Copy the permanent binds from the new leader to the group
         Group::ConvertLeaderInstancesToGroup(newLeader, this, true);
 
