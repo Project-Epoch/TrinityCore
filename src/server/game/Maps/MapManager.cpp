@@ -312,55 +312,34 @@ void MapManager::InitInstanceIds()
 {
     _nextInstanceId = 1;
 
-    if (QueryResult result = CharacterDatabase.Query("SELECT IFNULL(MAX(id), 0) FROM instance"))
-        _freeInstanceIds.resize((*result)[0].GetUInt64() + 2, true); // make space for one extra to be able to access [_nextInstanceId] index in case all slots are taken
-    else
-        _freeInstanceIds.resize(_nextInstanceId + 1, true);
+    QueryResult result = CharacterDatabase.Query("SELECT MAX(id) FROM instance");
+    if (result)
+    {
+        uint32 maxId = (*result)[0].GetUInt32();
 
-    // never allow 0 id
-    _freeInstanceIds[0] = false;
+        // resize to maxId + 1, if we have instance with id n, there are n+1 elements
+        _instanceIds.resize(maxId + 1);
+    }
 }
 
 void MapManager::RegisterInstanceId(uint32 instanceId)
 {
     // Allocation and sizing was done in InitInstanceIds()
-    _freeInstanceIds[instanceId] = false;
-
-    // Instances are pulled in ascending order from db and nextInstanceId is initialized with 1,
-    // so if the instance id is used, increment until we find the first unused one for a potential new instance
-    if (_nextInstanceId == instanceId)
-        ++_nextInstanceId;
+    _instanceIds[instanceId] = true;
 }
 
 uint32 MapManager::GenerateInstanceId()
 {
-    if (_nextInstanceId == 0xFFFFFFFF)
+    uint32 newInstanceId = _nextInstanceId;
+
+    // Find the lowest available id starting from the current NextInstanceId (which should be the lowest according to the logic in FreeInstanceId()
+    while (_nextInstanceId < 0xFFFFFFFF && ++_nextInstanceId < _instanceIds.size() && _instanceIds[_nextInstanceId]);
+    
+    if (newInstanceId == _nextInstanceId)
     {
         TC_LOG_ERROR("maps", "Instance ID overflow!! Can't continue, shutting down server. ");
         World::StopNow(ERROR_EXIT_CODE);
-        return _nextInstanceId;
     }
-
-    uint32 newInstanceId = _nextInstanceId;
-    ASSERT(newInstanceId < _freeInstanceIds.size());
-    _freeInstanceIds[newInstanceId] = false;
-
-    // Find the lowest available id starting from the current NextInstanceId (which should be the lowest according to the logic in FreeInstanceId())
-    size_t nextFreedId = _freeInstanceIds.find_next(_nextInstanceId++);
-    if (nextFreedId == InstanceIds::npos)
-    {
-        _nextInstanceId = uint32(_freeInstanceIds.size());
-        _freeInstanceIds.push_back(true);
-    }
-    else
-        _nextInstanceId = uint32(nextFreedId);
 
     return newInstanceId;
-}
-
-void MapManager::FreeInstanceId(uint32 instanceId)
-{
-    // If freed instance id is lower than the next id available for new instances, use the freed one instead
-    _nextInstanceId = std::min(instanceId, _nextInstanceId);
-    _freeInstanceIds[instanceId] = true;
 }
