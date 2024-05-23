@@ -596,9 +596,6 @@ void WorldSession::LogoutPlayer(bool save)
         ///- Leave all channels before player delete...
         _player->CleanupChannels();
 
-        ///- If the player is in a group (or invited), remove him. If the group if then only 1 person, disband the group.
-        _player->UninviteFromGroup();
-
         //! Send update to group and reset stored max enchanting level
         if (Group* group = _player->GetGroup())
         {
