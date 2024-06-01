@@ -13,6 +13,8 @@ public:
 
     void WriteSaveDataMore(std::ostringstream& /*data*/) override;
     void ReadSaveDataMore(std::istringstream& /*data*/) override;
+    void SetData(uint32 /*type*/, uint32 /*data*/) override;
+    uint32 GetData(uint32 /*type*/) const override;
 };
 
 #endif

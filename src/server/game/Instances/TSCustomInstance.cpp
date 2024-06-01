@@ -58,3 +58,29 @@ void TSCustomInstance::ReadSaveDataMore(std::istringstream& data)
         , _data
     );
 }
+
+uint32 TSCustomInstance::GetData(uint32 type) const
+{
+    uint32 result = 0;
+
+    FIRE_ID(
+          instance->GetEntry()->ID
+        , Instance,OnDataGet
+        , TSInstance(instance, const_cast<TSCustomInstance*>(this))
+        , type
+        , TSMutableNumber<uint32>(&result)
+    );
+
+    return result;
+}
+
+void TSCustomInstance::SetData(uint32 type, uint32 data)
+{
+    FIRE_ID(
+          instance->GetEntry()->ID
+        , Instance,OnDataSet
+        , TSInstance(instance, this)
+        , type
+        , data
+    );
+}
