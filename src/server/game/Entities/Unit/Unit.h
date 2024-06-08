@@ -179,6 +179,7 @@ enum UnitMods
     UNIT_MOD_DAMAGE_MAINHAND,
     UNIT_MOD_DAMAGE_OFFHAND,
     UNIT_MOD_DAMAGE_RANGED,
+    UNIT_MOD_THORNS,
     UNIT_MOD_END,
     // synonyms
     UNIT_MOD_STAT_START = UNIT_MOD_STAT_STRENGTH,
@@ -323,9 +324,9 @@ enum CombatRating
     CR_DODGE                    = 2,
     CR_PARRY                    = 3,
     CR_BLOCK                    = 4,
-    CR_HIT_MELEE                = 5,
-    CR_HIT_RANGED               = 6,
-    CR_HIT_SPELL                = 7,
+    CR_SPEED                    = 5,
+    CR_LIFESTEAL                = 6,
+    CR_AVOIDANCE                = 7,
     CR_CRIT_MELEE               = 8,
     CR_CRIT_RANGED              = 9,
     CR_CRIT_SPELL               = 10,
@@ -341,8 +342,8 @@ enum CombatRating
     CR_WEAPON_SKILL_MAINHAND    = 20,
     CR_WEAPON_SKILL_OFFHAND     = 21,
     CR_WEAPON_SKILL_RANGED      = 22,
-    CR_EXPERTISE                = 23,
-    CR_ARMOR_PENETRATION        = 24
+    CR_MASTERY                  = 23,
+    CR_MULTISTRIKE              = 24
 };
 
 #define MAX_COMBAT_RATING         25
@@ -439,6 +440,8 @@ class TC_GAME_API DamageInfo
         uint32 m_resist;
         uint32 m_block;
         uint32 m_hitMask;
+        bool m_criticalBlock = false;
+        uint32 m_hitInfo;
 
         // amalgamation constructor (used for proc)
         DamageInfo(DamageInfo const& dmg1, DamageInfo const& dmg2);
@@ -464,6 +467,9 @@ class TC_GAME_API DamageInfo
         uint32 GetAbsorb() const { return m_absorb; }
         uint32 GetResist() const { return m_resist; }
         uint32 GetBlock() const { return m_block; }
+
+        bool GetCriticalBlock() const { return m_criticalBlock; };
+        uint32 GetHitInfo() const { return m_hitInfo; };
 
         uint32 GetHitMask() const;
 };
@@ -559,6 +565,8 @@ struct CalcDamageInfo
     uint32 ProcVictim;
     uint32 CleanDamage;          // Used only for rage calculation
     MeleeHitOutcome HitOutCome;  /// @todo remove this field (need use TargetState)
+
+    bool criticalBlock = false;
 };
 
 // Spell damage info structure based on structure sending in SMSG_SPELLNONMELEEDAMAGELOG opcode
@@ -584,6 +592,7 @@ struct TC_GAME_API SpellNonMeleeDamage
     // Used for help
     uint32 cleanDamage;
     bool   fullBlock;
+    bool criticalBlock = false;
 };
 
 struct SpellPeriodicAuraLogInfo
@@ -762,6 +771,13 @@ struct PositionUpdateInfo
     bool Turned = false;
 };
 
+class ThornsDamage
+{
+public:
+    std::unordered_map<SpellSchoolMask, uint32> ThornsDamageMap;
+    uint32 TotalDamage;
+};
+
 // delay time next attack to prevent client attack animation problems
 #define ATTACK_DISPLAY_DELAY 200
 #define MAX_PLAYER_STEALTH_DETECT_RANGE 30.0f               // max distance for detection targets by player
@@ -795,6 +811,8 @@ class TC_GAME_API Unit : public WorldObject
         typedef std::map<uint8, AuraApplication*> VisibleAuraMap;
 
         virtual ~Unit();
+
+        bool IsCreature() { return GetTypeId() == TYPEID_UNIT; }
 
         bool IsAIEnabled() const { return (i_AI != nullptr); }
         void AIUpdateTick(uint32 diff);
@@ -917,6 +935,7 @@ class TC_GAME_API Unit : public WorldObject
 
         uint32 GetHealth()    const { return GetUInt32Value(UNIT_FIELD_HEALTH); }
         uint32 GetMaxHealth() const { return GetUInt32Value(UNIT_FIELD_MAXHEALTH); }
+        uint32 GetMissingHealth() const { return GetMaxHealth() - GetHealth(); }
 
         bool IsFullHealth() const { return GetHealth() == GetMaxHealth(); }
         bool HealthBelowPct(int32 pct) const { return GetHealth() < CountPctFromMaxHealth(pct); }
@@ -926,6 +945,9 @@ class TC_GAME_API Unit : public WorldObject
         float GetHealthPct() const { return GetMaxHealth() ? 100.f * GetHealth() / GetMaxHealth() : 0.0f; }
         uint32 CountPctFromMaxHealth(int32 pct) const { return CalculatePct(GetMaxHealth(), pct); }
         uint32 CountPctFromCurHealth(int32 pct) const { return CalculatePct(GetHealth(), pct); }
+
+        bool PowerAbovePct(float pct) const { return pct < GetPowerPct(POWER_MANA); }
+        bool PowerBelowPct(float pct) const { return pct > GetPowerPct(POWER_MANA); }
 
         void SetHealth(uint32 val);
         void SetMaxHealth(uint32 val);
@@ -1042,6 +1064,9 @@ class TC_GAME_API Unit : public WorldObject
 
         void CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, WeaponAttackType attackType = BASE_ATTACK);
         void DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss);
+        ThornsDamage CalculateThorns();
+        ThornsDamage CalculateThorns(Unit* attacker, Unit* victim, bool calcMisses = true);
+
         void HandleProcExtraAttackFor(Unit* victim, uint32 count);
 
         void SetLastExtraAttackSpell(uint32 spellId) { _lastExtraAttackSpell = spellId; }
@@ -1144,6 +1169,12 @@ class TC_GAME_API Unit : public WorldObject
         bool IsImmuneToNPC() const { return HasUnitFlag(UNIT_FLAG_IMMUNE_TO_NPC); }
         void SetImmuneToNPC(bool apply, bool keepCombat);
         virtual void SetImmuneToNPC(bool apply) { SetImmuneToNPC(apply, false); }
+        void ToggleCombatAuras(bool startingCombat);
+        void ToggleOnPowerPctAuras();
+
+        bool CanProcMultistrike(SpellInfo const* spellInfo) const;
+        bool IsSpellMultistrike() const;
+        void ProcMultistrike(SpellInfo const* procSpellInfo, Unit* target, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, SpellInfo const* procAura, DamageInfo* damageInfo, HealInfo* healInfo);
 
         bool IsInCombat() const { return HasUnitFlag(UNIT_FLAG_IN_COMBAT); }
         bool IsInCombatWith(Unit const* who) const { return who && m_combatManager.IsInCombatWith(who); }
@@ -1271,6 +1302,7 @@ class TC_GAME_API Unit : public WorldObject
 
         void SetMinion(Minion *minion, bool apply);
         void GetAllMinionsByEntry(std::list<Creature*>& Minions, uint32 entry);
+        void GetAllSummonsByEntry(std::list<TempSummon*>& Minions, uint32 entry);
         void RemoveAllMinionsByEntry(uint32 entry);
         void SetCharm(Unit* target, bool apply);
         Unit* GetNextRandomRaidMemberOrPet(float radius);
@@ -1343,6 +1375,8 @@ class TC_GAME_API Unit : public WorldObject
         AuraApplicationMap      & GetAppliedAuras()       { return m_appliedAuras; }
         AuraApplicationMap const& GetAppliedAuras() const { return m_appliedAuras; }
 
+        uint8 GetAppliedAuraCountByMechanicType(Mechanics mech);
+
         void RemoveAura(AuraApplicationMap::iterator &i, AuraRemoveMode mode = AURA_REMOVE_BY_DEFAULT);
         void RemoveAura(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0, AuraRemoveMode removeMode = AURA_REMOVE_BY_DEFAULT);
         void RemoveAura(AuraApplication * aurApp, AuraRemoveMode mode = AURA_REMOVE_BY_DEFAULT);
@@ -1399,6 +1433,13 @@ class TC_GAME_API Unit : public WorldObject
 
         AuraApplication * GetAuraApplication(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, ObjectGuid itemCasterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0, AuraApplication * except = nullptr) const;
         Aura* GetAura(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, ObjectGuid itemCasterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0) const;
+
+        [[nodiscard]] std::vector<Aura*> GetAurasByMiscA(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, ObjectGuid itemCasterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0) const;
+        [[nodiscard]] std::vector<Aura*> GetAurasByMiscB(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, ObjectGuid itemCasterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0) const;
+        [[nodiscard]] std::vector<Aura*> GetAurasByRank1(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, ObjectGuid itemCasterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0) const;
+        [[nodiscard]] Aura* GetAuraByRank1(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, ObjectGuid itemCasterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0) const;
+        [[nodiscard]] bool CheckAuraExistsByMiscA(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, ObjectGuid itemCasterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0) const;
+        [[nodiscard]] bool CheckAuraExistsByMiscB(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, ObjectGuid itemCasterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0) const;
 
         AuraApplication * GetAuraApplicationOfRankedSpell(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, ObjectGuid itemCasterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0, AuraApplication * except = nullptr) const;
         Aura* GetAuraOfRankedSpell(uint32 spellId, ObjectGuid casterGUID = ObjectGuid::Empty, ObjectGuid itemCasterGUID = ObjectGuid::Empty, uint8 reqEffMask = 0) const;
@@ -1498,6 +1539,11 @@ class TC_GAME_API Unit : public WorldObject
         bool IsInFeralForm() const;
 
         bool IsInDisallowedMountForm() const;
+        uint32 GetCriticalBlockAmount(Unit* blocker, uint32 damageBlocked) const;
+        uint32 AdjustBeforeBlockDamage(Unit* blocker, uint32 damage) const;
+
+        UnitMods ClassSpecDependantUnitMod() const;
+        Stats ClassSpecDependantMainStat() const;
 
         float m_modMeleeHitChance;
         float m_modRangedHitChance;
@@ -1506,6 +1552,9 @@ class TC_GAME_API Unit : public WorldObject
 
         float m_modAttackSpeedPct[MAX_ATTACK];
         uint32 m_attackTimer[MAX_ATTACK];
+
+        uint32 m_ComboPointDegenTimer;
+        uint32 m_focusRegen;
 
         // stat system
         void HandleStatFlatModifier(UnitMods unitMod, UnitModifierFlatType modifierType, float amount, bool apply);
@@ -1552,6 +1601,7 @@ class TC_GAME_API Unit : public WorldObject
         void SetRangedAttackPowerModNeg(int32 attackPowerMod) { SetInt16Value(UNIT_FIELD_RANGED_ATTACK_POWER_MODS, 1, attackPowerMod); }
         void SetRangedAttackPowerMultiplier(float attackPowerMult) { SetFloatValue(UNIT_FIELD_RANGED_ATTACK_POWER_MULTIPLIER, attackPowerMult); }
         virtual void UpdateDamagePhysical(WeaponAttackType attType);
+
         float GetTotalAttackPowerValue(WeaponAttackType attType) const;
         float GetWeaponDamageRange(WeaponAttackType attType, WeaponDamageRange type, uint8 damageIndex = 0) const;
         void SetBaseWeaponDamage(WeaponAttackType attType, WeaponDamageRange damageRange, float value, uint8 damageIndex = 0) { m_weaponDamage[attType][damageRange][damageIndex] = value; }
@@ -1628,7 +1678,10 @@ class TC_GAME_API Unit : public WorldObject
         uint32 MeleeDamageBonusDone(Unit* pVictim, uint32 damage, WeaponAttackType attType, SpellInfo const* spellProto = nullptr, SpellSchoolMask damageSchoolMask = SPELL_SCHOOL_MASK_NORMAL);
         uint32 MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackType attType, SpellInfo const* spellProto = nullptr, SpellSchoolMask damageSchoolMask = SPELL_SCHOOL_MASK_NORMAL);
 
+        bool   isSpellBlocked(Unit* victim, SpellInfo const* spellProto, WeaponAttackType attackType = BASE_ATTACK);
         bool IsBlockCritical();
+        bool CanBlockSpells(Unit* victim);
+
         float SpellCritChanceDone(SpellInfo const* spellInfo, SpellSchoolMask schoolMask, WeaponAttackType attackType = BASE_ATTACK, bool isPeriodic = false) const;
         float SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo, SpellSchoolMask schoolMask, float doneChance, WeaponAttackType attackType = BASE_ATTACK, bool isPeriodic = false) const;
         static uint32 SpellCriticalDamageBonus(Unit const* caster, SpellInfo const* spellProto, uint32 damage, Unit* victim);

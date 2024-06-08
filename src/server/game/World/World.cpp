@@ -668,6 +668,52 @@ void World::LoadConfigSettings(bool reload)
     }
     ///- Read other configuration items from the config file
 
+    // @dh-begin
+    // Duskhaven custom player resources
+    rate_values[RATE_POWER_BATTERYGAUGE_INCOME] = sConfigMgr->GetFloatDefault("Rate.BatteryGauge.Income", 1);
+    rate_values[RATE_POWER_BATTERYGAUGE_LOSS] = sConfigMgr->GetFloatDefault("Rate.BatteryGauge.Loss", 1);
+    if (rate_values[RATE_POWER_BATTERYGAUGE_LOSS] < 0)
+    {
+        TC_LOG_ERROR("server.loading", "Rate.BatteryGauge.Loss ({}) must be > 0. Using 1 instead.", rate_values[RATE_POWER_BATTERYGAUGE_LOSS]);
+        rate_values[RATE_POWER_BATTERYGAUGE_LOSS] = 1;
+    }
+    rate_values[RATE_POWER_DISCORD_INCOME] = sConfigMgr->GetFloatDefault("Rate.Discord.Income", 1);
+    rate_values[RATE_POWER_DISCORD_LOSS] = sConfigMgr->GetFloatDefault("Rate.Discord.Loss", 1);
+    if (rate_values[RATE_POWER_DISCORD_LOSS] < 0)
+    {
+        TC_LOG_ERROR("server.loading", "Rate.Discord.Loss ({}) must be > 0. Using 1 instead.", rate_values[RATE_POWER_DISCORD_LOSS]);
+        rate_values[RATE_POWER_DISCORD_LOSS] = 1;
+    }
+    rate_values[RATE_POWER_FURY_INCOME] = sConfigMgr->GetFloatDefault("Rate.Fury.Income", 1);
+    rate_values[RATE_POWER_FURY_LOSS] = sConfigMgr->GetFloatDefault("Rate.Fury.Loss", 1);
+    if (rate_values[RATE_POWER_FURY_LOSS] < 0)
+    {
+        TC_LOG_ERROR("server.loading", "Rate.Fury.Loss ({}) must be > 0. Using 1 instead.", rate_values[RATE_POWER_FURY_LOSS]);
+        rate_values[RATE_POWER_FURY_LOSS] = 1;
+    }
+    rate_values[RATE_POWER_HARMONY_INCOME] = sConfigMgr->GetFloatDefault("Rate.Harmony.Income", 1);
+    rate_values[RATE_POWER_HARMONY_LOSS] = sConfigMgr->GetFloatDefault("Rate.Harmony.Loss", 1);
+    if (rate_values[RATE_POWER_HARMONY_LOSS] < 0)
+    {
+        TC_LOG_ERROR("server.loading", "Rate.Harmony.Loss ({}) must be > 0. Using 1 instead.", rate_values[RATE_POWER_HARMONY_LOSS]);
+        rate_values[RATE_POWER_HARMONY_LOSS] = 1;
+    }
+    rate_values[RATE_POWER_INSANITY_INCOME] = sConfigMgr->GetFloatDefault("Rate.Insanity.Income", 1);
+    rate_values[RATE_POWER_INSANITY_LOSS] = sConfigMgr->GetFloatDefault("Rate.Insanity.Loss", 1);
+    if (rate_values[RATE_POWER_INSANITY_LOSS] < 0)
+    {
+        TC_LOG_ERROR("server.loading", "Rate.Insanity.Loss ({}) must be > 0. Using 1 instead.", rate_values[RATE_POWER_INSANITY_LOSS]);
+        rate_values[RATE_POWER_INSANITY_LOSS] = 1;
+    }
+    rate_values[RATE_POWER_WRATH_INCOME] = sConfigMgr->GetFloatDefault("Rate.Wrath.Income", 1);
+    rate_values[RATE_POWER_WRATH_LOSS] = sConfigMgr->GetFloatDefault("Rate.Wrath.Loss", 1);
+    if (rate_values[RATE_POWER_WRATH_LOSS] < 0)
+    {
+        TC_LOG_ERROR("server.loading", "Rate.Wrath.Loss ({}) must be > 0. Using 1 instead.", rate_values[RATE_POWER_WRATH_LOSS]);
+        rate_values[RATE_POWER_WRATH_LOSS] = 1;
+    }
+    // @dh-end
+
     m_bool_configs[CONFIG_DURABILITY_LOSS_IN_PVP] = sConfigMgr->GetBoolDefault("DurabilityLoss.InPvP", false);
 
     m_int_configs[CONFIG_COMPRESSION] = sConfigMgr->GetIntDefault("Compression", 1);
@@ -1987,6 +2033,9 @@ void World::SetInitialWorldSettings()
 
     TC_LOG_INFO("server.loading", "Loading Pet Name Parts...");
     sObjectMgr->LoadPetNames();
+
+    TC_LOG_INFO("server.loading", "Loading Jump Charge Params...");
+    sObjectMgr->LoadJumpChargeParams();
 
     CharacterDatabaseCleaner::CleanDatabase();
 

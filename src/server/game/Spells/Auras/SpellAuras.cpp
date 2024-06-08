@@ -490,7 +490,7 @@ bool Aura::CanPeriodicTickCrit(Unit const* caster) const
 float Aura::CalcPeriodicCritChance(Unit const* caster) const
 {
     Player* modOwner = caster->GetSpellModOwner();
-    if (!modOwner || !CanPeriodicTickCrit(modOwner))
+    if (!modOwner)
         return 0.f;
 
     float critChance = modOwner->SpellCritChanceDone(GetSpellInfo(), GetSpellInfo()->GetSchoolMask(), GetSpellInfo()->GetAttackType(), true);
@@ -1029,15 +1029,16 @@ void Aura::SetStackAmount(uint8 stackAmount)
 bool Aura::ModStackAmount(int32 num, AuraRemoveMode removeMode /*= AURA_REMOVE_BY_DEFAULT*/, bool resetPeriodicTimer /*= true*/)
 {
     int32 stackAmount = m_stackAmount + num;
+    uint32 maxStackAmount = GetMaxStackAmount();
 
     // limit the stack amount (only on stack increase, stack amount may be changed manually)
-    if ((num > 0) && (stackAmount > int32(m_spellInfo->StackAmount)))
+    if ((num > 0) && (stackAmount > int32(maxStackAmount)))
     {
         // not stackable aura - set stack amount to 1
-        if (!m_spellInfo->StackAmount)
+        if (!maxStackAmount)
             stackAmount = 1;
         else
-            stackAmount = m_spellInfo->StackAmount;
+            stackAmount = maxStackAmount;
     }
     // we're out of stacks, remove
     else if (stackAmount <= 0)
@@ -1046,7 +1047,7 @@ bool Aura::ModStackAmount(int32 num, AuraRemoveMode removeMode /*= AURA_REMOVE_B
         return true;
     }
 
-    bool refresh = stackAmount >= GetStackAmount() && (m_spellInfo->StackAmount || !m_spellInfo->HasAttribute(SPELL_ATTR1_DONT_REFRESH_DURATION_ON_RECAST));
+    bool refresh = stackAmount >= GetStackAmount() && (maxStackAmount || !m_spellInfo->HasAttribute(SPELL_ATTR1_DONT_REFRESH_DURATION_ON_RECAST));
 
     // Update stack amount
     SetStackAmount(stackAmount);
@@ -1417,6 +1418,30 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
                         target->CastSpell(nullptr, 74396, args);
                         break;
                     }
+                    case 1310044: // Arcanosphere
+                        // Arcane Potency
+                        if (AuraEffect const* aurEff = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_MAGE, 2120, 0))
+                        {
+                            uint32 spellId = 0;
+
+                            if (caster->HasAura(1310052))
+                            {
+                                switch (aurEff->GetId())
+                                {
+                                case 31571:
+                                    spellId = 57529;
+                                    break;
+                                case 31572:
+                                    spellId = 57531;
+                                    break;
+                                default:
+                                    TC_LOG_ERROR("spells.aura", "Aura::HandleAuraSpecificMods: Unknown rank of Arcane Potency ({}) found", aurEff->GetId());
+                                }
+                                if (spellId)
+                                    caster->CastSpell(caster, spellId, true);
+                            }
+                        }
+                        break;
                     default:
                         break;
                 }
@@ -3030,3 +3055,37 @@ bool ChargeDropEvent::Execute(uint64 /*e_time*/, uint32 /*p_time*/)
     _base->ModChargesDelayed(-1, _mode);
     return true;
 }
+
+// @dh-begin
+void Aura::AddDuration(int32 duration, bool capMax, bool withMods)
+{
+    if (withMods)
+    {
+        if (Unit* caster = GetCaster())
+            if (Player* modOwner = caster->GetSpellModOwner())
+                modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_DURATION, duration);
+    }
+
+    int32 newDur = m_duration + duration;
+
+    if (capMax && newDur > m_maxDuration)
+        newDur = m_maxDuration;
+
+    SetDuration(newDur);
+}
+
+uint32 Aura::GetMaxStackAmount()
+{
+    uint32 maxStackAmount = GetSpellInfo()->StackAmount;
+
+    if (GetCaster() && GetCaster()->IsPlayer())
+    {
+        Player* playerCaster = GetCaster()->ToPlayer();
+        playerCaster->ApplySpellMod(GetSpellInfo()->Id, SPELLMOD_STACK_AMOUNT, maxStackAmount);
+    }
+
+    return maxStackAmount;
+}
+
+
+// @dh-end

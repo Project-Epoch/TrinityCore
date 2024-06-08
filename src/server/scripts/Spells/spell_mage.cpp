@@ -851,8 +851,8 @@ class spell_mage_ignite : public AuraScript
         SpellInfo const* igniteDot = sSpellMgr->AssertSpellInfo(SPELL_MAGE_IGNITE);
         int32 pct = 8 * GetSpellInfo()->GetRank();
 
-        ASSERT(igniteDot->GetMaxTicks() > 0);
-        int32 amount = int32(CalculatePct(eventInfo.GetDamageInfo()->GetDamage(), pct) / igniteDot->GetMaxTicks());
+        ASSERT(igniteDot->GetMaxTicks(eventInfo.GetActor()) > 0);
+        int32 amount = int32(CalculatePct(eventInfo.GetDamageInfo()->GetDamage(), pct) / igniteDot->GetMaxTicks(eventInfo.GetActor()));
 
         CastSpellExtraArgs args(aurEff);
         args.AddSpellBP0(amount);

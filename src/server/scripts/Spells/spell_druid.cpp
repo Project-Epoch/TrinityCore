@@ -510,8 +510,8 @@ class spell_dru_glyph_of_innervate : public AuraScript
         SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(SPELL_DRUID_GLYPH_OF_INNERVATE_REGEN);
         int32 amount = CalculatePct(static_cast<int32>(caster->GetCreatePowerValue(POWER_MANA)), aurEff->GetAmount());
 
-        ASSERT(spellInfo->GetMaxTicks() > 0);
-        amount /= spellInfo->GetMaxTicks();
+        ASSERT(spellInfo->GetMaxTicks(caster) > 0);
+        amount /= spellInfo->GetMaxTicks(caster);
 
         CastSpellExtraArgs args(aurEff);
         args.AddSpellBP0(amount);
@@ -1726,8 +1726,8 @@ class spell_dru_t10_balance_4p_bonus : public AuraScript
         SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(SPELL_DRUID_LANGUISH);
         int32 amount = CalculatePct(static_cast<int32>(damageInfo->GetDamage()), aurEff->GetAmount());
 
-        ASSERT(spellInfo->GetMaxTicks() > 0);
-        amount /= spellInfo->GetMaxTicks();
+        ASSERT(spellInfo->GetMaxTicks(caster) > 0);
+        amount /= spellInfo->GetMaxTicks(caster);
 
         CastSpellExtraArgs args(aurEff);
         args.AddSpellBP0(amount);

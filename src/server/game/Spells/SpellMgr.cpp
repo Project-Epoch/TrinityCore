@@ -2595,7 +2595,7 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
     uint32 oldMSTime = getMSTime();
     uint32 oldMSTime2 = oldMSTime;
 
-    QueryResult result = WorldDatabase.Query("SELECT entry, attributes FROM spell_custom_attr");
+    QueryResult result = WorldDatabase.Query("SELECT * FROM spell_custom_attr");
 
     if (!result)
         TC_LOG_INFO("server.loading", ">> Loaded 0 spell custom attributes from DB. DB table `spell_custom_attr` is empty.");
@@ -2608,6 +2608,7 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
 
             uint32 spellId = fields[0].GetUInt32();
             uint32 attributes = fields[1].GetUInt32();
+            uint32 attributesEx = fields[2].GetUInt32();
 
             SpellInfo* spellInfo = _GetSpellInfo(spellId);
             if (!spellInfo)
@@ -2631,7 +2632,27 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
                 }
             }
 
+            if ((attributesEx & SPELL_ATTR1_CU_USE_TARGETS_LEVEL_FOR_SPELL_SCALING) && (attributesEx & SPELL_ATTR1_CU_IGNORES_CASTER_LEVEL))
+            {
+                TC_LOG_ERROR("sql.sql", "Table `spell_custom_attr` attributesEx field has attributes SPELL_ATTR1_CU_USE_TARGETS_LEVEL_FOR_SPELL_SCALING and SPELL_ATTR1_CU_IGNORES_CASTER_LEVEL which cannot stack for spell {}. Both attributes will be ignored.", spellId);
+                attributesEx &= ~(SPELL_ATTR1_CU_USE_TARGETS_LEVEL_FOR_SPELL_SCALING | SPELL_ATTR1_CU_IGNORES_CASTER_LEVEL);
+            }
+
+            if ((attributesEx & SPELL_ATTR1_CU_NOT_USABLE_IN_INSTANCES) && (attributesEx & SPELL_ATTR1_CU_USABLE_IN_INSTANCES_ONLY))
+            {
+                TC_LOG_ERROR("sql.sql", "Table `spell_custom_attr` attributesEx field has attributes SPELL_ATTR1_CU_NOT_USABLE_IN_INSTANCES and SPELL_ATTR1_CU_USABLE_IN_INSTANCES_ONLY which cannot stack for spell {}. Both attributes will be ignored.", spellId);
+                attributesEx &= ~(SPELL_ATTR1_CU_NOT_USABLE_IN_INSTANCES | SPELL_ATTR1_CU_USABLE_IN_INSTANCES_ONLY);
+            }
+
+            if ((attributesEx & SPELL_ATTR1_CU_NOT_USABLE_IN_INSTANCES) && (attributesEx & SPELL_ATTR1_CU_REMOVE_OUTSIDE_DUNGEONS_AND_RAIDS))
+            {
+                TC_LOG_ERROR("sql.sql", "Table `spell_custom_attr` attributesEx field has attributes SPELL_ATTR1_CU_NOT_USABLE_IN_INSTANCES and SPELL_ATTR1_CU_REMOVE_OUTSIDE_DUNGEONS_AND_RAIDS which cannot stack for spell {}. Both attributes will be ignored.", spellId);
+                attributesEx &= ~(SPELL_ATTR1_CU_NOT_USABLE_IN_INSTANCES | SPELL_ATTR1_CU_REMOVE_OUTSIDE_DUNGEONS_AND_RAIDS);
+            }
+
             spellInfo->AttributesCu |= attributes;
+            spellInfo->AttributesExCu |= attributesEx;
+
             ++count;
         } while (result->NextRow());
 

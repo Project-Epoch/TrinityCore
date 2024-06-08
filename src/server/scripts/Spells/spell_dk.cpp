@@ -1995,8 +1995,8 @@ class spell_dk_unholy_blight : public AuraScript
         if (AuraEffect const* glyph = caster->GetAuraEffect(SPELL_DK_GLYPH_OF_UNHOLY_BLIGHT, EFFECT_0, caster->GetGUID()))
             AddPct(amount, glyph->GetAmount());
 
-        ASSERT(spellInfo->GetMaxTicks() > 0);
-        amount /= spellInfo->GetMaxTicks();
+        ASSERT(spellInfo->GetMaxTicks(caster) > 0);
+        amount /= spellInfo->GetMaxTicks(caster);
 
         CastSpellExtraArgs args(aurEff);
         args.AddSpellBP0(amount);

@@ -26,6 +26,86 @@
 float const GROUND_HEIGHT_TOLERANCE = 0.05f; // Extra tolerance to z position to check if it is in air or on ground.
 constexpr float Z_OFFSET_FIND_HEIGHT = 1.5f;
 
+const std::string MSG_TYPE_FORGE = "FORGE";
+
+enum class ForgeTopic
+{
+    GET_TALENTS = 0,
+    LEARN_TALENT = 1,
+    // a single talent
+    UNLEARN_TALENT = 2,
+    // respec talents
+    RESPEC_TALENTS = 3,
+    RESPEC_TALENTS_ERROR = 4,
+    UPDATE_SPEC = 5,
+    ACTIVATE_SPEC = 6,
+    PRESTIGE = 7,
+    TALENT_TREE_LAYOUT = 8,
+    PROMPT_CHAR_SPEC = 9,
+    UPDATE_SPEC_ERROR = 10,
+    ACTIVATE_SPEC_ERROR = 11,
+    LEARN_TALENT_ERROR = 12,
+    BUY_ITEM_ERROR = 13,
+    UNLEARN_TALENT_ERROR = 14,
+    GET_TALENT_ERROR = 15,
+    BUY_ITEMS = 16,
+    GET_ITEM_FROM_COLLECTION = 17,
+    GET_PLAYER_COLLECTION = 18,
+    GET_SHOP_LAYOUT = 19,
+    HOLIDAYS = 20,
+    GET_CHARACTER_SPECS = 21,
+    PRESTIGE_ERROR = 22,
+    ACTIVATE_CLASS_SPEC = 23,
+    ACTIVATE_CLASS_SPEC_ERROR = 24,
+    GET_TOOLTIPS = 25,
+    FORGET_TOOLTIP = 26,
+    GET_GAME_MODES = 27,
+    SET_GAME_MODES = 28,
+    SET_GAME_MODES_ERROR = 29,
+    END_GAME_MODES = 30,
+
+    // xmog
+    COLLECTION_INIT = 31,
+    GET_XMOG_SETS = 32,
+    LOAD_XMOG_SET = 33,
+    LOAD_XMOG_SET_ERROR = 34,
+    XMOG_OK = 35,
+    LOAD_XMOG = 36,
+    LEARN_MOUNT = 44,
+    USE_TOY = 45,
+    APPLY_XMOG = 47,
+    REMOVE_XMOG_SET = 48,
+    SAVE_XMOG_SET = 49,
+    RENAME_XMOG_SET = 50,
+    COLLECTION_SETUP_STARTED = 52,
+    COLLECTION_SETUP_FINISHED = 53,
+    ADD_XMOG = 54,
+    APPLY_XMOG_ERROR = 55,
+
+    // m+
+    MYTHIC_GET_WEEKLY_REWARD = 101,
+    MYTHIC_GET_MAP_STATS = 102,
+    MYTHIC_GET_AFFIXES_LIST = 103,
+    MYTHIC_SET_AFFIXES_AND_START = 104,
+    MYTHIC_KEY_COMPLETED = 105, // send confirmation that key has ended
+    MYTHIC_OPEN_WINDOW = 106,
+    MYTHIC_UPDATE_TIMER = 107,
+    MYTHIC_UPDATE_DEATHS = 108,
+    MYTHIC_UPDATE_CRITERIA = 109,
+
+    // loadouts
+    LOADOUT_ERROR = 120,
+    GET_LOADOUTS = 121,
+    SAVE_LOADOUT = 122,
+    DELETE_LOADOUT = 123,
+};
+
+enum class ForgeError
+{
+    OK = 0,
+    UNKNOWN_SPELL = 1
+};
+
 enum SpellEffIndex : uint8
 {
     EFFECT_0 = 0,
@@ -123,18 +203,21 @@ enum Races
 // EnumUtils: DESCRIBE THIS
 enum Classes
 {
-    CLASS_NONE          = 0, // SKIP
-    CLASS_WARRIOR       = 1, // TITLE Warrior
-    CLASS_PALADIN       = 2, // TITLE Paladin
-    CLASS_HUNTER        = 3, // TITLE Hunter
-    CLASS_ROGUE         = 4, // TITLE Rogue
-    CLASS_PRIEST        = 5, // TITLE Priest
-    CLASS_DEATH_KNIGHT  = 6, // TITLE Death Knight
-    CLASS_SHAMAN        = 7, // TITLE Shaman
-    CLASS_MAGE          = 8, // TITLE Mage
-    CLASS_WARLOCK       = 9, // TITLE Warlock
-    //CLASS_UNK           = 10,
-    CLASS_DRUID         = 11 // TITLE Druid
+    CLASS_NONE = 0,  // SKIP
+    CLASS_WARRIOR = 1,  // TITLE Warrior
+    CLASS_PALADIN = 2,  // TITLE Paladin
+    CLASS_HUNTER = 3,  // TITLE Hunter
+    CLASS_ROGUE = 4,  // TITLE Rogue
+    CLASS_PRIEST = 5,  // TITLE Priest
+    CLASS_DEATH_KNIGHT = 6,  // TITLE Death Knight
+    CLASS_SHAMAN = 7,  // TITLE Shaman
+    CLASS_MAGE = 8,  // TITLE Mage
+    CLASS_WARLOCK = 9,  // TITLE Warlock
+    CLASS_DEMON_HUNTER = 10, // TITLE DemonHunter
+    CLASS_DRUID = 11, // TITLE Druid
+    CLASS_MONK = 12, // TITLE Monk
+    CLASS_BARD = 13, // TITLE Bard
+    CLASS_TINKER = 14  // TITLE Tinker
 };
 
 // max+1 for player class
@@ -961,7 +1044,17 @@ enum SpellEffects
     SPELL_EFFECT_TALENT_SPEC_SELECT                 = 162,
     SPELL_EFFECT_163                                = 163,
     SPELL_EFFECT_REMOVE_AURA                        = 164,
-    TOTAL_SPELL_EFFECTS                             = 165
+    SPELL_EFFECT_LEARN_TRANSMOG_SET                 = 165, 
+    SPELL_EFFECT_CREATE_AREATRIGGER                 = 166,
+    SPELL_EFFECT_JUMP_CHARGE                        = 167,
+    SPELL_EFFECT_MODIFY_CURRENT_SPELL_COOLDOWN      = 168,
+    SPELL_EFFECT_REMOVE_CURRENT_SPELL_COOLDOWN      = 169,
+    SPELL_EFFECT_RESTORE_SPELL_CHARGE               = 170,
+    SPELL_EFFECT_GIVE_EXPERIENCE                    = 171,
+    SPELL_EFFECT_GIVE_RESTED_EXPERIENCE_BONUS       = 172,
+    SPELL_EFFECT_GIVE_HONOR                         = 173,
+    SPELL_EFFECT_RECEIVE_ITEM                       = 174,
+    TOTAL_SPELL_EFFECTS
 };
 
 // EnumUtils: DESCRIBE THIS
@@ -1530,6 +1623,7 @@ enum Targets
     TARGET_UNK_DEST_AREA_UNK_107       = 107, // not enough info - only generic spells avalible
     TARGET_GAMEOBJECT_CONE             = 108,
     TARGET_UNIT_CONE_ENTRY_110         = 110, // 1 spell
+    TARGET_UNIT_CASTER_AREA_SUMMONS    = 111,
     TOTAL_SPELL_TARGETS
 };
 

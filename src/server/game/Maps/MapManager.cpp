@@ -194,12 +194,16 @@ Map::EnterState MapManager::PlayerCannotEnter(uint32 mapid, Player* player, bool
     // players are only allowed to enter 5 instances per hour
     if (entry->IsDungeon() && (!player->GetGroup() || (player->GetGroup() && !player->GetGroup()->isLFGGroup())))
     {
+        Player* bindOwner = player;
+        if (group)
+            bindOwner = group->GetLeaderGUID() ? group->GetLeader() : player;
+
         uint32 instanceIdToCheck = 0;
-        if (InstanceSave* save = player->GetInstanceSave(mapid, entry->IsRaid()))
+        if (InstanceSave* save = bindOwner->GetInstanceSave(mapid, entry->IsRaid()))
             instanceIdToCheck = save->GetInstanceId();
 
         // instanceId can never be 0 - will not be found
-        if (!player->CheckInstanceCount(instanceIdToCheck) && !player->isDead())
+        if (!bindOwner->CheckInstanceCount(instanceIdToCheck) && !player->isDead())
             return Map::CANNOT_ENTER_TOO_MANY_INSTANCES;
     }
 

@@ -27,6 +27,7 @@
 #include "DatabaseEnvFwd.h"
 #include "DBCEnums.h"
 #include "EquipmentSet.h"
+#include "GameTime.h"
 #include "GroupReference.h"
 #include "ItemDefines.h"
 #include "ItemEnchantmentMgr.h"
@@ -144,6 +145,14 @@ struct PlayerTalent
     uint8 spec;
 };
 
+// hater: record keeping
+struct ForgeAddonMessage
+{
+    Player* player;
+    std::string topic;
+    std::string message;
+};
+
 // Spell modifier (used for modify other spells)
 struct SpellModifier
 {
@@ -151,6 +160,7 @@ struct SpellModifier
 
     SpellModOp op;
     SpellModType type;
+    int16 charges : 16;
 
     int32 value;
     flag96 mask;
@@ -759,6 +769,7 @@ enum PlayerLoginQueryIndex
     PLAYER_LOGIN_QUERY_LOAD_MONTHLY_QUEST_STATUS    = 32,
     PLAYER_LOGIN_QUERY_LOAD_CORPSE_LOCATION         = 33,
     PLAYER_LOGIN_QUERY_LOAD_PET_SLOTS               = 34,
+    PLAYER_LOGIN_QUERY_LOAD_BOSS_KILLS,
     MAX_PLAYER_LOGIN_QUERY
 };
 
@@ -1080,6 +1091,16 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void Whisper(std::string_view text, Language language, Player* receiver, bool = false) override;
         void Whisper(uint32 textId, Player* target, bool isBossWhisper = false) override;
 
+        // hater: record keeping
+        ///     Sends a message to be recieved by the Forge IU
+        /// </summary>
+        /// <param name="topic">Type of message</param>
+        /// <param name="message">the message</param>
+        void SendForgeUIMsg(std::string topic, std::string message);
+        std::vector<std::string> SplitString(const std::string& str, int splitLength);
+        void SendForgeUIMsg(ForgeTopic topic, std::string message);
+        void SendForgeUIMsg(int topic, std::string message);
+
         /*********************************************************/
         /***                    STORAGE SYSTEM                 ***/
         /*********************************************************/
@@ -1184,6 +1205,9 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void AddArmorProficiency(uint32 newflag) { m_ArmorProficiency |= newflag; }
         uint32 GetWeaponProficiency() const { return m_WeaponProficiency; }
         uint32 GetArmorProficiency() const { return m_ArmorProficiency; }
+
+        PlayerSpellMap GetKnownSpells() { return m_spells; }
+
         bool IsUseEquipedWeapon(bool mainhand) const;
         bool IsTwoHandUsed() const;
         bool IsUsingTwoHandedWeaponInOneHand() const;
@@ -1286,6 +1310,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         bool GetQuestRewardStatus(uint32 quest_id) const;
         QuestStatus GetQuestStatus(uint32 quest_id) const;
         void SetQuestStatus(uint32 questId, QuestStatus status, bool update = true);
+        void ClearQuestStatus();
         void RemoveActiveQuest(uint32 questId, bool update = true);
         void RemoveRewardedQuest(uint32 questId, bool update = true);
         void SendQuestUpdate(uint32 questId);
@@ -1526,6 +1551,8 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         static bool HasSpellModApplied(SpellModifier* mod, Spell* spell);
         void SetSpellModTakingSpell(Spell* spell, bool apply);
 
+        void RemoveSpellRelatedDebuffs();
+
         void RemoveArenaSpellCooldowns(bool removeActivePetCooldowns = false);
         uint32 GetLastPotionId() const { return m_lastPotionId; }
         void SetLastPotionId(uint32 item_id) { m_lastPotionId = item_id; }
@@ -1623,6 +1650,65 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SetRaidDifficulty(Difficulty raid_difficulty) { m_raidDifficulty = raid_difficulty; }
         void StoreRaidMapDifficulty();
 
+        // hater: custom lockout : record keeping
+        struct BossLootLockout {
+            uint32 map;
+            uint8 diff;
+            uint32 encountersCompleted;
+            uint64 resettime;
+
+            BossLootLockout(uint32 map, uint8 diff, uint32 encounters, uint64 resettime) {
+                this->map = map;
+                this->diff = diff;
+                this->encountersCompleted = encounters;
+                this->resettime = resettime;
+            }
+        };
+
+        void SetBossLootBinding(uint32 map, uint8 diff, uint32 encounterMask) {
+            bool needNew = true;
+
+            auto findMap = _encounterLockouts.find(map);
+            if (findMap != _encounterLockouts.end()) {
+                auto foundDiff = findMap->second.find(diff);
+                if (foundDiff != findMap->second.end()) {
+                    auto now = GameTime::GetGameTime();
+                    BossLootLockout* lockout = foundDiff->second;
+                    if (lockout->resettime > now) {
+                        needNew = false;
+                        lockout->encountersCompleted |= encounterMask;
+                        _encounterLockouts[map][diff] = lockout;
+                    }
+                }
+            }
+            if (needNew) {
+                BossLootLockout* lockout = new BossLootLockout(map, diff, encounterMask, GameTime::GetGameTime() + DAY);
+                _encounterLockouts[map][diff] = lockout;
+            }
+
+            auto lockout = _encounterLockouts[map][diff];
+
+            /*CharacterDatabase.DirectExecute("REPLACE INTO encounter_loot_lockout (`char`, `map`, `difficulty`, `encounters`, `resettime`) VALUES ({}, {}, {}, {}, {})",
+                GetGUID().GetCounter(), lockout->map, lockout->diff, lockout->encountersCompleted, lockout->resettime);*/
+        }
+
+        bool CanLootBoss(uint32 map, uint8 diff, uint32 encounterMask) {
+            auto findMap = _encounterLockouts.find(map);
+            if (findMap != _encounterLockouts.end()) {
+                auto foundDiff = findMap->second.find(diff);
+                if (foundDiff != findMap->second.end()) {
+                    auto now = GameTime::GetGameTime();
+                    BossLootLockout* lockout = foundDiff->second;
+                    if (lockout->resettime < now || lockout->encountersCompleted & ~encounterMask) {
+                        return true;
+                    }
+                    return false;
+                }
+                return true;
+            }
+            return true;
+        }
+
         bool UpdateSkill(uint32 skill_id, uint32 step);
         bool UpdateSkillPro(uint16 SkillId, int32 Chance, uint32 step);
 
@@ -1664,6 +1750,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         float OCTRegenMPPerSpirit() const;
         float GetRatingMultiplier(CombatRating cr) const;
         float GetRatingBonusValue(CombatRating cr) const;
+        float GetMasteryMultiplier() const;
         uint32 GetBaseSpellPowerBonus() const { return m_baseSpellPower; }
         int32 GetSpellPenetrationItemMod() const { return m_spellPenetrationItemMod; }
 
@@ -2245,6 +2332,17 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         std::string GetDebugInfo() const override;
 
+    bool GetSpecActivationAllowed() {
+        return specActivationAllowed;
+    }
+
+    void SetSpecActivationAllowed(bool allow) {
+        specActivationAllowed = allow;
+    }
+
+    // hater: loadout actions
+    void SaveLoadoutActions(uint32 specId, uint8 loadoutId);
+
     protected:
         // Gamemaster whisper whitelist
         GuidList WhisperList;
@@ -2578,6 +2676,10 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         // @tswow-begin
         friend class TSPlayer;
         // @tswow-end
+
+        // hater: record keeping
+        bool specActivationAllowed = false;
+        std::unordered_map<uint32 /*map*/, std::unordered_map<uint8 /*tier*/, BossLootLockout* /*lockout*/>> _encounterLockouts;
 };
 
 TC_GAME_API void AddItemsSetItem(Player* player, Item* item);

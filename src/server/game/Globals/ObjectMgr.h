@@ -59,6 +59,8 @@ struct PlayerInfo;
 struct PlayerLevelInfo;
 struct SkillRaceClassInfoEntry;
 struct WorldSafeLocsEntry;
+struct NPCSoundsEntry;
+struct JumpChargeParams;
 
 struct PageText
 {
@@ -1566,7 +1568,14 @@ class TC_GAME_API ObjectMgr
         const CreatureOutfitContainer& GetCreatureOutfitMap() const { return _creatureOutfitStore; }
         std::shared_ptr<CreatureOutfit> const & GetOutfit(uint32 modelid) const;
         uint32 GetRealDisplayId(uint32 modelid) const;
+
+        // @dh-begin
         void LoadCreatureOutfits();
+        void LoadNpcSounds();
+        NPCSoundsEntry* GetNpcSounds(uint32 id);
+        void LoadJumpChargeParams();
+        JumpChargeParams const* GetJumpChargeParams(int32 id) const;
+        // @dh-end
 
         Trainer::Trainer const* GetTrainer(uint32 creatureId) const;
         std::vector<Trainer::Trainer const*> const& GetClassTrainers(uint8 classId) const { return _classTrainers.at(classId); }
@@ -1826,6 +1835,11 @@ class TC_GAME_API ObjectMgr
 
         PlayerTotemModelMap _playerTotemModel;
         VehicleSeatAddonContainer _vehicleSeatAddonStore;
+
+        // @dh-begin
+        std::unordered_map<uint32, NPCSoundsEntry*> _npcSounds;
+        std::unordered_map<int32, JumpChargeParams> _jumpChargeParams;
+        // @dh-end
 };
 
 #define sObjectMgr ObjectMgr::instance()

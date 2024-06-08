@@ -203,6 +203,10 @@ void Unit::UpdateDamagePhysical(WeaponAttackType attType)
 ########                         ########
 #######################################*/
 
+// @dh-begin
+
+// @dh-end
+
 bool Player::UpdateStats(Stats stat)
 {
     if (stat > STAT_SPIRIT)
@@ -337,7 +341,7 @@ bool Player::UpdateAllStats()
     UpdateManaRegen();
     UpdateExpertise(BASE_ATTACK);
     UpdateExpertise(OFF_ATTACK);
-    RecalculateRating(CR_ARMOR_PENETRATION);
+    //RecalculateRating(CR_ARMOR_PENETRATION);
     UpdateAllResistances();
 
     return true;
@@ -851,11 +855,11 @@ void Player::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, bo
         weaponMinDamage = BASE_MINDAMAGE;
         weaponMaxDamage = BASE_MAXDAMAGE;
     }
-    else if (attType == RANGED_ATTACK) // add ammo DPS to ranged primary damage
-    {
-        weaponMinDamage += GetAmmoDPS() * attackPowerMod;
-        weaponMaxDamage += GetAmmoDPS() * attackPowerMod;
-    }
+    //else if (attType == RANGED_ATTACK) // add ammo DPS to ranged primary damage
+    //{
+    //    weaponMinDamage += GetAmmoDPS() * attackPowerMod;
+    //    weaponMaxDamage += GetAmmoDPS() * attackPowerMod;
+    //}
 
     minDamage = ((weaponMinDamage + baseValue) * basePct + totalValue) * totalPct;
     maxDamage = ((weaponMaxDamage + baseValue) * basePct + totalValue) * totalPct;
@@ -1076,7 +1080,7 @@ void Player::UpdateSpellCritChance(uint32 school)
         return;
     }
     // For others recalculate it from:
-    float crit = 0.0f;
+    float crit = 5.0f;
     // Crit from Intellect
     crit += GetSpellCritFromIntellect();
     // Increase crit from SPELL_AURA_MOD_SPELL_CRIT_CHANCE
@@ -1110,12 +1114,12 @@ void Player::UpdateArmorPenetration(int32 amount)
         , TSMutableNumber<int32>(&amount)
     );
     // @tswow-end
-    SetUInt32Value(PLAYER_FIELD_COMBAT_RATING_1 + AsUnderlyingType(CR_ARMOR_PENETRATION), amount);
+    //SetUInt32Value(PLAYER_FIELD_COMBAT_RATING_1 + AsUnderlyingType(CR_ARMOR_PENETRATION), amount);
 }
 
 void Player::UpdateMeleeHitChances()
 {
-    m_modMeleeHitChance = GetRatingBonusValue(CR_HIT_MELEE);
+    m_modMeleeHitChance = 8.f;
     // @tswow-begin
     FIRE(
           Player,OnUpdateMeleeHitChances
@@ -1127,7 +1131,7 @@ void Player::UpdateMeleeHitChances()
 
 void Player::UpdateRangedHitChances()
 {
-    m_modRangedHitChance = GetRatingBonusValue(CR_HIT_RANGED);
+    m_modRangedHitChance = 8.f;
     // @tswow-begin
     FIRE(
         Player,OnUpdateRangedHitChances
@@ -1139,8 +1143,7 @@ void Player::UpdateRangedHitChances()
 
 void Player::UpdateSpellHitChances()
 {
-    m_modSpellHitChance = (float)GetTotalAuraModifier(SPELL_AURA_MOD_SPELL_HIT_CHANCE);
-    m_modSpellHitChance += GetRatingBonusValue(CR_HIT_SPELL);
+    m_modSpellHitChance = 17.f;
     // @tswow-begin
     FIRE(
         Player,OnUpdateSpellHitChances
@@ -1161,7 +1164,7 @@ void Player::UpdateExpertise(WeaponAttackType attack)
     if (attack == RANGED_ATTACK)
         return;
 
-    int32 expertise = int32(GetRatingBonusValue(CR_EXPERTISE));
+    int32 expertise = 56; //int32(GetRatingBonusValue(CR_EXPERTISE));
 
     Item const* weapon = GetWeaponForAttack(attack, true);
     expertise += GetTotalAuraModifier(SPELL_AURA_MOD_EXPERTISE, [weapon](AuraEffect const* aurEff) -> bool

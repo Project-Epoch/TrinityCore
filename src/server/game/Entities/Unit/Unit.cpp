@@ -1101,6 +1101,20 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
                     damage = Unit::SpellCriticalDamageBonus(this, spellInfo, damage, victim);
                 }
 
+                if (blocked)
+                {
+                    damageInfo->blocked = victim->GetShieldBlockValue();
+                    // double blocked amount if block is critical
+                    if (victim->IsBlockCritical())
+                        damageInfo->blocked += damageInfo->blocked;
+                    if (damage <= int32(damageInfo->blocked))
+                    {
+                        damageInfo->blocked = uint32(damage);
+                        damageInfo->fullBlock = true;
+                    }
+                    damage -= damageInfo->blocked;
+                }
+
                 if (CanApplyResilience())
                     Unit::ApplyResilience(victim, nullptr, &damage, crit, CR_CRIT_TAKEN_SPELL);
                 break;
@@ -1142,6 +1156,22 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
         , effectMask
     );
     // @tswow-end
+
+    // @dh-begin
+    // TODO: move to this FIRE
+    // Aleist3r: this is much cleaner
+    //Unit* casterUnit = damageInfo->attacker;
+    //if (casterUnit->GetTypeId() == TYPEID_PLAYER)
+    //{
+    //    int32 leechRating = int32(casterUnit->ToPlayer()->GetRatingBonusValue(CR_LIFESTEAL));
+
+    //    if (leechRating > 0)
+    //    {
+    //        int32 leechAmount = round(CalculatePct((damageInfo->damage - damageInfo->overkill), leechRating));
+    //        casterUnit->CastCustomSpell(1570000, SPELLVALUE_BASE_POINT0, leechAmount, casterUnit, TRIGGERED_FULL_MASK);
+    //    }
+    //}
+    // @dh-end
 }
 
 void Unit::DealSpellDamage(SpellNonMeleeDamage const* damageInfo, bool durabilityLoss)
@@ -1667,7 +1697,7 @@ void Unit::HandleEmoteCommand(Emote emoteId)
         // Apply Player CR_ARMOR_PENETRATION rating and buffs from stances\specializations etc.
         if (attacker->GetTypeId() == TYPEID_PLAYER)
         {
-            float arpPct = attacker->ToPlayer()->GetRatingBonusValue(CR_ARMOR_PENETRATION);
+            float arpPct = 0; //attacker->ToPlayer()->GetRatingBonusValue(CR_ARMOR_PENETRATION);
 
             Item const* weapon = attacker->ToPlayer()->GetWeaponForAttack(attackType, true);
             arpPct += attacker->GetTotalAuraModifier(SPELL_AURA_MOD_ARMOR_PENETRATION_PCT, [weapon](AuraEffect const* aurEff) -> bool
@@ -2394,6 +2424,24 @@ uint32 Unit::CalculateDamage(WeaponAttackType attType, bool normalized, bool add
     minDamage = std::max(0.f, minDamage);
     maxDamage = std::max(0.f, maxDamage);
 
+    // Aleist3r: moved this from StatSystem.cpp, probably a better idea to do it in this function
+    AuraEffectList const& mAPbyStat = GetAuraEffectsByType(SPELL_AURA_MOD_AUTOATTACK_DAMAGE_PCT);
+    for (AuraEffectList::const_iterator i = mAPbyStat.begin(); i != mAPbyStat.end(); ++i)
+    {
+        minDamage += CalculatePct(minDamage, (*i)->GetAmount());
+        maxDamage += CalculatePct(maxDamage, (*i)->GetAmount());
+    }
+
+    // Aleist3r: spell aura school damage vs caster needs to be added here as well, otherwise it works only for spells
+    AuraEffectList const& mDamageDoneVersusCaster = GetAuraEffectsByType(SPELL_AURA_MOD_SCHOOL_MASK_DAMAGE_VS_CASTER);
+    for (AuraEffectList::const_iterator i = mDamageDoneVersusCaster.begin(); i != mDamageDoneVersusCaster.end(); ++i)
+        if ((*i)->GetCasterGUID() == GetVictim()->GetGUID() && ((*i)->GetMiscValue() & SPELL_SCHOOL_MASK_NORMAL))
+        {
+            AddPct(minDamage, (*i)->GetAmount());
+            AddPct(maxDamage, (*i)->GetAmount());
+        }
+
+
     if (minDamage > maxDamage)
         std::swap(minDamage, maxDamage);
 
@@ -2436,6 +2484,35 @@ void Unit::SendMeleeAttackStop(Unit* victim)
     else
         TC_LOG_DEBUG("entities.unit", "{} stopped attacking", GetGUID().ToString());
 }
+
+bool Unit::isSpellBlocked(Unit* victim, SpellInfo const* spellProto, WeaponAttackType attackType)
+{
+    // These spells can't be blocked
+    if (spellProto && spellProto->HasAttribute(SPELL_ATTR0_IMPOSSIBLE_DODGE_PARRY_BLOCK))
+        return false;
+
+    if (victim->HasAuraType(SPELL_AURA_IGNORE_HIT_DIRECTION) || victim->HasInArc(M_PI, this))
+    {
+        // Check creatures flags_extra for disable block
+        if (victim->GetTypeId() == TYPEID_UNIT && victim->ToCreature()->GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_NO_BLOCK)
+            return false;
+
+        // xinef: cant block while casting or while stunned
+        if (victim->IsNonMeleeSpellCast(false, false, true) || victim->HasUnitState(UNIT_STATE_CONTROLLED))
+            return false;
+
+        float blockChance = victim->GetUnitBlockChance(attackType, victim);
+        if (roll_chance_f(blockChance))
+            return true;
+    }
+    return false;
+}
+
+bool Unit::CanBlockSpells(Unit* victim)
+{
+    return !victim->GetAuraEffectsByType(SPELL_AURA_ADD_SPELL_BLOCK).empty();
+}
+
 
 bool Unit::IsBlockCritical()
 {
@@ -2521,7 +2598,7 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
 
     bool canDodge = !spellInfo->HasAttribute(SPELL_ATTR7_CANT_DODGE);
     bool canParry = !spellInfo->HasAttribute(SPELL_ATTR7_CANT_PARRY);
-    bool canBlock = true; // all melee and ranged attacks can be blocked
+    bool canBlock = spellInfo->HasAttribute(SPELL_ATTR3_COMPLETELY_BLOCKED) && !spellInfo->HasAttribute(SPELL_ATTR0_CU_DIRECT_DAMAGE) && !spellInfo->HasAttribute(SPELL_ATTR1_CU_NO_ATTACK_BLOCK);
 
     // if victim is casting or cc'd it can't avoid attacks
     if (victim->IsNonMeleeSpellCast(false, false, true) || victim->HasUnitState(UNIT_STATE_CONTROLLED))
@@ -3733,6 +3810,94 @@ Aura* Unit::GetOwnedAura(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemC
         }
     }
     return nullptr;
+}
+
+uint8 Unit::GetAppliedAuraCountByMechanicType(Mechanics mech)
+{
+    uint8 out = 0;
+    for (auto aura : m_appliedAuras) {
+        AuraApplication* app = aura.second;
+        if (SpellInfo const* spell = app->GetBase()->GetSpellInfo())
+            if (spell->GetAllEffectsMechanicMask() & 1 << mech)
+                out += 1;
+    }
+    return out;
+}
+
+std::vector<Aura*> Unit::GetAurasByMiscA(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint8 reqEffMask) const
+{
+    std::vector<Aura*> ret;
+
+    for (auto auraApp : m_appliedAuras)
+    {
+        Aura* aura = auraApp.second->GetBase();
+        if (aura->GetSpellInfo()->GetEffect(EFFECT_0).MiscValue == spellId
+            && ((aura->GetEffectMask() & reqEffMask) == reqEffMask)
+            && (!casterGUID || aura->GetCasterGUID() == casterGUID)
+            && (!itemCasterGUID || aura->GetCastItemGUID() == itemCasterGUID))
+        {
+            ret.push_back(aura);
+        }
+    }
+    return ret;
+}
+
+bool Unit::CheckAuraExistsByMiscA(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint8 reqEffMask) const
+{
+    std::vector<Aura*> ret;
+
+    for (auto auraApp : m_appliedAuras)
+    {
+        Aura* aura = auraApp.second->GetBase();
+        if (aura->GetSpellInfo()->GetEffect(EFFECT_0).MiscValue == spellId
+            && ((aura->GetEffectMask() & reqEffMask) == reqEffMask)
+            && (!casterGUID || aura->GetCasterGUID() == casterGUID)
+            && (!itemCasterGUID || aura->GetCastItemGUID() == itemCasterGUID))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::vector<Aura*> Unit::GetAurasByMiscB(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint8 reqEffMask) const
+{
+    std::vector<Aura*> ret;
+
+    for (auto auraApp : m_appliedAuras)
+    {
+        Aura* aura = auraApp.second->GetBase();
+        if (aura->GetSpellInfo()->GetEffect(EFFECT_0).MiscValueB == spellId
+            && ((aura->GetEffectMask() & reqEffMask) == reqEffMask)
+            && (!casterGUID || aura->GetCasterGUID() == casterGUID)
+            && (!itemCasterGUID || aura->GetCastItemGUID() == itemCasterGUID))
+        {
+            ret.push_back(aura);
+        }
+    }
+
+    return ret;
+
+}
+
+bool Unit::CheckAuraExistsByMiscB(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint8 reqEffMask) const
+{
+    std::vector<Aura*> ret;
+
+    for (auto auraApp : m_appliedAuras)
+    {
+        Aura* aura = auraApp.second->GetBase();
+        if (aura->GetSpellInfo()->GetEffect(EFFECT_0).MiscValueB == spellId
+            && ((aura->GetEffectMask() & reqEffMask) == reqEffMask)
+            && (!casterGUID || aura->GetCasterGUID() == casterGUID)
+            && (!itemCasterGUID || aura->GetCastItemGUID() == itemCasterGUID))
+        {
+            return true;
+        }
+    }
+
+    return false;
+
 }
 
 void Unit::RemoveAura(AuraApplicationMap::iterator &i, AuraRemoveMode mode)
@@ -5749,6 +5914,8 @@ bool Unit::Attack(Unit* victim, bool meleeAttack)
             // @tswow-end
     }
 
+    AddComboPoints(0);
+
     return true;
 }
 
@@ -5807,6 +5974,8 @@ void Unit::CombatStop(bool includingCast, bool mutualPvP)
     RemoveAllAttackers();
     if (GetTypeId() == TYPEID_PLAYER)
         ToPlayer()->SendAttackSwingCancelAttack();     // melee and ranged forced attack cancel
+
+    AddComboPoints(0);
 
     if (mutualPvP)
         ClearInCombat();
@@ -6175,6 +6344,16 @@ void Unit::GetAllMinionsByEntry(std::list<Creature*>& Minions, uint32 entry)
         if (unit->GetEntry() == entry && unit->GetTypeId() == TYPEID_UNIT
             && unit->IsSummon()) // minion, actually
             Minions.push_back(unit->ToCreature());
+    }
+}
+
+void Unit::GetAllSummonsByEntry(std::list<TempSummon*>& Minions, uint32 entry)
+{
+    for (Unit::ControlList::iterator itr = m_Controlled.begin(); itr != m_Controlled.end();)
+    {
+        Unit* unit = *itr;
+        if (unit->GetEntry() == entry && unit->IsSummon())
+            Minions.push_back(unit->ToTempSummon());
     }
 }
 
@@ -6691,6 +6870,16 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
         DoneTotal += int32(DoneAdvertisedBenefit * coeff * factorMod);
     }
 
+    if (spellProto->Id == 1310048)      // Flame Convergence calc
+    {
+        if (victim->HasAura(1310031))
+        {
+            uint8 auraStacks = victim->GetAura(1310031)->GetStackAmount();
+            int32 dmgBonusPctMult = sSpellMgr->GetSpellInfo(1310047)->GetEffect(EFFECT_0).CalcValue();
+            DoneTotal += round(CalculatePct(DoneTotal, dmgBonusPctMult * auraStacks));
+        }
+    }
+
     float tmpDamage = float(int32(pdamage) + DoneTotal) * DoneTotalMod;
 
     // apply spellmod to Done damage (flat and pct)
@@ -6867,6 +7056,14 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
                 }
                 break;
             }
+            case 12500:
+            case 12502:
+            case 12503:
+            {
+                if (victim->HasAuraState(AURA_STATE_HEALTHLESS_35_PERCENT, spellProto, this))
+                    AddPct(DoneTotalMod, (*i)->GetAmount());
+                break;
+            }
         }
     }
 
@@ -6877,10 +7074,10 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
             // Ice Lance
             if (spellProto->SpellIconID == 186)
             {
-                if (victim->HasAuraState(AURA_STATE_FROZEN, spellProto, this))
+                if (victim->HasAuraState(AURA_STATE_FROZEN, spellProto, this) || owner->HasAura(1290010))
                 {
                     // Glyph of Ice Lance
-                    if (owner->HasAura(56377) && victim->GetLevel() > owner->GetLevel())
+                    if (owner->HasAura(1280020) && victim->GetLevel() > owner->GetLevel())
                         DoneTotalMod *= 4.0f;
                     else
                         DoneTotalMod *= 3.0f;
@@ -6888,7 +7085,7 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
             }
 
             // Torment the weak
-            if (spellProto->SpellFamilyFlags[0] & 0x20600021 || spellProto->SpellFamilyFlags[1] & 0x9000)
+            if (spellProto->SpellFamilyFlags[2] & 0x200000)
             {
                 if (victim->HasAuraWithMechanic((1 << MECHANIC_SNARE) | (1 << MECHANIC_SLOW_ATTACK)))
                 {
@@ -7006,6 +7203,12 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
             break;
     }
 
+    // damage bonus against caster
+    AuraEffectList const& mDamageDoneVersusCaster = GetAuraEffectsByType(SPELL_AURA_MOD_SCHOOL_MASK_DAMAGE_VS_CASTER);
+    for (AuraEffectList::const_iterator i = mDamageDoneVersusCaster.begin(); i != mDamageDoneVersusCaster.end(); ++i)
+        if ((*i)->GetCasterGUID() == victim->GetGUID() && ((*i)->GetMiscValue() & spellProto->GetSchoolMask()))
+            AddPct(DoneTotalMod, (*i)->GetAmount());
+
     return DoneTotalMod;
 }
 
@@ -7058,11 +7261,18 @@ uint32 Unit::SpellDamageBonusTaken(Unit* caster, SpellInfo const* spellProto, ui
         if (caster)
         {
             TakenTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_FROM_CASTER, [caster, spellProto](AuraEffect const* aurEff) -> bool
-            {
-                if (aurEff->GetCasterGUID() == caster->GetGUID() && aurEff->IsAffectedOnSpell(spellProto))
-                    return true;
-                return false;
-            });
+                {
+                    if (aurEff->GetCasterGUID() == caster->GetGUID() && aurEff->IsAffectedOnSpell(spellProto))
+                        return true;
+                    return false;
+                });
+
+            TakenTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER, [caster, spellProto](AuraEffect const* aurEff) -> bool
+                {
+                    if (aurEff->GetCasterGUID() == caster->GetGUID() && aurEff->IsAffectedOnSpell(spellProto))
+                        return true;
+                    return false;
+                });
         }
     }
 
@@ -7107,8 +7317,27 @@ int32 Unit::SpellBaseDamageBonusDone(SpellSchoolMask schoolMask) const
             }
         }
 
+        AuraEffectList const& mDamageDoneOfRatingPercent = GetAuraEffectsByType(SPELL_AURA_MOD_SPELL_POWER_OF_RATING_PERCENT);
+        for (AuraEffect const* aurEff : mDamageDoneOfRatingPercent)
+        {
+            if ((aurEff->GetMiscValue() & schoolMask) != 0)
+            {
+                // combat rating used stored in miscValueB for this aura; not a bitmask 
+                CombatRating usedRating = CombatRating(aurEff->GetMiscValueB());
+                DoneAdvertisedBenefit += int32(CalculatePct(ToPlayer()->GetRatingBonusValue(usedRating), aurEff->GetAmount()));
+            }
+        }
+
         // ... and attack power
         DoneAdvertisedBenefit += static_cast<int32>(CalculatePct(GetTotalAttackPowerValue(BASE_ATTACK), GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_SPELL_DAMAGE_OF_ATTACK_POWER, schoolMask)));
+
+        // ... and armor
+        AuraEffectList const& mDamageDonebyArmor = GetAuraEffectsByType(SPELL_AURA_MOD_SPELL_DAMAGE_OF_ARMOR);
+        for (AuraEffect const* aurEff : mDamageDoneOfStatPercent)
+        {
+            if (aurEff->GetMiscValue() & schoolMask)
+                DoneAdvertisedBenefit += int32(GetArmor() / aurEff->GetAmount());
+        }
     }
 
     return DoneAdvertisedBenefit;
@@ -7691,6 +7920,13 @@ uint32 Unit::SpellHealingBonusTaken(Unit* caster, SpellInfo const* spellProto, u
                 return true;
             return false;
         });
+
+        TakenTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_SCHOOL_MASK_HEALING_FROM_CASTER, [caster, spellProto](AuraEffect const* aurEff) -> bool
+            {
+                if (caster->GetGUID() == aurEff->GetCasterGUID() && aurEff->IsAffectedOnSpell(spellProto))
+                    return true;
+                return false;
+            });
     }
 
     float heal = healamount * TakenTotalMod;
@@ -7705,6 +7941,8 @@ int32 Unit::SpellBaseHealingBonusDone(SpellSchoolMask schoolMask) const
             return true;
         return false;
     });
+
+    int32 advertisedBenefitPct = 0;
 
     // Healing bonus of spirit, intellect and strength
     if (GetTypeId() == TYPEID_PLAYER)
@@ -7721,12 +7959,38 @@ int32 Unit::SpellBaseHealingBonusDone(SpellSchoolMask schoolMask) const
             advertisedBenefit += int32(CalculatePct(GetStat(usedStat), (*i)->GetAmount()));
         }
 
+        AuraEffectList const& mSpellPowerOfStatPercent = GetAuraEffectsByType(SPELL_AURA_MOD_SPELL_POWER_OF_STAT_PERCENT);
+        for (AuraEffectList::const_iterator i = mSpellPowerOfStatPercent.begin(); i != mSpellPowerOfStatPercent.end(); ++i)
+        {
+            // stat used dependent from misc value (stat index)
+            Stats usedStat = Stats((*i)->GetSpellInfo()->GetEffect((*i)->GetEffIndex()).MiscValueB);
+            advertisedBenefit += int32(CalculatePct(GetStat(usedStat), (*i)->GetAmount()));
+        }
+        // ... and combat rating
+        AuraEffectList const& mSpellPowerOfCombatRating = GetAuraEffectsByType(SPELL_AURA_MOD_SPELL_POWER_OF_RATING_PERCENT);
+        for (AuraEffectList::const_iterator i = mSpellPowerOfCombatRating.begin(); i != mSpellPowerOfCombatRating.end(); ++i)
+        {
+            // combat rating used stored in miscValueB for this aura; not a bitmask 
+            CombatRating usedRating = CombatRating((*i)->GetSpellInfo()->GetEffect((*i)->GetEffIndex()).MiscValueB);
+            advertisedBenefit += int32(CalculatePct(ToPlayer()->GetRatingBonusValue(usedRating), (*i)->GetAmount()));
+        }
+
         // ... and attack power
         AuraEffectList const& mHealingDonebyAP = GetAuraEffectsByType(SPELL_AURA_MOD_SPELL_HEALING_OF_ATTACK_POWER);
         for (AuraEffectList::const_iterator i = mHealingDonebyAP.begin(); i != mHealingDonebyAP.end(); ++i)
             if ((*i)->GetMiscValue() & schoolMask)
                 advertisedBenefit += int32(CalculatePct(GetTotalAttackPowerValue(BASE_ATTACK), (*i)->GetAmount()));
     }
+
+    // Spell Power Pct should be added after everything
+    AuraEffectList const& mSpellPowerPct = GetAuraEffectsByType(SPELL_AURA_MOD_SPELL_POWER_PCT);
+    for (AuraEffectList::const_iterator i = mSpellPowerPct.begin(); i != mSpellPowerPct.end(); ++i)
+        if ((*i)->GetMiscValue() & schoolMask)
+            advertisedBenefitPct += int32(CalculatePct(advertisedBenefit, (*i)->GetAmount()))
+            + int32(CalculatePct(ToPlayer()->GetBaseSpellPowerBonus(), (*i)->GetAmount()));
+
+    advertisedBenefit += advertisedBenefitPct;
+
     return advertisedBenefit;
 }
 
@@ -8155,6 +8419,13 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
             return false;
         });
 
+        TakenTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER, [attacker, spellProto](AuraEffect const* aurEff) -> bool
+            {
+                if (aurEff->GetCasterGUID() == attacker->GetGUID() && aurEff->IsAffectedOnSpell(spellProto))
+                    return true;
+                return false;
+            });
+
         // Mod damage from spell mechanic
         uint32 mechanicMask = spellProto->GetAllEffectsMechanicMask();
 
@@ -8539,6 +8810,9 @@ int32 Unit::GetHealthGain(int32 dVal)
 // returns negative amount on power reduction
 int32 Unit::ModifyPower(Powers power, int32 dVal, bool withPowerUpdate /*= true*/)
 {
+    // @dh-begin
+    // TODO: Add FIRE here for Power Change
+    // @dh-end
     int32 gain = 0;
 
     if (dVal == 0)
@@ -8648,6 +8922,9 @@ void Unit::UpdateSpeed(UnitMoveType mtype)
                 main_speed_mod  = GetMaxPositiveAuraModifier(SPELL_AURA_MOD_INCREASE_SPEED);
                 stack_bonus     = GetTotalAuraMultiplier(SPELL_AURA_MOD_SPEED_ALWAYS);
                 non_stack_bonus += GetMaxPositiveAuraModifier(SPELL_AURA_MOD_SPEED_NOT_STACK) / 100.0f;
+
+                if (GetTypeId() == TYPEID_PLAYER)
+                    main_speed_mod += round(ToPlayer()->GetRatingBonusValue(CR_SPEED));
             }
             break;
         }
@@ -8870,6 +9147,10 @@ void Unit::setDeathState(DeathState s)
         // players in instance don't have ZoneScript, but they have InstanceScript
         if (ZoneScript* zoneScript = GetZoneScript() ? GetZoneScript() : GetInstanceScript())
             zoneScript->OnUnitDeath(this);
+
+        // @dh-begin
+        // TODO: Add fire for unit dying
+        // @dh-end
 
         // @tswow-begin
         m_tsWorldEntity.m_timers.remove_on_death();
@@ -9105,6 +9386,254 @@ bool Unit::IsInDisallowedMountForm() const
             return true;
 
     return false;
+}
+
+uint32 Unit::GetCriticalBlockAmount(Unit* blocker, uint32 damageBlocked) const
+{
+    float critblockmulti = 200.0f;
+
+    Unit::AuraEffectList critBlockAuras = blocker->GetAuraEffectsByType(SPELL_AURA_MOD_CRITICAL_BLOCK_PCT);
+    for (auto critBlockAura : critBlockAuras)
+        critblockmulti += critBlockAura->GetAmount();
+
+    return uint32(damageBlocked * (critblockmulti / 100));
+}
+
+uint32 Unit::AdjustBeforeBlockDamage(Unit* blocker, uint32 damage) const
+{
+    float damagemulti = 100.0f;
+
+    Unit::AuraEffectList dmgBeforeBlockAuras = blocker->GetAuraEffectsByType(SPELL_AURA_MOD_DAMAGE_TAKEN_PCT_BEFORE_BLOCK);
+    for (auto dmgBeforeBlockAura : dmgBeforeBlockAuras)
+        damagemulti += dmgBeforeBlockAura->GetAmount();
+
+    return uint32(damage * (damagemulti / 100));
+}
+
+UnitMods Unit::ClassSpecDependantUnitMod() const
+{
+    uint8 pClass = ToPlayer()->GetClass();
+    uint32 pSpec = ToPlayer()->GetActiveSpec();
+    UnitMods mod;
+
+    // @dh-begin
+    // TODO: FIRE for this
+    // @dh-end
+
+    /*switch (pClass)
+    {
+    case CLASS_WARRIOR:
+        mod = UNIT_MOD_STAT_STRENGTH;
+        break;
+    case CLASS_PALADIN:
+        if (pSpec == TALENT_TREE_PALADIN_HOLY)
+        {
+            mod = UNIT_MOD_STAT_INTELLECT;
+            break;
+        }
+        mod = UNIT_MOD_STAT_STRENGTH;
+        break;
+    case CLASS_ROGUE:
+        mod = UNIT_MOD_STAT_AGILITY;
+        break;
+    case CLASS_HUNTER:
+        mod = UNIT_MOD_STAT_AGILITY;
+        break;
+    case CLASS_PRIEST:
+        mod = UNIT_MOD_STAT_INTELLECT;
+        break;
+    case CLASS_DEATH_KNIGHT:
+        mod = UNIT_MOD_STAT_STRENGTH;
+        break;
+    case CLASS_SHAMAN:
+        if (pSpec == TALENT_TREE_SHAMAN_ENHANCEMENT || pSpec == TALENT_TREE_SHAMAN_WATCHER)
+        {
+            mod = UNIT_MOD_STAT_AGILITY;
+            break;
+        }
+        mod = UNIT_MOD_STAT_INTELLECT;
+        break;
+    case CLASS_MAGE:
+        mod = UNIT_MOD_STAT_INTELLECT;
+        break;
+    case CLASS_WARLOCK:
+        mod = UNIT_MOD_STAT_INTELLECT;
+        break;
+    case CLASS_DEMON_HUNTER:
+        mod = UNIT_MOD_STAT_AGILITY;
+        break;
+    case CLASS_DRUID:
+        if (pSpec == TALENT_TREE_DRUID_BALANCE || pSpec == TALENT_TREE_DRUID_RESTORATION)
+        {
+            mod = UNIT_MOD_STAT_INTELLECT;
+            break;
+        }
+        mod = UNIT_MOD_STAT_AGILITY;
+        break;
+    case CLASS_MONK:
+        if (pSpec == TALENT_TREE_MONK_ZEALOTRY)
+        {
+            mod = UNIT_MOD_STAT_AGILITY;
+            break;
+        }
+        mod = UNIT_MOD_STAT_INTELLECT;
+        break;
+    case CLASS_BARD:
+        mod = UNIT_MOD_STAT_INTELLECT;
+        break;
+    case CLASS_TINKER:
+        mod = UNIT_MOD_STAT_INTELLECT;
+        break;
+    default:
+        mod = UNIT_MOD_STAT_STRENGTH;
+        break;
+    }*/
+
+    return UNIT_MOD_HEALTH;
+}
+
+Stats Unit::ClassSpecDependantMainStat() const
+{
+    uint8 pClass = ToPlayer()->GetClass();
+    uint32 pSpec = ToPlayer()->GetActiveSpec();
+    Stats stat;
+
+    // @dh-begin
+    // TODO: FIRE for this
+    // @dh-end
+
+    /*switch (pClass)
+    {
+    case CLASS_WARRIOR:
+        stat = STAT_STRENGTH;
+        break;
+    case CLASS_PALADIN:
+        if (pSpec == TALENT_TREE_PALADIN_HOLY)
+        {
+            stat = STAT_INTELLECT;
+            break;
+        }
+        stat = STAT_STRENGTH;
+        break;
+    case CLASS_ROGUE:
+        stat = STAT_AGILITY;
+        break;
+    case CLASS_HUNTER:
+        stat = STAT_AGILITY;
+        break;
+    case CLASS_PRIEST:
+        stat = STAT_INTELLECT;
+        break;
+    case CLASS_DEATH_KNIGHT:
+        stat = STAT_STRENGTH;
+        break;
+    case CLASS_SHAMAN:
+        if (pSpec == TALENT_TREE_SHAMAN_ENHANCEMENT || pSpec == TALENT_TREE_SHAMAN_WATCHER)
+        {
+            stat = STAT_AGILITY;
+            break;
+        }
+        stat = STAT_INTELLECT;
+        break;
+    case CLASS_MAGE:
+        stat = STAT_INTELLECT;
+        break;
+    case CLASS_WARLOCK:
+        stat = STAT_INTELLECT;
+        break;
+    case CLASS_DEMON_HUNTER:
+        stat = STAT_AGILITY;
+        break;
+    case CLASS_DRUID:
+        if (pSpec == TALENT_TREE_DRUID_BALANCE || pSpec == TALENT_TREE_DRUID_RESTORATION)
+        {
+            stat = STAT_INTELLECT;
+            break;
+        }
+        stat = STAT_AGILITY;
+        break;
+    case CLASS_MONK:
+        if (pSpec == TALENT_TREE_MONK_ZEALOTRY)
+        {
+            stat = STAT_AGILITY;
+            break;
+        }
+        stat = STAT_AGILITY;
+        break;
+    case CLASS_BARD:
+        stat = STAT_INTELLECT;
+        break;
+    case CLASS_TINKER:
+        stat = STAT_INTELLECT;
+        break;
+    default:
+        stat = STAT_STRENGTH;
+        break;
+    }*/
+
+    return STAT_STAMINA;
+}
+
+void Unit::ToggleCombatAuras(bool startingCombat)
+{
+    auto auras = GetAuraEffectsByType(SPELL_AURA_MOD_TOGGLE_AURA_COMBAT_STATE);
+    for (auto aura : auras)
+    {
+        auto triggered = aura->GetSpellInfo()->GetEffect(aura->GetEffIndex()).TriggerSpell;
+
+        if (startingCombat && aura->GetMiscValueB() == 1)
+            AddAura(triggered, this);
+        else if (!startingCombat && aura->GetMiscValueB() == 0)
+            AddAura(triggered, this);
+        else
+            RemoveAura(triggered);
+    }
+}
+
+void Unit::ToggleOnPowerPctAuras()
+{
+    auto auras = GetAuraEffectsByType(SPELL_AURA_MOD_TRIGGER_SPELL_ON_POWER_PCT);
+    for (auto aura : auras)
+    {
+        auto triggered = aura->GetSpellInfo()->GetEffect(aura->GetEffIndex()).TriggerSpell;
+
+        int8 power = aura->GetMiscValue();
+        int32 amount = aura->GetAmount();
+
+        if ((aura->GetMiscValueB() == 0 && (float)GetPowerPct(Powers(power)) < amount)
+            || (aura->GetMiscValueB() == 1 && (float)GetPowerPct(Powers(power)) <= amount)
+            || (aura->GetMiscValueB() == 2 && (float)GetPowerPct(Powers(power)) > amount)
+            || (aura->GetMiscValueB() == 3 && (float)GetPowerPct(Powers(power)) >= amount))
+        {
+            if (!HasAura(triggered))
+                AddAura(triggered, this);
+        }
+        else
+            RemoveAura(triggered);
+    }
+}
+
+bool Unit::CanProcMultistrike(SpellInfo const* spellInfo) const
+{
+    // Aleist3r: placeholder entry for now, will need case by case check probably
+    if (spellInfo && spellInfo->Id == 1)
+        return false;
+
+    return true;
+}
+
+bool Unit::IsSpellMultistrike() const
+{
+    if (GetSpellModOwner() == nullptr)
+        return false;
+
+    return roll_chance_f(GetSpellModOwner()->GetFloatValue(PLAYER_FIELD_COMBAT_RATING_1 + static_cast<uint16>(CR_MULTISTRIKE)));
+}
+
+void Unit::ProcMultistrike(SpellInfo const* procSpellInfo, Unit* target, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, SpellInfo const* procAura, DamageInfo* damageInfo, HealInfo* healInfo)
+{
+    if (!IsSpellMultistrike() && !CanProcMultistrike(procSpellInfo))
+        return;
 }
 
 /*#######################################
@@ -10581,6 +11110,10 @@ void Unit::AddComboPoints(Unit* target, int8 count)
         m_comboTarget = target;
         m_comboPoints = count;
         target->AddComboPointHolder(this);
+
+        m_ComboPointDegenTimer = 0;
+
+        return;
     }
     else
         m_comboPoints = std::max<int8>(std::min<int8>(m_comboPoints + count, 5),0);
@@ -10907,7 +11440,7 @@ float Unit::CalculateDefaultCoefficient(SpellInfo const* spellInfo, DamageEffect
         if (!spellInfo->IsChanneled() && DotDuration > 0)
             DotFactor = DotDuration / 15000.0f;
 
-        if (uint32 DotTicks = spellInfo->GetMaxTicks())
+        if (uint32 DotTicks = spellInfo->GetMaxTicks((Unit*) this))
             DotFactor /= DotTicks;
     }
 
@@ -12479,14 +13012,88 @@ uint32 Unit::GetModelForForm(ShapeshiftForm form, uint32 spellId) const
 
     if (Player const* player = ToPlayer())
     {
+        uint32 CatnDisplay = 0;
+        uint32 CatnSpellID = 0;
+        uint32 CatnReqSpellID = 0;
+
+        uint32 BearnDisplay = 0;
+        uint32 BearnSpellID = 0;
+        uint32 BearnReqSpellID = 0;
+
+        uint32 FlynDisplay = 0;
+        uint32 FlynSpellID = 0;
+        uint32 FlynReqSpellID = 0;
+
+        uint32 BuhonDisplay = 0;
+        uint32 BuhonSpellID = 0;
+        uint32 BuhonReqSpellID = 0;
+
+        uint32 SeanDisplay = 0;
+        uint32 SeanSpellID = 0;
+        uint32 SeanReqSpellID = 0;
+
+        uint32 TreenDisplay = 0;
+        uint32 TreenSpellID = 0;
+        uint32 TreenReqSpellID = 0;
+
+        uint32 TravelnDisplay = 0;
+        uint32 TravelnSpellID = 0;
+        uint32 TravelnReqSpellID = 0;
+
+        QueryResult resultCat = WorldDatabase.Query("SELECT type,name,display,npc,racemask,SpellId,ReqSpellID FROM custom_druid_barbershop WHERE type = 'cat'");
+        QueryResult resultBear = WorldDatabase.Query("SELECT type,name,display,npc,racemask,SpellId,ReqSpellID FROM custom_druid_barbershop WHERE type = 'bear'");
+        QueryResult resultFly = WorldDatabase.Query("SELECT type,name,display,npc,racemask,SpellId,ReqSpellID FROM custom_druid_barbershop WHERE type = 'fly'");
+        QueryResult resultBuho = WorldDatabase.Query("SELECT type,name,display,npc,racemask,SpellId,ReqSpellID FROM custom_druid_barbershop WHERE type = 'buho'");
+        QueryResult resultSea = WorldDatabase.Query("SELECT type,name,display,npc,racemask,SpellId,ReqSpellID FROM custom_druid_barbershop WHERE type = 'sea'");
+        QueryResult resultTree = WorldDatabase.Query("SELECT type,name,display,npc,racemask,SpellId,ReqSpellID FROM custom_druid_barbershop WHERE type = 'tree'");
+        QueryResult resultTravel = WorldDatabase.Query("SELECT type,name,display,npc,racemask,SpellId,ReqSpellID FROM custom_druid_barbershop WHERE type = 'travel'");
+
+
         switch (form)
         {
             case FORM_CAT:
                 // Based on Hair color
-                if (GetRace() == RACE_NIGHTELF)
+                if (resultCat)
                 {
-                    switch (player->GetHairColorId())
+                    do
                     {
+                        Field* fields = resultCat->Fetch();
+                        CatnSpellID = fields[5].GetUInt32();
+                        CatnReqSpellID = fields[6].GetUInt32();
+
+                        if (HasSpell(CatnSpellID))
+                        {
+
+                            if (CatnReqSpellID == 0)
+                            {
+                                CatnDisplay = fields[2].GetUInt32();
+                            }
+                            else
+                            {
+                                if (HasSpell(CatnReqSpellID))
+                                {
+                                    CatnDisplay = fields[2].GetUInt32();
+                                }
+                                else
+                                {
+                                    CatnDisplay = 0;
+                                }
+                            }
+                        }
+
+                    } while (resultCat->NextRow());
+                }
+
+                if (CatnDisplay != 0) // Violet
+                {
+                    return CatnDisplay;
+                }
+                else
+                {
+                    if (GetRace() == RACE_NIGHTELF)
+                    {
+                        switch (player->GetHairColorId())
+                        {
                         case 7: // Violet
                         case 8:
                             return 29405;
@@ -12500,17 +13107,17 @@ uint32 Unit::GetModelForForm(ShapeshiftForm form, uint32 spellId) const
                             return 29408;
                         default: // original - Dark Blue
                             return 892;
+                        }
                     }
-                }
-                // Based on Skin color
-                else if (GetRace() == RACE_TAUREN)
-                {
-                    uint8 skinColor = player->GetSkinId();
-                    // Male
-                    if (GetNativeGender() == GENDER_MALE)
+                    // Based on Skin color
+                    else if (GetRace() == RACE_TAUREN)
                     {
-                        switch (skinColor)
+                        uint8 skinColor = player->GetSkinId();
+                        // Male
+                        if (GetNativeGender() == GENDER_MALE)
                         {
+                            switch (skinColor)
+                            {
                             case 12: // White
                             case 13:
                             case 14:
@@ -12533,11 +13140,11 @@ uint32 Unit::GetModelForForm(ShapeshiftForm form, uint32 spellId) const
                                 return 29412;
                             default: // original - Grey
                                 return 8571;
+                            }
                         }
-                    }
-                    // Female
-                    else switch (skinColor)
-                    {
+                        // Female
+                        else switch (skinColor)
+                        {
                         case 10: // White
                             return 29409;
                         case 6: // Light Brown
@@ -12553,12 +13160,13 @@ uint32 Unit::GetModelForForm(ShapeshiftForm form, uint32 spellId) const
                             return 29412;
                         default: // original - Grey
                             return 8571;
+                        }
                     }
+                    else if (Player::TeamForRace(GetRace()) == ALLIANCE)
+                        return 892;
+                    else
+                        return 8571;
                 }
-                else if (Player::TeamForRace(GetRace()) == ALLIANCE)
-                    return 892;
-                else
-                    return 8571;
             case FORM_DIREBEAR:
             case FORM_BEAR:
                 // Based on Hair color
@@ -12638,13 +13246,272 @@ uint32 Unit::GetModelForForm(ShapeshiftForm form, uint32 spellId) const
                 else
                     return 2289;
             case FORM_FLIGHT:
-                if (Player::TeamForRace(GetRace()) == ALLIANCE)
-                    return 20857;
+                if (resultFly)
+                {
+                    do
+                    {
+                        Field* fields = resultFly->Fetch();
+                        FlynSpellID = fields[5].GetUInt32();
+                        FlynReqSpellID = fields[6].GetUInt32();
+
+                        if (HasSpell(FlynSpellID))
+                        {
+
+                            if (FlynReqSpellID == 0)
+                            {
+                                FlynDisplay = fields[2].GetUInt32();
+                            }
+                            else
+                            {
+                                if (HasSpell(FlynReqSpellID))
+                                {
+                                    FlynDisplay = fields[2].GetUInt32();
+                                }
+                                else
+                                {
+                                    FlynDisplay = 0;
+                                }
+                            }
+                        }
+
+                    } while (resultFly->NextRow());
+                }
+                if (FlynDisplay != 0) // Violet
+                {
+                    return FlynDisplay;
+                }
+                else
+                {
+
+                    if (Player::TeamForRace(GetRace()) == ALLIANCE)
+                        return 20857;
+                }
                 return 20872;
             case FORM_FLIGHT_EPIC:
-                if (Player::TeamForRace(GetRace()) == ALLIANCE)
-                    return 21243;
+                if (resultFly)
+                {
+                    do
+                    {
+                        Field* fields = resultFly->Fetch();
+                        FlynSpellID = fields[5].GetUInt32();
+                        FlynReqSpellID = fields[6].GetUInt32();
+
+                        if (HasSpell(FlynSpellID))
+                        {
+
+                            if (FlynReqSpellID == 0)
+                            {
+                                FlynDisplay = fields[2].GetUInt32();
+                            }
+                            else
+                            {
+                                if (HasSpell(FlynReqSpellID))
+                                {
+                                    FlynDisplay = fields[2].GetUInt32();
+                                }
+                                else
+                                {
+                                    FlynDisplay = 0;
+                                }
+                            }
+                        }
+
+                    } while (resultFly->NextRow());
+                }
+
+                if (FlynDisplay != 0) // Violet
+                {
+                    return FlynDisplay;
+                }
+                else
+                {
+                    if (Player::TeamForRace(GetRace()) == ALLIANCE)
+                        return 21243;
+                }
                 return 21244;
+            case FORM_MOONKIN:
+                if (resultBuho)
+                {
+                    do
+                    {
+                        Field* fields = resultBuho->Fetch();
+                        BuhonSpellID = fields[5].GetUInt32();
+                        BuhonReqSpellID = fields[6].GetUInt32();
+
+                        if (HasSpell(BuhonSpellID))
+                        {
+
+                            if (BuhonReqSpellID == 0)
+                            {
+                                BuhonDisplay = fields[2].GetUInt32();
+                            }
+                            else
+                            {
+                                if (HasSpell(BuhonReqSpellID))
+                                {
+                                    BuhonDisplay = fields[2].GetUInt32();
+                                }
+                                else
+                                {
+                                    BuhonDisplay = 0;
+                                }
+                            }
+                        }
+
+                    } while (resultBuho->NextRow());
+                }
+
+                if (BuhonDisplay != 0) // Violet
+                {
+                    return BuhonDisplay;
+                }
+                else
+                {
+                    if (Player::TeamForRace(GetRace()) == TEAM_ALLIANCE)
+                    {
+                        return 15374;
+                    }
+                    else
+                    {
+                        return 15375;
+                    }
+                }
+
+            case FORM_AQUA:
+
+                if (resultSea)
+                {
+                    do
+                    {
+                        Field* fields = resultSea->Fetch();
+                        SeanSpellID = fields[5].GetUInt32();
+                        SeanReqSpellID = fields[6].GetUInt32();
+
+                        if (HasSpell(SeanSpellID))
+                        {
+                            if (SeanReqSpellID == 0)
+                            {
+                                SeanDisplay = fields[2].GetUInt32();
+                            }
+                            else
+                            {
+                                if (HasSpell(SeanReqSpellID))
+                                {
+                                    SeanDisplay = fields[2].GetUInt32();
+                                }
+                                else
+                                {
+                                    SeanDisplay = 0;
+                                }
+                            }
+                        }
+
+                    } while (resultSea->NextRow());
+                }
+
+                if (SeanDisplay != 0)
+                {
+                    return SeanDisplay;
+                }
+                else
+                {
+                    return 2428;
+                }
+            case FORM_TREE:
+
+                if (resultTree)
+                {
+                    do
+                    {
+                        Field* fields = resultTree->Fetch();
+                        TreenSpellID = fields[5].GetUInt32();
+                        TreenReqSpellID = fields[6].GetUInt32();
+
+                        if (HasSpell(TreenSpellID))
+                        {
+
+                            if (TreenReqSpellID == 0)
+                            {
+                                TreenDisplay = fields[2].GetUInt32();
+                            }
+                            else
+                            {
+                                if (HasSpell(TreenReqSpellID))
+                                {
+                                    TreenDisplay = fields[2].GetUInt32();
+                                }
+                                else
+                                {
+                                    TreenDisplay = 0;
+                                }
+                            }
+                        }
+
+                    } while (resultTree->NextRow());
+                }
+
+                if (TreenDisplay != 0) // Violet
+                {
+                    return TreenDisplay;
+                }
+                else
+                {
+                    if (Player::TeamForRace(GetRace()) == TEAM_ALLIANCE)
+                    {
+                        return 2451;
+                    }
+                    else
+                    {
+                        return 864;
+                    }
+                }
+            case FORM_TRAVEL:
+                if (resultTravel)
+                {
+                    do
+                    {
+                        Field* fields = resultTravel->Fetch();
+                        TravelnSpellID = fields[5].GetUInt32();
+                        TravelnReqSpellID = fields[6].GetUInt32();
+
+                        if (HasSpell(TravelnSpellID))
+                        {
+
+                            if (TravelnReqSpellID == 0)
+                            {
+                                TravelnDisplay = fields[2].GetUInt32();
+                            }
+                            else
+                            {
+                                if (HasSpell(TravelnReqSpellID))
+                                {
+                                    TravelnDisplay = fields[2].GetUInt32();
+                                }
+                                else
+                                {
+                                    TravelnDisplay = 0;
+                                }
+                            }
+                        }
+
+                    } while (resultTravel->NextRow());
+                }
+
+                if (TravelnDisplay != 0) // Violet
+                {
+                    return TravelnDisplay;
+                }
+                else
+                {
+                    if (Player::TeamForRace(GetRace()) == TEAM_ALLIANCE)
+                    {
+                        return 918;
+                    }
+                    else
+                    {
+                        return 15593;
+                    }
+                }
             default:
                 break;
         }

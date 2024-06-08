@@ -2434,6 +2434,11 @@ bool Group::IsCreated() const
     return GetMembersCount() > 0;
 }
 
+Player* Group::GetLeader() const
+{
+    return ObjectAccessor::FindConnectedPlayer(m_leaderGuid);
+}
+
 ObjectGuid Group::GetLeaderGUID() const
 {
     return m_leaderGuid;

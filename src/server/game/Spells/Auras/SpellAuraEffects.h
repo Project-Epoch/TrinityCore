@@ -319,6 +319,28 @@ class TC_GAME_API AuraEffect
         void HandleProcTriggerDamageAuraProc(AuraApplication* aurApp, ProcEventInfo& eventInfo);
         void HandleRaidProcFromChargeAuraProc(AuraApplication* aurApp, ProcEventInfo& eventInfo);
         void HandleRaidProcFromChargeWithValueAuraProc(AuraApplication* aurApp, ProcEventInfo& eventInfo);
+
+        // @dh-begin
+        void HandleModSpellDamagePercentFromArmor(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const;
+        void HandleModArmorFromMainStat(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleModBlockValueScaling(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const;
+        void HandleModTriggerSpellOnStacks(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleAuraModForgeStat(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleModRatingPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleModRatingFromRating(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleAuraModSpellPower(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleAuraModSpellPowerPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleAuraModSpellPowerOfStatPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleAuraModSpellPowerOfCombatRatingPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleModToggleAuraCombatState(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleAuraModTriggerSpellPowerPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleAuraAddCharges(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleCreateAreaTrigger(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandlePeriodicCooldownRecoveryTick(AuraApplication* aurApp, Unit* caster) const;
+
+        uint32 GetTriggerSpell() const;
+
+        // @dh-end
 };
 
 namespace Trinity

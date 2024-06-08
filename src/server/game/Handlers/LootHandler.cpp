@@ -191,6 +191,36 @@ void WorldSession::HandleLootMoneyOpcode(WorldPacket& /*recvData*/)
                 data << uint32(goldPerPlayer);
                 data << uint8(playersNear.size() <= 1); // Controls the text displayed in chat. 0 is "Your share is..." and 1 is "You loot..."
                 (*i)->SendDirectMessage(&data);
+
+                // @dh-start
+                // ADD NEW FIRE HERE FOR
+                // if (goldMod)
+                // {
+                //    uint32 gold = goldMod / 10000;
+                //    uint8 silver = (goldMod / 100) % 100;
+                //    uint8 copper = goldMod % 100;
+                //    std::string currStr = "";
+
+                //    if (gold > 0)
+                //        currStr.append(std::to_string(gold) + " Gold");
+
+                //    if (silver > 0)
+                //    {
+                //        if (!currStr.empty())
+                //            currStr.append(", ");
+                //        currStr.append(std::to_string(silver) + " Silver");
+                //    }
+
+                //    if (copper > 0)
+                //    {
+                //        if (!currStr.empty())
+                //            currStr.append(", ");
+                //        currStr.append(std::to_string(copper) + " Copper");
+                //    }
+
+                //    ChatHandler(player->GetSession()).PSendSysMessage("You loot additional %s", currStr);
+                // }
+                // @dh-end
             }
         }
         else

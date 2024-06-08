@@ -1690,8 +1690,8 @@ class spell_sha_t8_elemental_4p_bonus : public AuraScript
         SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(SPELL_SHAMAN_ELECTRIFIED);
         int32 amount = CalculatePct(static_cast<int32>(damageInfo->GetDamage()), aurEff->GetAmount());
 
-        ASSERT(spellInfo->GetMaxTicks() > 0);
-        amount /= spellInfo->GetMaxTicks();
+        ASSERT(spellInfo->GetMaxTicks(eventInfo.GetActor()) > 0);
+        amount /= spellInfo->GetMaxTicks(eventInfo.GetActor());
 
         Unit* caster = eventInfo.GetActor();
         Unit* target = eventInfo.GetProcTarget();
@@ -1728,8 +1728,8 @@ class spell_sha_t9_elemental_4p_bonus : public AuraScript
         SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(SPELL_SHAMAN_LAVA_BURST_BONUS_DAMAGE);
         int32 amount = CalculatePct(static_cast<int32>(damageInfo->GetDamage()), aurEff->GetAmount());
 
-        ASSERT(spellInfo->GetMaxTicks() > 0);
-        amount /= spellInfo->GetMaxTicks();
+        ASSERT(spellInfo->GetMaxTicks(eventInfo.GetActor()) > 0);
+        amount /= spellInfo->GetMaxTicks(eventInfo.GetActor());
 
         Unit* caster = eventInfo.GetActor();
         Unit* target = eventInfo.GetProcTarget();
@@ -1800,8 +1800,8 @@ class spell_sha_t10_restoration_4p_bonus : public AuraScript
         SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(SPELL_SHAMAN_CHAINED_HEAL);
         int32 amount = CalculatePct(static_cast<int32>(healInfo->GetHeal()), aurEff->GetAmount());
 
-        ASSERT(spellInfo->GetMaxTicks() > 0);
-        amount /= spellInfo->GetMaxTicks();
+        ASSERT(spellInfo->GetMaxTicks(eventInfo.GetActor()) > 0);
+        amount /= spellInfo->GetMaxTicks(eventInfo.GetActor());
 
         Unit* caster = eventInfo.GetActor();
         Unit* target = eventInfo.GetProcTarget();

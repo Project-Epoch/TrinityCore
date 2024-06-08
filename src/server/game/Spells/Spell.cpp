@@ -1032,6 +1032,7 @@ void Spell::SelectImplicitNearbyTargets(SpellEffectInfo const& spellEffectInfo, 
         case TARGET_CHECK_PARTY:
         case TARGET_CHECK_RAID:
         case TARGET_CHECK_RAID_CLASS:
+        case TARGET_CHECK_SUMMON:
             range = m_spellInfo->GetMaxRange(true, m_caster, this);
             break;
         case TARGET_CHECK_ENTRY:
@@ -2493,6 +2494,8 @@ void Spell::TargetInfo::DoDamageAndTriggers(Spell* spell)
             if (IsCrit)
             {
                 hitMask |= PROC_HIT_CRITICAL;
+                procVictim |= PROC_FLAG_CRITICAL_HEALING_TAKEN;
+                procAttacker |= PROC_FLAG_CRITICAL_HEALING_DONE;
                 addhealth = Unit::SpellCriticalHealingBonus(caster, spell->m_spellInfo, addhealth, nullptr);
             }
             else
@@ -2511,8 +2514,19 @@ void Spell::TargetInfo::DoDamageAndTriggers(Spell* spell)
         if (spell->m_damage > 0)
         {
             hasDamage = true;
+            SpellSchoolMask calcSchool = spell->m_spellSchoolMask;
+            if (auto owner = spell->GetCaster()->ToUnit()) {
+                auto mOwnerSchoolMods = owner->GetAuraEffectsByType(SPELL_AURA_MOD_CHANGE_DAMAGE_SCHOOL_OF_SPELL);
+                for (auto schools : mOwnerSchoolMods)
+                    if (schools->GetCasterGUID() == caster->GetGUID()) {
+                        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                            if (spell->m_spellInfo->GetEffect(SpellEffIndex(i)).SpellClassMask & schools->GetSpellInfo()->SpellFamilyFlags)
+                                calcSchool = SpellSchoolMask(schools->GetMiscValue() | calcSchool);
+                    }
+            }
+
             // Fill base damage struct (unitTarget - is real spell target)
-            SpellNonMeleeDamage damageInfo(caster, spell->unitTarget, spell->m_spellInfo->Id, spell->m_spellSchoolMask);
+            SpellNonMeleeDamage damageInfo(caster, spell->unitTarget, spell->m_spellInfo->Id, calcSchool);
             // Check damage immunity
             if (spell->unitTarget->IsImmunedToDamage(spell->m_spellInfo))
             {
@@ -2534,6 +2548,12 @@ void Spell::TargetInfo::DoDamageAndTriggers(Spell* spell)
 
                 hitMask |= createProcHitMask(&damageInfo, MissCondition);
                 procVictim |= PROC_FLAG_TAKEN_DAMAGE;
+
+                if (hitMask & PROC_HIT_CRITICAL)
+                {
+                    procVictim |= PROC_FLAG_CRITICAL_DAMAGE_TAKEN;
+                    procAttacker |= PROC_FLAG_CRITICAL_DAMAGE_DONE;
+                }
 
                 spell->m_damage = damageInfo.damage;
                 caster->DealSpellDamage(&damageInfo, true);
@@ -4846,6 +4866,13 @@ void Spell::TakePower()
 
 void Spell::TakeAmmo()
 {
+    // @dh-begin
+    // TODO: add FIRE here for ammo stuff
+    // for now just
+    return;
+    // @dh-end
+
+
     // Only players use ammo
     Player* player = m_caster->ToPlayer();
     if (!player)
@@ -5021,6 +5048,10 @@ void Spell::TakeRunePower(bool didHit)
 
 void Spell::TakeReagents()
 {
+    // @dh-begin
+    // TODO: add FIRE for before and after reagent consume
+    // @dh-end
+    
     if (m_caster->GetTypeId() != TYPEID_PLAYER)
         return;
 
@@ -6168,7 +6199,7 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
         {
             if (m_spellInfo->NeedsExplicitUnitTarget())
             {
-                if (!unitCaster->GetComboPoints(m_targets.GetUnitTarget()))
+                if (!unitCaster->GetComboPoints())
                     return SPELL_FAILED_NO_COMBO_POINTS;
             }
             else
@@ -6178,6 +6209,31 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
             }
         }
     }
+
+    // @dh-begin
+    // TODO: add FIRE for custom checks like
+    //if (m_spellInfo->HasAttribute(SPELL_ATTR1_CU_NOT_USABLE_IN_INSTANCES))
+    //{
+
+    //    Map* map = m_caster->GetMap();
+    //    if (map && map->Instanceable())
+    //    {
+    //        m_customError = SPELL_CUSTOM_ERROR_NOT_IN_INSTANCES;
+    //        return SPELL_FAILED_CUSTOM_ERROR;
+    //    }
+    //}
+
+    //if (m_spellInfo->HasAttribute(SPELL_ATTR1_CU_USABLE_IN_INSTANCES_ONLY))
+    //{
+
+    //    Map* map = m_caster->GetMap();
+    //    if (map && !map->Instanceable())
+    //    {
+    //        m_customError = SPELL_CUSTOM_ERROR_ONLY_IN_INSTANCES;
+    //        return SPELL_FAILED_CUSTOM_ERROR;
+    //    }
+    //}
+    // @dh-end
 
     // all ok
     return SPELL_CAST_OK;
@@ -7081,57 +7137,10 @@ SpellCastResult Spell::CheckItems(uint32* param1 /*= nullptr*/, uint32* param2 /
 
                 switch (item->GetTemplate()->SubClass)
                 {
-                    case ITEM_SUBCLASS_WEAPON_THROWN:
-                    {
-                        uint32 const ammo = item->GetEntry();
-                        if (!player->HasItemCount(ammo))
-                            return SPELL_FAILED_NO_AMMO;
-                        break;
-                    }
+                    case ITEM_SUBCLASS_WEAPON_THROWN: // @dh-begin hater disable ammo
                     case ITEM_SUBCLASS_WEAPON_GUN:
                     case ITEM_SUBCLASS_WEAPON_BOW:
                     case ITEM_SUBCLASS_WEAPON_CROSSBOW:
-                    {
-                        uint32 const ammo = player->GetUInt32Value(PLAYER_AMMO_ID);
-                        if (!ammo)
-                        {
-                            // Requires No Ammo
-                            if (player->HasAura(46699))
-                                break;                      // skip other checks
-
-                            return SPELL_FAILED_NO_AMMO;
-                        }
-
-                        ItemTemplate const* ammoProto = sObjectMgr->GetItemTemplate(ammo);
-                        if (!ammoProto)
-                            return SPELL_FAILED_NO_AMMO;
-
-                        if (ammoProto->Class != ITEM_CLASS_PROJECTILE)
-                            return SPELL_FAILED_NO_AMMO;
-
-                        // check ammo ws. weapon compatibility
-                        switch (item->GetTemplate()->SubClass)
-                        {
-                            case ITEM_SUBCLASS_WEAPON_BOW:
-                            case ITEM_SUBCLASS_WEAPON_CROSSBOW:
-                                if (ammoProto->SubClass != ITEM_SUBCLASS_ARROW)
-                                    return SPELL_FAILED_NO_AMMO;
-                                break;
-                            case ITEM_SUBCLASS_WEAPON_GUN:
-                                if (ammoProto->SubClass != ITEM_SUBCLASS_BULLET)
-                                    return SPELL_FAILED_NO_AMMO;
-                                break;
-                            default:
-                                return SPELL_FAILED_NO_AMMO;
-                        }
-
-                        if (!player->HasItemCount(ammo))
-                        {
-                            player->SetUInt32Value(PLAYER_AMMO_ID, 0);
-                            return SPELL_FAILED_NO_AMMO;
-                        }
-                        break;
-                    }
                     case ITEM_SUBCLASS_WEAPON_WAND:
                         break;
                     default:
@@ -8474,6 +8483,17 @@ bool WorldObjectSpellTargetCheck::operator()(WorldObject* target) const
                 if (!target->IsCorpse() && !_caster->IsValidAssistTarget(unitTarget, _spellInfo))
                     return false;
                 if (!refUnit->IsInRaidWith(unitTarget))
+                    return false;
+                break;
+            case TARGET_CHECK_SUMMON:
+                if (!refUnit)
+                    return false;
+                if (unitTarget->IsTotem())
+                    return false;
+                // TODO: restore IsValidAttackTarget for corpses using corpse owner (faction, etc)
+                if (!target->IsCorpse() && !_caster->IsValidAssistTarget(unitTarget, _spellInfo))
+                    return false;
+                if (unitTarget->GetOwnerGUID() != refUnit->GetGUID())
                     return false;
                 break;
             default:

@@ -907,7 +907,7 @@ class spell_hun_piercing_shots : public AuraScript
             SpellInfo const* piercingShots = sSpellMgr->AssertSpellInfo(SPELL_HUNTER_PIERCING_SHOTS);
             uint32 dmg = dmgInfo->GetDamage();
 
-            int32 bp = CalculatePct(int32(dmg), aurEff->GetAmount()) / static_cast<int32>(piercingShots->GetMaxTicks());
+            int32 bp = CalculatePct(int32(dmg), aurEff->GetAmount()) / static_cast<int32>(piercingShots->GetMaxTicks(caster));
 
             CastSpellExtraArgs args(aurEff);
             args.AddSpellBP0(bp);
@@ -1245,8 +1245,7 @@ class spell_hun_thrill_of_the_hunt : public AuraScript
                 // due to Lock and Load SpellInfo::CalcPowerCost might return 0, so just calculate it manually
                 amount = CalculatePct(static_cast<int32>(CalculatePct(caster->GetCreateMana(), explosiveShot->GetSpellInfo()->ManaCostPercentage)), aurEff->GetAmount());
 
-                ASSERT(explosiveShot->GetSpellInfo()->GetMaxTicks() > 0);
-                amount /= explosiveShot->GetSpellInfo()->GetMaxTicks();
+                amount /= explosiveShot->GetSpellInfo()->GetMaxTicks(caster);
             }
         }
         else

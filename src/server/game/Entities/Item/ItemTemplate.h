@@ -42,9 +42,9 @@ enum ItemModType
     ITEM_MOD_DODGE_RATING             = 13,
     ITEM_MOD_PARRY_RATING             = 14,
     ITEM_MOD_BLOCK_RATING             = 15,
-    ITEM_MOD_HIT_MELEE_RATING         = 16,
-    ITEM_MOD_HIT_RANGED_RATING        = 17,
-    ITEM_MOD_HIT_SPELL_RATING         = 18,
+    ITEM_MOD_SPEED                    = 16,
+    ITEM_MOD_LIFESTEAL                = 17,
+    ITEM_MOD_AVOIDANCE                = 18,
     ITEM_MOD_CRIT_MELEE_RATING        = 19,
     ITEM_MOD_CRIT_RANGED_RATING       = 20,
     ITEM_MOD_CRIT_SPELL_RATING        = 21,
@@ -63,14 +63,14 @@ enum ItemModType
     ITEM_MOD_CRIT_TAKEN_RATING        = 34,
     ITEM_MOD_RESILIENCE_RATING        = 35,
     ITEM_MOD_HASTE_RATING             = 36,
-    ITEM_MOD_EXPERTISE_RATING         = 37,
+    ITEM_MOD_MASTERY                  = 37,
     ITEM_MOD_ATTACK_POWER             = 38,
     ITEM_MOD_RANGED_ATTACK_POWER      = 39,
     //ITEM_MOD_FERAL_ATTACK_POWER       = 40, not in 3.3
-    ITEM_MOD_SPELL_HEALING_DONE       = 41,                 // deprecated
-    ITEM_MOD_SPELL_DAMAGE_DONE        = 42,                 // deprecated
+    ITEM_MOD_AGI_STR_INT              = 41,                 // deprecated
+    ITEM_MOD_THORNS                   = 42,                 // deprecated
     ITEM_MOD_MANA_REGENERATION        = 43,
-    ITEM_MOD_ARMOR_PENETRATION_RATING = 44,
+    ITEM_MOD_MULTISTRIKE              = 44,
     ITEM_MOD_SPELL_POWER              = 45,
     ITEM_MOD_HEALTH_REGEN             = 46,
     ITEM_MOD_SPELL_PENETRATION        = 47,
@@ -537,10 +537,14 @@ enum ItemSubclassGlyph
     ITEM_SUBCLASS_GLYPH_SHAMAN                  = 7,
     ITEM_SUBCLASS_GLYPH_MAGE                    = 8,
     ITEM_SUBCLASS_GLYPH_WARLOCK                 = 9,
-    ITEM_SUBCLASS_GLYPH_DRUID                   = 11
+    ITEM_SUBCLASS_GLYPH_DEMON_HUNTER            = 10,
+    ITEM_SUBCLASS_GLYPH_DRUID                   = 11,
+    ITEM_SUBCLASS_GLYPH_MONK                    = 12,
+    ITEM_SUBCLASS_GLYPH_BARD                    = 13,
+    ITEM_SUBCLASS_GLYPH_TINKER                  = 14,
 };
 
-#define MAX_ITEM_SUBCLASS_GLYPH                   12
+#define MAX_ITEM_SUBCLASS_GLYPH                   15
 
 const uint32 MaxItemSubclassValues[MAX_ITEM_CLASS] =
 {

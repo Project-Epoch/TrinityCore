@@ -92,7 +92,8 @@ enum SpellTargetCheckTypes : uint8
     TARGET_CHECK_PARTY,
     TARGET_CHECK_RAID,
     TARGET_CHECK_RAID_CLASS,
-    TARGET_CHECK_PASSENGER
+    TARGET_CHECK_PASSENGER,
+    TARGET_CHECK_SUMMON
 };
 
 enum SpellTargetDirectionTypes
@@ -173,7 +174,26 @@ enum SpellCustomAttributes
     SPELL_ATTR0_CU_IS_TALENT                     = 0x00800000, // reserved for master branch
     SPELL_ATTR0_CU_AURA_CANNOT_BE_SAVED          = 0x01000000,
 
+    SPELL_ATTR0_CU_BYPASS_MECHANIC_IMMUNITY      = 0x80000000,
+
     SPELL_ATTR0_CU_NEGATIVE                      = SPELL_ATTR0_CU_NEGATIVE_EFF0 | SPELL_ATTR0_CU_NEGATIVE_EFF1 | SPELL_ATTR0_CU_NEGATIVE_EFF2
+};
+
+enum SpellCustomAttributes2
+{
+    SPELL_ATTR1_CU_REQUIRES_COMBAT                      = 0x00000001,
+    SPELL_ATTR1_CU_NO_ATTACK_BLOCK                      = 0x00000002,
+    SPELL_ATTR1_CU_SCALE_DAMAGE_EFFECTS_ONLY            = 0x00000004,
+    SPELL_ATTR1_CU_SCALE_HEALING_EFFECTS_ONLY           = 0x00000008,
+    SPELL_ATTR1_CU_USE_TARGETS_LEVEL_FOR_SPELL_SCALING  = 0x00000010,
+    SPELL_ATTR1_CU_REMOVE_OUTSIDE_DUNGEONS_AND_RAIDS    = 0x00000020,
+    SPELL_ATTR1_CU_NOT_USABLE_IN_INSTANCES              = 0x00000040,
+    SPELL_ATTR1_CU_USABLE_IN_INSTANCES_ONLY             = 0x00000080,
+    SPELL_ATTR1_CU_PERIODIC_CAN_CRIT                    = 0x00000100,
+    SPELL_ATTR1_CU_IGNORES_CASTER_LEVEL                 = 0x00000200,
+    SPELL_ATTR1_CU_ONLY_PROC_FROM_CLASS_ABILITIES       = 0x00000400, //TODO
+    SPELL_ATTR1_CU_ACTIVATES_REQUIRED_SHAPESHIFT        = 0x00000800, //TODO
+    SPELL_ATTR1_CU_REAPPLY_NO_REFRESH_DURATION          = 0x00001000,
 };
 
 uint32 GetTargetFlagMask(SpellTargetObjectTypes objType);
@@ -307,6 +327,7 @@ class TC_GAME_API SpellInfo
         uint32 AttributesEx6;
         uint32 AttributesEx7;
         uint32 AttributesCu;
+        uint32 AttributesExCu;
         uint64 Stances;
         uint64 StancesNot;
         uint32 Targets;
@@ -384,6 +405,21 @@ class TC_GAME_API SpellInfo
         bool HasAura(AuraType aura) const;
         bool HasAreaAuraEffect() const;
         bool HasOnlyDamageEffects() const;
+
+        // @dh-begin
+        bool CheckFamilyFlagsApply(flag96 flags) const;
+        bool CheckFamilyFlagsApply(flag96 flags, uint8 effect) const;
+        bool HasAuraPositive(AuraType aura) const;
+        inline bool HasAttribute(SpellCustomAttributes2 customAttribute) const { return (AttributesExCu & customAttribute) != 0; }
+        bool RequiresCombat() const; // hater
+        bool CanScaleDamagingOrHealing() const;
+        bool ComputeIsDamagingOrHealingEffect() const;
+
+        uint32 GetNoHasteTicks() const;
+        uint32 GetMaxTicks(Unit* caster) const;
+        uint32 GetMaxTicks(int32 DotDuration, Unit* caster) const;
+        uint32 CalculateTicks(uint32 ampl, int32 DotDuration, Unit* caster) const;
+        // @dh-end
 
         inline bool HasAttribute(SpellAttr0 attribute) const { return !!(Attributes & attribute); }
         inline bool HasAttribute(SpellAttr1 attribute) const { return !!(AttributesEx & attribute); }
@@ -473,8 +509,6 @@ class TC_GAME_API SpellInfo
 
         int32 GetDuration() const;
         int32 GetMaxDuration() const;
-
-        uint32 GetMaxTicks() const;
 
         uint32 CalcCastTime(Spell* spell = nullptr) const;
         uint32 GetRecoveryTime() const;

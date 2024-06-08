@@ -3340,15 +3340,15 @@ void ObjectMgr::LoadItemTemplates()
                 itemTemplate.ItemStat[j].ItemStatType = 0;
             }
 
-            switch (itemTemplate.ItemStat[j].ItemStatType)
-            {
-                case ITEM_MOD_SPELL_HEALING_DONE:
-                case ITEM_MOD_SPELL_DAMAGE_DONE:
-                    TC_LOG_ERROR("sql.sql", "Item (Entry: {}) has deprecated stat_type{} ({})", entry, j+1, itemTemplate.ItemStat[j].ItemStatType);
-                    break;
-                default:
-                    break;
-            }
+            //switch (itemTemplate.ItemStat[j].ItemStatType)
+            //{
+            //    case ITEM_MOD_SPELL_HEALING_DONE:
+            //    case ITEM_MOD_SPELL_DAMAGE_DONE:
+            //        TC_LOG_ERROR("sql.sql", "Item (Entry: {}) has deprecated stat_type{} ({})", entry, j+1, itemTemplate.ItemStat[j].ItemStatType);
+            //        break;
+            //    default:
+            //        break;
+            //}
         }
 
         for (uint8 j = 0; j < MAX_ITEM_PROTO_DAMAGES; ++j)
@@ -9732,6 +9732,57 @@ SkillRangeType GetSkillRangeType(SkillRaceClassInfoEntry const* rcEntry)
     return SKILL_RANGE_LEVEL;
 }
 
+void ObjectMgr::LoadNpcSounds()
+{
+    uint32 oldMSTime = getMSTime();
+
+    _npcSounds.clear();                                  // for reload case
+
+    //                                                0      1        2       3    4
+    QueryResult result = WorldDatabase.Query("SELECT id, hello, goodbye, pissed, ack FROM npc_sounds");
+
+    if (!result)
+    {
+        TC_LOG_WARN("server.loading", ">> Loaded 0 NpcSounds. DB table `npc_sounds` is empty!");
+        TC_LOG_INFO("server.loading", " ");
+        return;
+    }
+
+    uint32 count = 0;
+
+    do
+    {
+        Field* fields = result->Fetch();
+
+        uint32 id = fields[0].GetUInt32();
+        uint32 hello = fields[1].GetUInt32();
+        uint32 goodbye = fields[2].GetUInt32();
+        uint32 pissed = fields[3].GetUInt32();
+        uint32 ack = fields[4].GetUInt32();
+
+        NPCSoundsEntry* entry = new NPCSoundsEntry();
+        entry->ack = ack;
+        entry->hello = hello;
+        entry->goodbye = goodbye;
+        entry->pissed = pissed;
+        _npcSounds[id] = entry;
+
+        ++count;
+    } while (result->NextRow());
+
+    TC_LOG_INFO("server.loading", ">> Loaded {} NpcSounds in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
+    TC_LOG_INFO("server.loading", " ");
+}
+
+NPCSoundsEntry* ObjectMgr::GetNpcSounds(uint32 id)
+{
+    auto out = _npcSounds.find(id);
+    if (out != _npcSounds.end())
+        return out->second;
+
+    return nullptr;
+}
+
 void ObjectMgr::LoadCreatureOutfits()
 {
     uint32 oldMSTime = getMSTime();
@@ -11255,6 +11306,11 @@ PlayerInfo const* ObjectMgr::GetPlayerInfo(uint32 race, uint32 class_) const
     return info.get();
 }
 
+JumpChargeParams const* ObjectMgr::GetJumpChargeParams(int32 id) const
+{
+    return Trinity::Containers::MapGetValuePtr(_jumpChargeParams, id);
+}
+
 void ObjectMgr::LoadGameObjectQuestItems()
 {
     uint32 oldMSTime = getMSTime();
@@ -11386,6 +11442,53 @@ void ObjectMgr::InitializeQueriesData(QueryDataGroup mask)
     pool.Join();
 
     TC_LOG_INFO("server.loading", ">> Initialized query cache data in {} ms", GetMSTimeDiffToNow(oldMSTime));
+}
+
+void ObjectMgr::LoadJumpChargeParams()
+{
+    uint32 oldMSTime = getMSTime();
+
+    _jumpChargeParams.clear();
+
+    //                                               0   1      2                            3            4
+    QueryResult result = WorldDatabase.Query("SELECT id, speed, treatSpeedAsMoveTimeSeconds, jumpGravity, comments FROM forge_spell_jump_charge_params");
+
+    if (!result)
+    {
+        TC_LOG_ERROR("sql.sql", ">> Loaded 0 jump charge params. DB table `forge_spell_jump_charge_params` is empty.");
+        TC_LOG_INFO("server.loading", " ");
+        return;
+    }
+
+    do
+    {
+        Field* fields = result->Fetch();
+
+        uint32 id = fields[0].GetUInt32();
+        float speed = fields[1].GetFloat();
+        bool treatSpeedAsMoveTimeSeconds = fields[2].GetBool();
+        float jumpGravity = fields[3].GetFloat();
+
+        if (speed <= 0.0f)
+        {
+            TC_LOG_ERROR("sql.sql", "Table `forge_spell_jump_charge_params` uses invalid speed {} for id {}, set to default charge speed {}.", speed, id, SPEED_CHARGE);
+            speed = SPEED_CHARGE;
+        }
+
+        if (jumpGravity <= 0.0f)
+        {
+            TC_LOG_ERROR("sql.sql", "Table `forge_spell_jump_charge_params` uses invalid jump gravity {} for id {}, set to default {}.", jumpGravity, id, static_cast<float>(19.29110527038574));
+            jumpGravity = static_cast<float>(19.29110527038574);
+        }
+
+        JumpChargeParams& params = _jumpChargeParams[id];
+        params.Speed = speed;
+        params.MoveTimeInSec = speed;
+        params.TreatSpeedAsMoveTimeSeconds = treatSpeedAsMoveTimeSeconds;
+        params.JumpGravity = jumpGravity;
+    } while (result->NextRow());
+
+    TC_LOG_INFO("server.loading", ">> Loaded {} jump charge params from forge_spell_jump_charge_params in {} ms", _jumpChargeParams.size(), GetMSTimeDiffToNow(oldMSTime));
 }
 
 void QuestPOIWrapper::InitializeQueryData()

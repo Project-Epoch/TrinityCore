@@ -214,6 +214,7 @@ class TC_GAME_API Group
         bool isBGGroup()   const;
         bool isBFGroup()   const;
         bool IsCreated()   const;
+        Player* GetLeader() const;
         ObjectGuid GetLeaderGUID() const;
         ObjectGuid GetGUID() const;
         ObjectGuid::LowType GetLowGUID() const;

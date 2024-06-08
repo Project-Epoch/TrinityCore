@@ -217,6 +217,11 @@ struct TC_GAME_API ScriptedAI : public CreatureAI
         // Spawns a creature relative to me
         Creature* DoSpawnCreature(uint32 entry, float offsetX, float offsetY, float offsetZ, float angle, uint32 type, Milliseconds despawntime);
 
+        bool IsUniqueTimedEventDone(uint32 id) const { return _uniqueTimedEvents.find(id) != _uniqueTimedEvents.end(); }
+        void SetUniqueTimedEventDone(uint32 id) { _uniqueTimedEvents.insert(id); }
+        void ResetUniqueTimedEvent(uint32 id) { _uniqueTimedEvents.erase(id); }
+        void ClearUniqueTimedEventsDone() { _uniqueTimedEvents.clear(); }
+
         bool HealthBelowPct(uint32 pct) const;
         bool HealthAbovePct(uint32 pct) const;
 
@@ -302,6 +307,8 @@ struct TC_GAME_API ScriptedAI : public CreatureAI
         Difficulty _difficulty;
         bool _isCombatMovementAllowed;
         bool _isHeroic;
+
+        std::unordered_set<uint32> _uniqueTimedEvents;
 };
 
 class TC_GAME_API BossAI : public ScriptedAI

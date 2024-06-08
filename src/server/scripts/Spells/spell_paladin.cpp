@@ -1531,8 +1531,8 @@ class spell_pal_righteous_vengeance : public AuraScript
         SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(SPELL_PALADIN_RIGHTEOUS_VENGEANCE_DAMAGE);
         int32 amount = CalculatePct(static_cast<int32>(damageInfo->GetDamage()), aurEff->GetAmount());
 
-        ASSERT(spellInfo->GetMaxTicks() > 0);
-        amount /= spellInfo->GetMaxTicks();
+        ASSERT(spellInfo->GetMaxTicks(caster) > 0);
+        amount /= spellInfo->GetMaxTicks(caster);
 
         CastSpellExtraArgs args(aurEff);
         args.AddSpellBP0(amount);
@@ -1852,8 +1852,8 @@ class spell_pal_sheath_of_light : public AuraScript
         SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(SPELL_PALADIN_SHEATH_OF_LIGHT_HEAL);
         int32 amount = CalculatePct(static_cast<int32>(healInfo->GetEffectiveHeal()), aurEff->GetAmount());
 
-        ASSERT(spellInfo->GetMaxTicks() > 0);
-        amount /= spellInfo->GetMaxTicks();
+        ASSERT(spellInfo->GetMaxTicks(caster) > 0);
+        amount /= spellInfo->GetMaxTicks(caster);
 
         CastSpellExtraArgs args(aurEff);
         args.AddSpellBP0(amount);
@@ -1946,8 +1946,8 @@ class spell_pal_t8_2p_bonus : public AuraScript
         SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(SPELL_PALADIN_HOLY_MENDING);
         int32 amount = CalculatePct(static_cast<int32>(healInfo->GetHeal()), aurEff->GetAmount());
 
-        ASSERT(spellInfo->GetMaxTicks() > 0);
-        amount /= spellInfo->GetMaxTicks();
+        ASSERT(spellInfo->GetMaxTicks(caster) > 0);
+        amount /= spellInfo->GetMaxTicks(caster);
 
         CastSpellExtraArgs args(aurEff);
         args.AddSpellBP0(amount);

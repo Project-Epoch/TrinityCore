@@ -607,6 +607,13 @@ void WorldSession::HandleSetSelectionOpcode(WorldPacket& recvData)
             creature->SendMirrorSound(_player, 0);
 #endif
     _player->SetSelection(guid);
+
+    // @dh-begin
+    if (Unit* unit = ObjectAccessor::GetUnit(*_player, guid)) {
+        if (unit->IsAlive() && !_player->IsFriendlyTo(unit) && unit->isTargetableForAttack(true))
+            _player->AddComboPoints(unit, 0);
+    }
+    // @dh-end
 }
 
 void WorldSession::HandleStandStateChangeOpcode(WorldPacket& recvData)

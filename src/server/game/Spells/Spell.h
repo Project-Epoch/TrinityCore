@@ -294,6 +294,19 @@ class TC_GAME_API Spell
         void EffectCastButtons();
         void EffectRechargeManaGem();
 
+        // @dh-begin
+        void EffectLearnTransmogSet();
+        void EffectCreateAreaTrigger();
+        void EffectJumpCharge();
+        void EffectModifyCurrentSpellCooldown();
+        void EffectRemoveCurrentSpellCooldown();
+        void EffectRestoreSpellCharge();
+        void EffectGiveExperience();
+        void EffectGiveRestedExperience();
+        void EffectGiveHonor();
+        void EffectReceiveItem();
+        // @dh-end
+
         typedef std::unordered_set<Aura*> UsedSpellMods;
 
         Spell(WorldObject* caster, SpellInfo const* info, TriggerCastFlags triggerFlags, ObjectGuid originalCasterGUID = ObjectGuid::Empty);

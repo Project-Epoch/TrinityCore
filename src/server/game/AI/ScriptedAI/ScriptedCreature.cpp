@@ -28,8 +28,10 @@
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
 #include "Spell.h"
+#include "SpellHistory.h"
 #include "SpellMgr.h"
 #include "TemporarySummon.h"
+#include "Unit.h"
 
 // Spell summary for ScriptedAI::SelectSpell
 struct TSpellSummary
@@ -510,8 +512,22 @@ void BossAI::_Reset()
     events.Reset();
     summons.DespawnAll();
     scheduler.CancelAll();
-    if (instance && instance->GetBossState(_bossId) != DONE)
+
+    ClearUniqueTimedEventsDone();
+    if (instance && instance->GetBossState(_bossId) != DONE) {
         instance->SetBossState(_bossId, NOT_STARTED);
+
+        // Aleist3r: Duskhaven, reset all cooldowns on wipe, raids only
+        Map* map = me->GetMap();
+        Map::PlayerList const& players = map->GetPlayers();
+        for (Map::PlayerList::const_iterator i = players.begin(); i != players.end(); ++i)
+            if (Player* player = i->GetSource())
+                if (map && map->IsRaid())
+                {
+                    player->GetSpellHistory();
+                    player->RemoveSpellRelatedDebuffs();
+                }
+    }
 }
 
 void BossAI::_JustDied()
@@ -519,8 +535,20 @@ void BossAI::_JustDied()
     events.Reset();
     summons.DespawnAll();
     scheduler.CancelAll();
-    if (instance)
+    if (instance) {
         instance->SetBossState(_bossId, DONE);
+        
+        // Aleist3r: Duskhaven, reset all cooldowns on wipe, raids only
+        Map* map = me->GetMap();
+        Map::PlayerList const& players = map->GetPlayers();
+        for (Map::PlayerList::const_iterator i = players.begin(); i != players.end(); ++i)
+            if (Player* player = i->GetSource())
+                if (map && map->IsRaid())
+                {
+                    player->GetSpellHistory()->ResetAllCooldowns();
+                    player->RemoveSpellRelatedDebuffs();
+                }
+    }
 }
 
 void BossAI::_JustReachedHome()

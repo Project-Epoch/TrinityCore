@@ -891,12 +891,21 @@ void InstanceScript::UpdateEncounterState(EncounterCreditType type, uint32 credi
         return;
 
     uint32 dungeonId = 0;
+    bool updated = false;
 
     for (auto const& encounter : *encounters)
     {
         if (encounter->creditType == type && encounter->creditEntry == creditEntry)
         {
+            auto prevMask = completedEncounters;
             completedEncounters |= 1 << encounter->dbcEntry->Bit;
+            if (prevMask != completedEncounters)
+                updated = true;
+
+            // @dh-begin
+            // Add FIRE for encounter completed
+            // @dh-end
+
             if (encounter->lastEncounterDungeon)
             {
                 dungeonId = encounter->lastEncounterDungeon;
@@ -920,6 +929,10 @@ void InstanceScript::UpdateEncounterState(EncounterCreditType type, uint32 credi
                         sLFGMgr->FinishDungeon(grp->GetGUID(), dungeonId, instance);
                         return;
                     }
+
+                    // @dh-begin
+                    // Add FIRE for dungeon completed
+                    // @dh-end
                 }
             }
         }

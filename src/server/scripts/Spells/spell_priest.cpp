@@ -199,8 +199,8 @@ class spell_pri_blessed_recovery : public AuraScript
 
         int32 bp = CalculatePct(static_cast<int32>(dmgInfo->GetDamage()), aurEff->GetAmount());
 
-        ASSERT(triggerInfo->GetMaxTicks() > 0);
-        bp /= triggerInfo->GetMaxTicks();
+        ASSERT(triggerInfo->GetMaxTicks(eventInfo.GetActor()) > 0);
+        bp /= triggerInfo->GetMaxTicks(eventInfo.GetActor());
 
         CastSpellExtraArgs args(aurEff);
         args.AddSpellBP0(bp);
@@ -409,9 +409,9 @@ class spell_pri_glyph_of_prayer_of_healing : public AuraScript
 
         SpellInfo const* triggeredSpellInfo = sSpellMgr->AssertSpellInfo(SPELL_PRIEST_GLYPH_OF_PRAYER_OF_HEALING_HEAL);
 
-        ASSERT(triggeredSpellInfo->GetMaxTicks() > 0);
+        ASSERT(triggeredSpellInfo->GetMaxTicks(eventInfo.GetActor()) > 0);
         CastSpellExtraArgs args(aurEff);
-        args.AddSpellBP0(CalculatePct(healInfo->GetHeal(), aurEff->GetAmount()) / triggeredSpellInfo->GetMaxTicks());
+        args.AddSpellBP0(CalculatePct(healInfo->GetHeal(), aurEff->GetAmount()) / triggeredSpellInfo->GetMaxTicks(eventInfo.GetActor()));
         GetTarget()->CastSpell(eventInfo.GetProcTarget(), SPELL_PRIEST_GLYPH_OF_PRAYER_OF_HEALING_HEAL, args);
     }
 
@@ -1257,8 +1257,8 @@ class spell_pri_t10_heal_2p_bonus : public AuraScript
         SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(SPELL_PRIEST_BLESSED_HEALING);
         int32 amount = CalculatePct(static_cast<int32>(healInfo->GetHeal()), aurEff->GetAmount());
 
-        ASSERT(spellInfo->GetMaxTicks() > 0);
-        amount /= spellInfo->GetMaxTicks();
+        ASSERT(spellInfo->GetMaxTicks(eventInfo.GetActor()) > 0);
+        amount /= spellInfo->GetMaxTicks(eventInfo.GetActor());
 
         Unit* caster = eventInfo.GetActor();
         Unit* target = eventInfo.GetProcTarget();

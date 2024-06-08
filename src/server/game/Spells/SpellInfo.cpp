@@ -176,6 +176,7 @@ uint32 SpellImplicitTargetInfo::GetExplicitTargetMask(bool& srcSet, bool& dstSet
                                 targetMask = TARGET_FLAG_UNIT_PARTY;
                                 break;
                             case TARGET_CHECK_RAID:
+                            case TARGET_CHECK_SUMMON:
                                 targetMask = TARGET_FLAG_UNIT_RAID;
                                 break;
                             case TARGET_CHECK_PASSENGER:
@@ -345,6 +346,8 @@ std::array<SpellImplicitTargetInfo::StaticData, TOTAL_SPELL_TARGETS> SpellImplic
     {TARGET_OBJECT_TYPE_GOBJ, TARGET_REFERENCE_TYPE_CASTER, TARGET_SELECT_CATEGORY_CONE,    TARGET_CHECK_DEFAULT,  TARGET_DIR_FRONT},       // 108 TARGET_GAMEOBJECT_CONE
     {TARGET_OBJECT_TYPE_NONE, TARGET_REFERENCE_TYPE_NONE,   TARGET_SELECT_CATEGORY_NYI,     TARGET_CHECK_DEFAULT,  TARGET_DIR_NONE},        // 109
     {TARGET_OBJECT_TYPE_DEST, TARGET_REFERENCE_TYPE_NONE,   TARGET_SELECT_CATEGORY_NYI,     TARGET_CHECK_ENTRY,    TARGET_DIR_NONE},        // 110 TARGET_UNIT_CONE_ENTRY_110
+    {TARGET_OBJECT_TYPE_UNIT, TARGET_REFERENCE_TYPE_CASTER, TARGET_SELECT_CATEGORY_AREA,    TARGET_CHECK_SUMMON,   TARGET_DIR_NONE},        // 111 TARGET_UNIT_CASTER_AREA_SUMMONS
+
 } };
 
 SpellEffectInfo::SpellEffectInfo() : _spellInfo(nullptr), EffectIndex(EFFECT_0), Effect(SPELL_EFFECT_NONE), ApplyAuraName(SPELL_AURA_NONE),
@@ -440,17 +443,33 @@ int32 SpellEffectInfo::CalcValue(WorldObject const* caster /*= nullptr*/, int32 
         casterUnit = caster->ToUnit();
 
     // base amount modification based on spell lvl vs caster lvl
-    if (casterUnit && basePointsPerLevel != 0.0f)
-    {
-        int32 level = int32(casterUnit->GetLevel());
-        if (level > int32(_spellInfo->MaxLevel) && _spellInfo->MaxLevel > 0)
-            level = int32(_spellInfo->MaxLevel);
-        else if (level < int32(_spellInfo->BaseLevel))
-            level = int32(_spellInfo->BaseLevel);
+    if (casterUnit) {
+        if (basePointsPerLevel != 0.0f)
+        {
+            int32 level = int32(casterUnit->GetLevel());
+            if (level > int32(_spellInfo->MaxLevel) && _spellInfo->MaxLevel > 0)
+                level = int32(_spellInfo->MaxLevel);
+            else if (level < int32(_spellInfo->BaseLevel))
+                level = int32(_spellInfo->BaseLevel);
 
-        // if base level is greater than spell level, reduce by base level (eg. pilgrims foods)
-        level -= int32(std::max(_spellInfo->BaseLevel, _spellInfo->SpellLevel));
-        basePoints += int32(level * basePointsPerLevel);
+            // if base level is greater than spell level, reduce by base level (eg. pilgrims foods)
+            level -= int32(std::max(_spellInfo->BaseLevel, _spellInfo->SpellLevel));
+            basePoints += int32(level * basePointsPerLevel);
+        } else if (basePoints && casterUnit->IsPlayer()) {
+            // Aleist3r: this conditional is just fucking beautiful; I need this formula to work in certain cases outside of just damage or healing effect
+            if ((_spellInfo->CanScaleDamagingOrHealing() && _spellInfo->ComputeIsDamagingOrHealingEffect()) ||
+                (!_spellInfo->CanScaleDamagingOrHealing() && !_spellInfo->ComputeIsDamagingOrHealingEffect()))
+            {
+                if (Player* player = ((Unit*)caster)->ToPlayer())
+                {
+                    // general formula is L+(L-10)(L-10)(.016)
+                    int32 level = int32(player->GetLevel());
+                    int32 pct = int32(level + (level - 10) * (level - 10) * .016f);
+
+                    basePoints = CalculatePct(basePoints, pct);
+                }
+            }
+        }
     }
 
     // roll in a range <1;EffectDieSides> as of patch 3.3.3
@@ -797,6 +816,7 @@ std::array<SpellEffectInfo::StaticData, TOTAL_SPELL_EFFECTS> SpellEffectInfo::_d
     {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 162 SPELL_EFFECT_TALENT_SPEC_SELECT
     {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 163 SPELL_EFFECT_163
     {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 164 SPELL_EFFECT_REMOVE_AURA
+    {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_DEST}, // 165 SPELL_EFFECT_CREATE_AREATRIGGER
 } };
 
 SpellInfo::SpellInfo(SpellEntry const* spellEntry)
@@ -814,6 +834,7 @@ SpellInfo::SpellInfo(SpellEntry const* spellEntry)
     AttributesEx6 = spellEntry->AttributesExF;
     AttributesEx7 = spellEntry->AttributesExG;
     AttributesCu = 0;
+    AttributesExCu = 0;
     Stances = MAKE_PAIR64(spellEntry->ShapeshiftMask[0], spellEntry->ShapeshiftMask[1]);
     StancesNot = MAKE_PAIR64(spellEntry->ShapeshiftExclude[0], spellEntry->ShapeshiftExclude[1]);
     Targets = spellEntry->Targets;
@@ -890,6 +911,198 @@ SpellInfo::~SpellInfo()
 {
     _UnloadImplicitTargetConditionLists();
 }
+
+// @dh-begin
+bool SpellInfo::CheckFamilyFlagsApply(flag96 flags) const
+{
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+        if (GetEffect(SpellEffIndex(i)).SpellClassMask & flags)
+            return true;
+    return false;
+}
+
+bool SpellInfo::CheckFamilyFlagsApply(flag96 flags, uint8 effect) const
+{
+    return GetEffect(SpellEffIndex(effect)).SpellClassMask & flags;
+}
+
+bool SpellInfo::HasAuraPositive(AuraType aura) const
+{
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+        if (GetEffect(SpellEffIndex(i)).IsAura(aura) && IsPositiveEffect(i))
+            return true;
+
+    return false;
+}
+
+bool SpellInfo::RequiresCombat() const
+{
+    return HasAttribute(SPELL_ATTR1_CU_REQUIRES_COMBAT);
+}
+
+bool SpellInfo::CanScaleDamagingOrHealing() const
+{
+    return (AttributesExCu & SPELL_ATTR1_CU_SCALE_DAMAGE_EFFECTS_ONLY) || (AttributesExCu & SPELL_ATTR1_CU_SCALE_HEALING_EFFECTS_ONLY);
+}
+
+bool SpellInfo::ComputeIsDamagingOrHealingEffect() const
+{
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+    {
+        switch (GetEffect(SpellEffIndex(i)).Effect)
+        {
+        case SPELL_EFFECT_SCHOOL_DAMAGE:
+        case SPELL_EFFECT_HEALTH_LEECH:
+        case SPELL_EFFECT_HEAL:
+        case SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL:
+        case SPELL_EFFECT_WEAPON_PERCENT_DAMAGE:
+        case SPELL_EFFECT_WEAPON_DAMAGE:
+        case SPELL_EFFECT_HEAL_MECHANICAL:
+        case SPELL_EFFECT_NORMALIZED_WEAPON_DMG:
+        case SPELL_EFFECT_HEAL_PCT:
+            return true;
+        case SPELL_EFFECT_APPLY_AURA:
+        case SPELL_EFFECT_APPLY_AREA_AURA_ENEMY:
+        case SPELL_EFFECT_APPLY_AREA_AURA_FRIEND:
+        case SPELL_EFFECT_APPLY_AREA_AURA_OWNER:
+        case SPELL_EFFECT_APPLY_AREA_AURA_PARTY:
+        case SPELL_EFFECT_APPLY_AREA_AURA_PET:
+        case SPELL_EFFECT_APPLY_AREA_AURA_RAID:
+        case SPELL_EFFECT_PERSISTENT_AREA_AURA:
+        {
+            switch (GetEffect(SpellEffIndex(i)).ApplyAuraName)
+            {
+            case SPELL_AURA_PERIODIC_DAMAGE:
+            case SPELL_AURA_PERIODIC_HEAL:
+            case SPELL_AURA_DAMAGE_SHIELD:
+            case SPELL_AURA_OBS_MOD_HEALTH:
+            case SPELL_AURA_PROC_TRIGGER_DAMAGE:
+            case SPELL_AURA_PERIODIC_LEECH:
+            case SPELL_AURA_PERIODIC_HEALTH_FUNNEL:
+            case SPELL_AURA_PERIODIC_DAMAGE_PERCENT:
+                return true;
+            }
+        }
+        }
+    }
+
+    return false;
+}
+
+uint32 SpellInfo::GetNoHasteTicks() const
+{
+    auto DotDuration = GetMaxDuration();
+    if (DotDuration == 0)
+        return 1;
+
+    // 200% limit
+    if (DotDuration > 30000)
+        DotDuration = 30000;
+
+    for (uint8 x = 0; x < MAX_SPELL_EFFECTS; x++)
+    {
+        if (GetEffect(SpellEffIndex(x)).Effect == SPELL_EFFECT_APPLY_AURA)
+            switch (GetEffect(SpellEffIndex(x)).ApplyAuraName)
+            {
+            case SPELL_AURA_PERIODIC_DAMAGE:
+            case SPELL_AURA_PERIODIC_HEAL:
+            case SPELL_AURA_PERIODIC_LEECH:
+            case SPELL_AURA_PERIODIC_TRIGGER_SPELL_FROM_CLIENT:
+                if (GetEffect(SpellEffIndex(x)).Amplitude != 0)
+                {
+                    return DotDuration / GetEffect(SpellEffIndex(x)).Amplitude;
+                }
+                break;
+            }
+    }
+
+    return 6;
+}
+
+uint32 SpellInfo::GetMaxTicks(Unit* caster) const
+{
+    return GetMaxTicks(GetMaxDuration(), caster);
+}
+
+uint32 SpellInfo::GetMaxTicks(int32 DotDuration, Unit* caster) const
+{
+    if (DotDuration == 0)
+        return 1;
+
+    // 200% limit
+    if (DotDuration > 30000)
+        DotDuration = 30000;
+
+    for (uint8 x = 0; x < MAX_SPELL_EFFECTS; x++)
+    {
+        if (GetEffect(SpellEffIndex(x)).Effect == SPELL_EFFECT_APPLY_AURA)
+            switch (GetEffect(SpellEffIndex(x)).ApplyAuraName)
+            {
+            case SPELL_AURA_PERIODIC_DAMAGE:
+            case SPELL_AURA_PERIODIC_DAMAGE_PERCENT:
+            case SPELL_AURA_PERIODIC_HEAL:
+            case SPELL_AURA_OBS_MOD_HEALTH:
+            case SPELL_AURA_OBS_MOD_POWER:
+            case SPELL_AURA_PERIODIC_TRIGGER_SPELL_FROM_CLIENT:
+            case SPELL_AURA_POWER_BURN:
+            case SPELL_AURA_PERIODIC_LEECH:
+            case SPELL_AURA_PERIODIC_MANA_LEECH:
+            case SPELL_AURA_PERIODIC_ENERGIZE:
+            case SPELL_AURA_PERIODIC_DUMMY:
+            case SPELL_AURA_PERIODIC_TRIGGER_SPELL:
+            case SPELL_AURA_PERIODIC_TRIGGER_SPELL_WITH_VALUE:
+            case SPELL_AURA_PERIODIC_HEALTH_FUNNEL:
+            case SPELL_AURA_MOD_ATTACK_POWER_OF_ARMOR:
+                if (GetEffect(SpellEffIndex(x)).Amplitude != 0)
+                {
+                    return CalculateTicks(GetEffect(SpellEffIndex(x)).Amplitude, DotDuration, caster);
+                }
+                break;
+            }
+    }
+    return 6;
+}
+
+
+uint32 SpellInfo::CalculateTicks(uint32 ampl, int32 DotDuration, Unit* caster) const
+{
+    if (DotDuration == 0)
+        return 1;
+
+    // 200% limit
+    if (DotDuration > 30000)
+        DotDuration = 30000;
+
+
+    if (ampl != 0)
+    {
+        int numOfTicks = DotDuration / ampl;
+
+        if (numOfTicks != 0)
+        {
+            auto timeOfTicks = DotDuration / numOfTicks;
+            auto castSpeed = 1 - caster->GetFloatValue(UNIT_MOD_CAST_SPEED);
+
+            if (castSpeed > .74)
+                castSpeed = .74;
+
+            if (castSpeed < 0)
+                castSpeed = 0;
+
+            auto calc = DotDuration / (timeOfTicks / castSpeed);
+            auto addedTicks = (int)floor(calc);
+            numOfTicks += addedTicks;
+        }
+
+        if (HasAttribute(SPELL_ATTR5_START_PERIODIC_AT_APPLY))
+            ++numOfTicks;
+
+        return numOfTicks;
+    }
+
+    return 6;
+}
+// @dh-end
 
 uint32 SpellInfo::GetCategory() const
 {
@@ -3170,49 +3383,6 @@ uint32 SpellInfo::CalcCastTime(Spell* spell /*= nullptr*/) const
         castTime += 500;
 
     return (castTime > 0) ? uint32(castTime) : 0;
-}
-
-uint32 SpellInfo::GetMaxTicks() const
-{
-    uint32 totalTicks = 0;
-    int32 DotDuration = GetDuration();
-
-    for (SpellEffectInfo const& effect : GetEffects())
-    {
-        if (effect.IsEffect(SPELL_EFFECT_APPLY_AURA))
-        {
-            switch (effect.ApplyAuraName)
-            {
-                case SPELL_AURA_PERIODIC_DAMAGE:
-                case SPELL_AURA_PERIODIC_DAMAGE_PERCENT:
-                case SPELL_AURA_PERIODIC_HEAL:
-                case SPELL_AURA_OBS_MOD_HEALTH:
-                case SPELL_AURA_OBS_MOD_POWER:
-                case SPELL_AURA_PERIODIC_TRIGGER_SPELL_FROM_CLIENT:
-                case SPELL_AURA_POWER_BURN:
-                case SPELL_AURA_PERIODIC_LEECH:
-                case SPELL_AURA_PERIODIC_MANA_LEECH:
-                case SPELL_AURA_PERIODIC_ENERGIZE:
-                case SPELL_AURA_PERIODIC_DUMMY:
-                case SPELL_AURA_PERIODIC_TRIGGER_SPELL:
-                case SPELL_AURA_PERIODIC_TRIGGER_SPELL_WITH_VALUE:
-                case SPELL_AURA_PERIODIC_HEALTH_FUNNEL:
-                case SPELL_AURA_MOD_ATTACK_POWER_OF_ARMOR:
-                    // skip infinite periodics
-                    if (effect.Amplitude > 0 && DotDuration > 0)
-                    {
-                        totalTicks = static_cast<uint32>(DotDuration) / effect.Amplitude;
-                        if (HasAttribute(SPELL_ATTR5_START_PERIODIC_AT_APPLY))
-                            ++totalTicks;
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-
-    return totalTicks;
 }
 
 uint32 SpellInfo::GetRecoveryTime() const

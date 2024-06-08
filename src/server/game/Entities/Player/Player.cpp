@@ -221,6 +221,7 @@ Player::Player(WorldSession* session): Unit(true)
     m_regenTimerCount = 0;
     m_foodEmoteTimerCount = 0;
     m_weaponChangeTimer = 0;
+    m_ComboPointDegenTimer = 0;
 
     m_zoneUpdateId = uint32(-1);
     m_zoneUpdateTimer = 0;
@@ -684,9 +685,11 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
                 }
 
                 // if  this is ammo then use it
+                /* hater: disable ammo
                 msg = CanUseAmmo(pItem->GetEntry());
                 if (msg == EQUIP_ERR_OK)
                     SetAmmo(pItem->GetEntry());
+                    */
             }
         }
     }
@@ -2027,9 +2030,11 @@ void Player::RegenerateAll()
 
     m_regenTimerCount += m_regenTimer;
     m_foodEmoteTimerCount += m_regenTimer;
+    m_ComboPointDegenTimer += m_regenTimer;
+    m_focusRegen += m_regenTimer;
 
     Regenerate(POWER_ENERGY);
-
+    Regenerate(POWER_FOCUS);
     Regenerate(POWER_MANA);
 
     // Runes act as cooldowns, and they don't need to send any data
@@ -2042,6 +2047,10 @@ void Player::RegenerateAll()
                 SetRuneCooldown(i, (cd > m_regenTimer) ? cd - m_regenTimer : 0);
 
     }
+
+    if (m_ComboPointDegenTimer >= 10000) // hater: updated combopoints
+        if (!IsInCombat())
+            AddComboPoints(-1);
 
     if (m_regenTimerCount >= 2000)
     {
@@ -2143,8 +2152,20 @@ void Player::Regenerate(Powers power)
                 addvalue += -30 * RunicPowerDecreaseRate;         // 3 RunicPower by tick
             }
         }   break;
+        case POWER_FOCUS: 
+            {
+                float haste = (1 - m_modAttackSpeedPct[RANGED_ATTACK]);
+                addvalue += (0.0052f * m_regenTimer * sWorld->getRate(RATE_POWER_FOCUS));
+
+                if (haste > 0)
+                {
+                    if (haste > 74)
+                        haste = 74;
+
+                    addvalue += addvalue * haste;
+                }
+            }  break;
         case POWER_RUNE:
-        case POWER_FOCUS:
         case POWER_HAPPINESS:
             break;
         case POWER_HEALTH:
@@ -2204,7 +2225,13 @@ void Player::Regenerate(Powers power)
         else
             m_powerFraction[power] = addvalue - integerValue;
     }
-    if (m_regenTimerCount >= 2000)
+
+    if (power == POWER_FOCUS && m_focusRegen >= 1000) // we send focus every second.
+    {
+        SetPower(power, curValue);
+        m_focusRegen -= 1000;
+    }
+    else if (m_regenTimerCount >= 2000)
         SetPower(power, curValue);
     else
         UpdateUInt32Value(UNIT_FIELD_POWER1 + AsUnderlyingType(power), curValue);
@@ -2271,6 +2298,9 @@ void Player::ResetAllPowers()
             break;
         case POWER_RUNIC_POWER:
             SetPower(POWER_RUNIC_POWER, 0);
+            break;
+        case POWER_FOCUS:
+            SetPower(POWER_FOCUS, 0);
             break;
         default:
             break;
@@ -3864,6 +3894,28 @@ bool Player::Has310Flyer(bool checkAllSpells, uint32 excludeSpellId)
     return false;
 }
 
+// Aleist3r: long-ish debuffs that disallows certain spells to be cast (or applied) on given player
+void Player::RemoveSpellRelatedDebuffs()
+{
+    // Aleist3r: the thing I love the most, hardcoding
+    // but tbf it's better than making sql table for that in this case
+
+    if (HasAura(25771))         // Forbearance (Paladin stuff)
+        RemoveAura(25771);
+
+    if (HasAura(57723))         // Exhaustion (Heroism)
+        RemoveAura(57723);
+
+    if (HasAura(57724))         // Sated (Bloodlust)
+        RemoveAura(57724);
+
+    if (HasAura(1280002))       // Temporal Displacement (Time Warp)
+        RemoveAura(1280002);
+
+    // Aleist3r: yes, I know, for() loop, cba, it's only 4 debuffs so far
+    // if there's more in the future I may change it
+}
+
 void Player::RemoveArenaSpellCooldowns(bool removeActivePetCooldowns)
 {
     // remove cooldowns on spells that have < 10 min CD
@@ -4666,6 +4718,7 @@ void Player::ResurrectPlayer(float restore_percent, bool applySickness)
         SetPower(POWER_MANA, uint32(GetMaxPower(POWER_MANA)*restore_percent));
         SetPower(POWER_RAGE, 0);
         SetPower(POWER_ENERGY, uint32(GetMaxPower(POWER_ENERGY)*restore_percent));
+        SetPower(POWER_FOCUS, 0);
     }
 
     // trigger update zone for alive state zone updates
@@ -5629,6 +5682,36 @@ void Player::UpdateRating(CombatRating cr)
         if (aurEff->GetMiscValue() & (1 << cr))
             amount += int32(CalculatePct(GetStat(Stats(aurEff->GetMiscValueB())), aurEff->GetAmount()));
 
+    // @dh-begin:
+    // hater: prob add the ts equiv here
+    /*
+    // Apply bonus from SPELL_AURA_MOD_RATING_PCT
+    AuraEffectList const& modRatingPct = GetAuraEffectsByType(SPELL_AURA_MOD_RATING_PCT);
+    for (AuraEffectList::const_iterator i = modRatingPct.begin(); i != modRatingPct.end(); ++i)
+        if ((*i)->GetMiscValue() & (1 << cr))
+        {
+            uint8 level = GetLevel();
+            GtCombatRatingsEntry const* combatRating = sGtCombatRatingsStore.LookupEntry(cr * GT_MAX_LEVEL + level - 1);
+            float mult = combatRating->ratio;
+            amount += round((*i)->GetAmount() * mult);
+        }
+
+    // Apply bonus from SPELL_AURA_MOD_RATING_OF_RATING_PCT
+    AuraEffectList const& modRatingFromRating = GetAuraEffectsByType(SPELL_AURA_MOD_RATING_OF_RATING_PCT);
+    for (AuraEffectList::const_iterator i = modRatingFromRating.begin(); i != modRatingFromRating.end(); ++i)
+        if ((*i)->GetMiscValue() & (1 << cr))
+            for (int8 tempCr = 0; tempCr < MAX_COMBAT_RATING; ++tempCr)
+                if ((*i)->GetMiscValueB() & (1 << tempCr))
+                    amount = int32(CalculatePct(GetRatingBonusValue(CombatRating(tempCr)), (*i)->GetAmount()));
+
+    // now apply bonus from SPELL_AURA_MOD_RATING_FROM_ALL_SOURCES_BY_PCT, it is cummulative
+    AuraEffectList const& modRatingFromAllSourcesPct = GetAuraEffectsByType(SPELL_AURA_MOD_RATING_FROM_ALL_SOURCES_BY_PCT);
+    for (AuraEffectList::const_iterator i = modRatingFromAllSourcesPct.begin(); i != modRatingFromAllSourcesPct.end(); ++i)
+        if ((*i)->GetMiscValue() & (1 << cr))
+            amount = int32(CalculatePct(GetRatingBonusValue(cr), (*i)->GetAmount()));
+    */
+    // @dh-end
+
     if (amount < 0)
         amount = 0;
     SetUInt32Value(PLAYER_FIELD_COMBAT_RATING_1 + AsUnderlyingType(cr), uint32(amount));
@@ -5650,14 +5733,21 @@ void Player::UpdateRating(CombatRating cr)
         case CR_BLOCK:
             UpdateBlockPercentage();
             break;
-        case CR_HIT_MELEE:
-            UpdateMeleeHitChances();
-            break;
-        case CR_HIT_RANGED:
-            UpdateRangedHitChances();
-            break;
-        case CR_HIT_SPELL:
-            UpdateSpellHitChances();
+        case CR_SPEED:
+        case CR_LIFESTEAL:
+        case CR_AVOIDANCE:
+        case CR_MASTERY:
+        case CR_MULTISTRIKE:
+            // @dh-begin
+            //if (affectStats)
+            //{
+            //    UpdateSpeed(MOVE_RUN);
+            //    UpdateLifesteal(amount);
+            //    UpdateAvoidance(amount);
+            //    UpdateMastery(amount);
+            //    UpdateMultistrike(amount);
+            //}
+            // @dh-end
             break;
         case CR_CRIT_MELEE:
             if (affectStats)
@@ -5692,16 +5782,7 @@ void Player::UpdateRating(CombatRating cr)
         case CR_WEAPON_SKILL_OFFHAND:
         case CR_WEAPON_SKILL_RANGED:
             break;
-        case CR_EXPERTISE:
-            if (affectStats)
-            {
-                UpdateExpertise(BASE_ATTACK);
-                UpdateExpertise(OFF_ATTACK);
-            }
-            break;
-        case CR_ARMOR_PENETRATION:
-            if (affectStats)
-                UpdateArmorPenetration(amount);
+        default:
             break;
     }
 }
@@ -5933,6 +6014,10 @@ bool Player::UpdateSkillPro(uint16 SkillId, int32 Chance, uint32 step)
 
     int32 Roll = irand(1, 1000);
 
+    // @dh-begin
+    // TODO: Add FIRE here for on skill up chance related things (maybe weighting)
+    // @dh-end
+
     if (Roll <= Chance)
     {
         uint32 new_value = SkillValue+step;
@@ -5955,6 +6040,11 @@ bool Player::UpdateSkillPro(uint16 SkillId, int32 Chance, uint32 step)
         UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_REACH_SKILL_LEVEL, SkillId);
         TC_LOG_DEBUG("entities.player.skills", "Player::UpdateSkillPro: Player '{}' ({}), SkillID: {}, Chance: {:3.1f}% taken",
             GetName(), GetGUID().ToString(), SkillId, Chance / 10.0f);
+
+        // @dh-begin
+        // TODO: Add FIRE here for on skill up (for xp and shit)
+        // @dh-end
+
         return true;
     }
 
@@ -7199,6 +7289,10 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea)
         sBattlefieldMgr->HandlePlayerLeaveZone(this, oldZone);
     }
 
+    // @dh-begin
+    // TODO: Add fire for leaving ZONE
+    // @dh-end
+
     // group update
     if (GetGroup())
         SetGroupUpdateFlag(GROUP_UPDATE_FULL);
@@ -7268,6 +7362,11 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea)
     {
         sOutdoorPvPMgr->HandlePlayerEnterZone(this, newZone);
         sBattlefieldMgr->HandlePlayerEnterZone(this, newZone);
+
+        // @dh-begin
+        // TODO: Add fire for entering ZONE
+        // @dh-end
+
         SendInitWorldStates(newZone, newArea);              // only if really enters to new zone, not just area change, works strange...
         if (Guild* guild = GetGuild())
             guild->UpdateMemberData(this, GUILD_MEMBER_DATA_ZONEID, newZone);
@@ -7452,8 +7551,9 @@ void Player::_ApplyItemMods(Item* item, uint8 slot, bool apply, bool updateItemA
 
     _ApplyItemBonuses(proto, slot, apply);
 
-    if (slot == EQUIPMENT_SLOT_RANGED)
-        _ApplyAmmoBonuses();
+    // hater: disable ammo
+    // if (slot == EQUIPMENT_SLOT_RANGED)
+    //     _ApplyAmmoBonuses();
 
     ApplyItemEquipSpell(item, apply);
     if (updateItemAuras)
@@ -7565,15 +7665,15 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
             case ITEM_MOD_BLOCK_RATING:
                 ApplyRatingMod(CR_BLOCK, int32(val), apply);
                 break;
-            case ITEM_MOD_HIT_MELEE_RATING:
-                ApplyRatingMod(CR_HIT_MELEE, int32(val), apply);
-                break;
-            case ITEM_MOD_HIT_RANGED_RATING:
-                ApplyRatingMod(CR_HIT_RANGED, int32(val), apply);
-                break;
-            case ITEM_MOD_HIT_SPELL_RATING:
-                ApplyRatingMod(CR_HIT_SPELL, int32(val), apply);
-                break;
+            // case ITEM_MOD_HIT_MELEE_RATING: hater: disable 
+            //     ApplyRatingMod(CR_HIT_MELEE, int32(val), apply);
+            //     break;
+            // case ITEM_MOD_HIT_RANGED_RATING:
+            //     ApplyRatingMod(CR_HIT_RANGED, int32(val), apply);
+            //     break;
+            // case ITEM_MOD_HIT_SPELL_RATING:
+            //     ApplyRatingMod(CR_HIT_SPELL, int32(val), apply);
+            //     break;
             case ITEM_MOD_CRIT_MELEE_RATING:
                 ApplyRatingMod(CR_CRIT_MELEE, int32(val), apply);
                 break;
@@ -7610,11 +7710,11 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
             case ITEM_MOD_HASTE_SPELL_RATING:
                 ApplyRatingMod(CR_HASTE_SPELL, int32(val), apply);
                 break;
-            case ITEM_MOD_HIT_RATING:
-                ApplyRatingMod(CR_HIT_MELEE, int32(val), apply);
-                ApplyRatingMod(CR_HIT_RANGED, int32(val), apply);
-                ApplyRatingMod(CR_HIT_SPELL, int32(val), apply);
-                break;
+            // case ITEM_MOD_HIT_RATING: hater: disable 
+            //     ApplyRatingMod(CR_HIT_MELEE, int32(val), apply);
+            //     ApplyRatingMod(CR_HIT_RANGED, int32(val), apply);
+            //     ApplyRatingMod(CR_HIT_SPELL, int32(val), apply);
+            //     break;
             case ITEM_MOD_CRIT_RATING:
                 ApplyRatingMod(CR_CRIT_MELEE, int32(val), apply);
                 ApplyRatingMod(CR_CRIT_RANGED, int32(val), apply);
@@ -7640,9 +7740,9 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
                 ApplyRatingMod(CR_HASTE_RANGED, int32(val), apply);
                 ApplyRatingMod(CR_HASTE_SPELL, int32(val), apply);
                 break;
-            case ITEM_MOD_EXPERTISE_RATING:
-                ApplyRatingMod(CR_EXPERTISE, int32(val), apply);
-                break;
+            // case ITEM_MOD_EXPERTISE_RATING: hater: disable
+            //     ApplyRatingMod(CR_EXPERTISE, int32(val), apply);
+            //     break;
             case ITEM_MOD_ATTACK_POWER:
                 HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, float(val), apply);
                 HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(val), apply);
@@ -7656,9 +7756,9 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
             case ITEM_MOD_MANA_REGENERATION:
                 ApplyManaRegenBonus(int32(val), apply);
                 break;
-            case ITEM_MOD_ARMOR_PENETRATION_RATING:
-                ApplyRatingMod(CR_ARMOR_PENETRATION, int32(val), apply);
-                break;
+            // case ITEM_MOD_ARMOR_PENETRATION_RATING: hater: disable 
+            //     ApplyRatingMod(CR_ARMOR_PENETRATION, int32(val), apply);
+            //     break;
             case ITEM_MOD_SPELL_POWER:
                 ApplySpellPowerBonus(int32(val), apply);
                 break;
@@ -7672,8 +7772,9 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
                 HandleBaseModFlatValue(SHIELD_BLOCK_VALUE, float(val), apply);
                 break;
             // deprecated item mods
-            case ITEM_MOD_SPELL_HEALING_DONE:
-            case ITEM_MOD_SPELL_DAMAGE_DONE:
+            //case ITEM_MOD_SPELL_HEALING_DONE:
+            //case ITEM_MOD_SPELL_DAMAGE_DONE:
+            default:
                 break;
         }
     }
@@ -8336,8 +8437,8 @@ void Player::_RemoveAllItemMods()
             ApplyItemDependentAuras(m_items[i], false);
             _ApplyItemBonuses(proto, i, false);
 
-            if (i == EQUIPMENT_SLOT_RANGED)
-                _ApplyAmmoBonuses();
+            // if (i == EQUIPMENT_SLOT_RANGED) hater: disable
+            //     _ApplyAmmoBonuses();
         }
     }
 
@@ -8366,8 +8467,8 @@ void Player::_ApplyAllItemMods()
             if (attackType != MAX_ATTACK)
                 UpdateWeaponDependentAuras(attackType);
 
-            if (i == EQUIPMENT_SLOT_RANGED)
-                _ApplyAmmoBonuses();
+            // if (i == EQUIPMENT_SLOT_RANGED) hater: disable
+            //     _ApplyAmmoBonuses();
         }
     }
 
@@ -12169,7 +12270,7 @@ void Player::SetAmmo(uint32 item)
 
     SetUInt32Value(PLAYER_AMMO_ID, item);
 
-    _ApplyAmmoBonuses();
+    // _ApplyAmmoBonuses(); hater: disable
 }
 
 void Player::RemoveAmmo()
@@ -12431,7 +12532,7 @@ Item* Player::EquipItem(uint16 pos, Item* pItem, bool update)
             case EQUIPMENT_SLOT_MAINHAND:
             case EQUIPMENT_SLOT_OFFHAND:
             case EQUIPMENT_SLOT_RANGED:
-                RecalculateRating(CR_ARMOR_PENETRATION);
+                //RecalculateRating(CR_ARMOR_PENETRATION);
                 break;
             default:
                 break;
@@ -12626,7 +12727,7 @@ void Player::RemoveItem(uint8 bag, uint8 slot, bool update)
                         case EQUIPMENT_SLOT_MAINHAND:
                         case EQUIPMENT_SLOT_OFFHAND:
                         case EQUIPMENT_SLOT_RANGED:
-                            RecalculateRating(CR_ARMOR_PENETRATION);
+                            //RecalculateRating(CR_ARMOR_PENETRATION);
                             break;
                         default:
                             break;
@@ -12775,7 +12876,7 @@ void Player::DestroyItem(uint8 bag, uint8 slot, bool update)
                     case EQUIPMENT_SLOT_MAINHAND:
                     case EQUIPMENT_SLOT_OFFHAND:
                     case EQUIPMENT_SLOT_RANGED:
-                        RecalculateRating(CR_ARMOR_PENETRATION);
+                        //RecalculateRating(CR_ARMOR_PENETRATION);
                         break;
                     default:
                         break;
@@ -14180,18 +14281,18 @@ void Player::ApplyEnchantment(Item* item, EnchantmentSlot slot, bool apply, bool
                             ApplyRatingMod(CR_BLOCK, enchant_amount, apply);
                             TC_LOG_DEBUG("entities.player.items", "+ {} SHIELD_BLOCK", enchant_amount);
                             break;
-                        case ITEM_MOD_HIT_MELEE_RATING:
-                            ApplyRatingMod(CR_HIT_MELEE, enchant_amount, apply);
-                            TC_LOG_DEBUG("entities.player.items", "+ {} MELEE_HIT", enchant_amount);
-                            break;
-                        case ITEM_MOD_HIT_RANGED_RATING:
-                            ApplyRatingMod(CR_HIT_RANGED, enchant_amount, apply);
-                            TC_LOG_DEBUG("entities.player.items", "+ {} RANGED_HIT", enchant_amount);
-                            break;
-                        case ITEM_MOD_HIT_SPELL_RATING:
-                            ApplyRatingMod(CR_HIT_SPELL, enchant_amount, apply);
-                            TC_LOG_DEBUG("entities.player.items", "+ {} SPELL_HIT", enchant_amount);
-                            break;
+                        //case ITEM_MOD_HIT_MELEE_RATING:
+                        //    ApplyRatingMod(CR_HIT_MELEE, enchant_amount, apply);
+                        //    TC_LOG_DEBUG("entities.player.items", "+ {} MELEE_HIT", enchant_amount);
+                        //    break;
+                        //case ITEM_MOD_HIT_RANGED_RATING:
+                        //    ApplyRatingMod(CR_HIT_RANGED, enchant_amount, apply);
+                        //    TC_LOG_DEBUG("entities.player.items", "+ {} RANGED_HIT", enchant_amount);
+                        //    break;
+                        //case ITEM_MOD_HIT_SPELL_RATING:
+                        //    ApplyRatingMod(CR_HIT_SPELL, enchant_amount, apply);
+                        //    TC_LOG_DEBUG("entities.player.items", "+ {} SPELL_HIT", enchant_amount);
+                        //    break;
                         case ITEM_MOD_CRIT_MELEE_RATING:
                             ApplyRatingMod(CR_CRIT_MELEE, enchant_amount, apply);
                             TC_LOG_DEBUG("entities.player.items", "+ {} MELEE_CRIT", enchant_amount);
@@ -14233,12 +14334,12 @@ void Player::ApplyEnchantment(Item* item, EnchantmentSlot slot, bool apply, bool
                         case ITEM_MOD_HASTE_SPELL_RATING:
                             ApplyRatingMod(CR_HASTE_SPELL, enchant_amount, apply);
                             break;
-                        case ITEM_MOD_HIT_RATING:
+                       /* case ITEM_MOD_HIT_RATING:
                             ApplyRatingMod(CR_HIT_MELEE, enchant_amount, apply);
                             ApplyRatingMod(CR_HIT_RANGED, enchant_amount, apply);
                             ApplyRatingMod(CR_HIT_SPELL, enchant_amount, apply);
                             TC_LOG_DEBUG("entities.player.items", "+ {} HIT", enchant_amount);
-                            break;
+                            break;*/
                         case ITEM_MOD_CRIT_RATING:
                             ApplyRatingMod(CR_CRIT_MELEE, enchant_amount, apply);
                             ApplyRatingMod(CR_CRIT_RANGED, enchant_amount, apply);
@@ -14268,10 +14369,10 @@ void Player::ApplyEnchantment(Item* item, EnchantmentSlot slot, bool apply, bool
                             ApplyRatingMod(CR_HASTE_SPELL, enchant_amount, apply);
                             TC_LOG_DEBUG("entities.player.items", "+ {} HASTE", enchant_amount);
                             break;
-                        case ITEM_MOD_EXPERTISE_RATING:
-                            ApplyRatingMod(CR_EXPERTISE, enchant_amount, apply);
-                            TC_LOG_DEBUG("entities.player.items", "+ {} EXPERTISE", enchant_amount);
-                            break;
+                        //case ITEM_MOD_EXPERTISE_RATING:
+                        //    ApplyRatingMod(CR_EXPERTISE, enchant_amount, apply);
+                        //    TC_LOG_DEBUG("entities.player.items", "+ {} EXPERTISE", enchant_amount);
+                        //    break;
                         case ITEM_MOD_ATTACK_POWER:
                             HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, float(enchant_amount), apply);
                             HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(enchant_amount), apply);
@@ -14289,10 +14390,10 @@ void Player::ApplyEnchantment(Item* item, EnchantmentSlot slot, bool apply, bool
                             ApplyManaRegenBonus(enchant_amount, apply);
                             TC_LOG_DEBUG("entities.player.items", "+ {} MANA_REGENERATION", enchant_amount);
                             break;
-                        case ITEM_MOD_ARMOR_PENETRATION_RATING:
-                            ApplyRatingMod(CR_ARMOR_PENETRATION, enchant_amount, apply);
-                            TC_LOG_DEBUG("entities.player.items", "+ {} ARMOR PENETRATION", enchant_amount);
-                            break;
+                        //case ITEM_MOD_ARMOR_PENETRATION_RATING:
+                        //    ApplyRatingMod(CR_ARMOR_PENETRATION, enchant_amount, apply);
+                        //    TC_LOG_DEBUG("entities.player.items", "+ {} ARMOR PENETRATION", enchant_amount);
+                        //    break;
                         case ITEM_MOD_SPELL_POWER:
                             ApplySpellPowerBonus(enchant_amount, apply);
                             TC_LOG_DEBUG("entities.player.items", "+ {} SPELL_POWER", enchant_amount);
@@ -14309,8 +14410,8 @@ void Player::ApplyEnchantment(Item* item, EnchantmentSlot slot, bool apply, bool
                             HandleBaseModFlatValue(SHIELD_BLOCK_VALUE, float(enchant_amount), apply);
                             TC_LOG_DEBUG("entities.player.items", "+ {} BLOCK_VALUE", enchant_amount);
                             break;
-                        case ITEM_MOD_SPELL_HEALING_DONE:   // deprecated
-                        case ITEM_MOD_SPELL_DAMAGE_DONE:    // deprecated
+                        //case ITEM_MOD_SPELL_HEALING_DONE:   // deprecated
+                        //case ITEM_MOD_SPELL_DAMAGE_DONE:    // deprecated
                         default:
                             break;
                     }
@@ -14511,15 +14612,15 @@ void Player::PrepareGossipMenu(WorldObject* source, uint32 menuId /*= 0*/, bool 
                 }
                 case GOSSIP_OPTION_LEARNDUALSPEC:
                 case GOSSIP_OPTION_DUALSPEC_INFO:
-                    if (!(GetSpecsCount() == 1 && creature->CanResetTalents(this, false) && !(GetLevel() < sWorld->getIntConfig(CONFIG_MIN_DUALSPEC_LEVEL))))
+                    //if (!(GetSpecsCount() == 1 && creature->CanResetTalents(this, false) && !(GetLevel() < sWorld->getIntConfig(CONFIG_MIN_DUALSPEC_LEVEL))))
                         canTalk = false;
                     break;
                 case GOSSIP_OPTION_UNLEARNTALENTS:
-                    if (!creature->CanResetTalents(this, false))
+                    //if (!creature->CanResetTalents(this, false))
                         canTalk = false;
                     break;
                 case GOSSIP_OPTION_UNLEARNPETTALENTS:
-                    if (!GetPet() || GetPet()->getPetType() != HUNTER_PET || GetPet()->m_spells.size() <= 1 || !creature->CanResetTalents(this, true))
+                    //if (!GetPet() || GetPet()->getPetType() != HUNTER_PET || GetPet()->m_spells.size() <= 1 || !creature->CanResetTalents(this, true))
                         canTalk = false;
                     break;
                 case GOSSIP_OPTION_TAXIVENDOR:
@@ -16341,6 +16442,28 @@ void Player::SetQuestStatus(uint32 questId, QuestStatus status, bool update /*= 
     if (update)
         SendQuestUpdate(questId);
     sScriptMgr->OnQuestStatusChange(this, questId);
+}
+
+void Player::ClearQuestStatus()
+{
+    for (uint16 i = 0; i < MAX_QUEST_LOG_SIZE; ++i) {
+        if (uint32 questId = GetQuestSlotQuestId(i)) {
+            if (questId != 500519) {
+                TakeQuestSourceItem(questId, true); // remove quest src item from player
+                AbandonQuest(questId); // remove all quest items player received before abandoning quest.
+                RemoveActiveQuest(questId);
+                RemoveTimedAchievement(ACHIEVEMENT_TIMED_TYPE_QUEST, questId);
+                SetQuestSlotState(i, 0);
+            }
+        }
+    }
+
+    CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_QUESTSTATUS_REWARDED);
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    stmt->setUInt32(0, this->GetGUID().GetCounter());
+    trans->Append(stmt);
+    CharacterDatabase.AsyncCommitTransaction(trans);
+
 }
 
 void Player::RemoveActiveQuest(uint32 questId, bool update /*= true*/)
@@ -21297,6 +21420,64 @@ void Player::SendOnCancelExpectedVehicleRideAura() const
     SendDirectMessage(&data);
 }
 
+/// HATER: FORGE MESSAGING RECORD KEEPING
+
+void Player::SendForgeUIMsg(int topic, std::string message)
+{
+    SendForgeUIMsg(std::to_string(topic), message);
+}
+
+void Player::SendForgeUIMsg(ForgeTopic topic, std::string message)
+{
+    SendForgeUIMsg(std::to_string((int)topic), message);
+}
+
+void Player::SendForgeUIMsg(std::string topic, std::string message) {
+    if (message.length() == 0)
+        return;
+
+    if (2048 < message.length())
+    {
+        std::vector<std::string> msgParts = SplitString(message, 2048);
+        std::string sizeStr = std::to_string(msgParts.size());
+
+        for (std::size_t i = 0; i < msgParts.size(); ++i)
+        {
+            std::string msg = topic + "}" + std::to_string(i + 1) + "}" + sizeStr + "|" + msgParts[i];
+            msg = MSG_TYPE_FORGE + "\t" + msg;
+            Whisper(msg, LANG_ADDON, this);
+        }
+    }
+    else
+    {
+        message = topic + "|" + message;
+        message = MSG_TYPE_FORGE + "\t" + message;
+        Whisper(message, LANG_ADDON, this);
+    }
+}
+
+std::vector<std::string> Player::SplitString(const std::string& str, int splitLength)
+{
+    int NumSubstrings = str.length() / splitLength;
+    std::vector<std::string> ret;
+
+    for (auto i = 0; i < NumSubstrings; i++)
+    {
+        ret.push_back(str.substr(i * splitLength, splitLength));
+    }
+
+    // If there are leftover characters, create a shorter item at the end.
+    if (str.length() % splitLength != 0)
+    {
+        ret.push_back(str.substr(splitLength * NumSubstrings));
+    }
+
+
+    return ret;
+}
+
+///
+
 void Player::PetSpellInitialize()
 {
     Pet* pet = GetPet();
@@ -23507,8 +23688,8 @@ void Player::LearnDefaultSkill(uint32 skillId, uint16 rank)
             uint16 skillValue = 1;
             if (rcInfo->Flags & SKILL_FLAG_ALWAYS_MAX_VALUE)
                 skillValue = maxValue;
-            else if (GetClass() == CLASS_DEATH_KNIGHT)
-                skillValue = std::min(std::max<uint16>({ uint16(1), uint16((GetLevel() - 1) * 5) }), maxValue);
+            // else if (GetClass() == CLASS_DEATH_KNIGHT) hater: disable
+            //     skillValue = std::min(std::max<uint16>({ uint16(1), uint16((GetLevel() - 1) * 5) }), maxValue);
 
             SetSkill(skillId, rank, skillValue, maxValue);
             break;
@@ -24465,6 +24646,7 @@ void Player::ResurrectUsingRequestDataImpl()
 
     SetPower(POWER_RAGE, 0);
     SetFullPower(POWER_ENERGY);
+    SetFullPower(POWER_FOCUS);
 
     SpawnCorpseBones();
 }
@@ -24523,6 +24705,15 @@ void Player::UpdateAreaDependentAuras(uint32 newArea)
         // use m_zoneUpdateId for speed: UpdateArea called from UpdateZone or instead UpdateZone in both cases m_zoneUpdateId up-to-date
         if (iter->second->GetSpellInfo()->CheckLocation(GetMapId(), m_zoneUpdateId, newArea, this, false) != SPELL_CAST_OK)
             RemoveOwnedAura(iter);
+        else if (iter->second->GetSpellInfo()->HasAttribute(SPELL_ATTR1_CU_REMOVE_OUTSIDE_DUNGEONS_AND_RAIDS))
+        {
+            Map* map = GetMap();
+
+            if (map && !(map->IsDungeon() && map->IsRaid()))
+                RemoveOwnedAura(iter);
+            else
+                ++iter;
+        }
         else
             ++iter;
     }
@@ -25091,6 +25282,15 @@ uint32 Player::GetRuneBaseCooldown(uint8 index)
     {
         if ((*i)->GetMiscValue() == POWER_RUNE && (*i)->GetMiscValueB() == rune)
             cooldown = cooldown * (100 - (*i)->GetAmount()) / 100;
+    }
+
+    float haste = (1 - m_modAttackSpeedPct[BASE_ATTACK]);
+    if (haste > 0)
+    {
+        if (haste > .74)
+            haste = .74;
+
+        cooldown -= cooldown * haste;
     }
 
     return cooldown;

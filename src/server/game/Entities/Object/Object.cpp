@@ -2598,6 +2598,15 @@ SpellMissInfo WorldObject::MagicSpellHitResult(Unit* victim, SpellInfo const* sp
             return SPELL_MISS_DEFLECT;
     }
 
+    // Physical or has aura SPELL_AURA_ADD_SPELL_BLOCK
+    if (Unit* asUnit = (Unit*) ToUnit())
+        if (asUnit->CanBlockSpells(victim))
+        {
+            // Get blocked status
+            if (asUnit->isSpellBlocked(victim, spellInfo, BASE_ATTACK))
+                return SPELL_MISS_BLOCK;
+        }
+
     return SPELL_MISS_NONE;
 }
 

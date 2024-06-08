@@ -282,6 +282,11 @@ class TC_GAME_API Aura
 
         virtual std::string GetDebugInfo() const;
 
+        // @dh-begin
+        void AddDuration(int32 duration, bool capMax = true, bool withMods = false);
+        uint32 GetMaxStackAmount();
+        // @dh-end
+
     private:
         AuraScript* GetScriptByName(std::string const& scriptName) const;
         void _DeleteRemovedApplications();
