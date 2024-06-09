@@ -3678,7 +3678,11 @@ enum SpellFamilyNames
     // 14 - unused
     SPELLFAMILY_DEATHKNIGHT = 15, // TITLE Death Knight
     // 16 - unused
-    SPELLFAMILY_PET         = 17  // TITLE Pet
+    SPELLFAMILY_PET         = 17, // TITLE Pet
+    SPELLFAMILY_MONK        = 18, // TITLE Monk
+    SPELLFAMILY_TINKER      = 19, // TITLE Tinker
+    SPELLFAMILY_DEMONHUNTER = 20, // TITLE Demon Hunter
+    SPELLFAMILY_BARD        = 21  // TITLE Bard
 };
 
 enum TradeStatus
