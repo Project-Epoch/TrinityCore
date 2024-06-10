@@ -26,86 +26,6 @@
 float const GROUND_HEIGHT_TOLERANCE = 0.05f; // Extra tolerance to z position to check if it is in air or on ground.
 constexpr float Z_OFFSET_FIND_HEIGHT = 1.5f;
 
-const std::string MSG_TYPE_FORGE = "FORGE";
-
-enum class ForgeTopic
-{
-    GET_TALENTS = 0,
-    LEARN_TALENT = 1,
-    // a single talent
-    UNLEARN_TALENT = 2,
-    // respec talents
-    RESPEC_TALENTS = 3,
-    RESPEC_TALENTS_ERROR = 4,
-    UPDATE_SPEC = 5,
-    ACTIVATE_SPEC = 6,
-    PRESTIGE = 7,
-    TALENT_TREE_LAYOUT = 8,
-    PROMPT_CHAR_SPEC = 9,
-    UPDATE_SPEC_ERROR = 10,
-    ACTIVATE_SPEC_ERROR = 11,
-    LEARN_TALENT_ERROR = 12,
-    BUY_ITEM_ERROR = 13,
-    UNLEARN_TALENT_ERROR = 14,
-    GET_TALENT_ERROR = 15,
-    BUY_ITEMS = 16,
-    GET_ITEM_FROM_COLLECTION = 17,
-    GET_PLAYER_COLLECTION = 18,
-    GET_SHOP_LAYOUT = 19,
-    HOLIDAYS = 20,
-    GET_CHARACTER_SPECS = 21,
-    PRESTIGE_ERROR = 22,
-    ACTIVATE_CLASS_SPEC = 23,
-    ACTIVATE_CLASS_SPEC_ERROR = 24,
-    GET_TOOLTIPS = 25,
-    FORGET_TOOLTIP = 26,
-    GET_GAME_MODES = 27,
-    SET_GAME_MODES = 28,
-    SET_GAME_MODES_ERROR = 29,
-    END_GAME_MODES = 30,
-
-    // xmog
-    COLLECTION_INIT = 31,
-    GET_XMOG_SETS = 32,
-    LOAD_XMOG_SET = 33,
-    LOAD_XMOG_SET_ERROR = 34,
-    XMOG_OK = 35,
-    LOAD_XMOG = 36,
-    LEARN_MOUNT = 44,
-    USE_TOY = 45,
-    APPLY_XMOG = 47,
-    REMOVE_XMOG_SET = 48,
-    SAVE_XMOG_SET = 49,
-    RENAME_XMOG_SET = 50,
-    COLLECTION_SETUP_STARTED = 52,
-    COLLECTION_SETUP_FINISHED = 53,
-    ADD_XMOG = 54,
-    APPLY_XMOG_ERROR = 55,
-
-    // m+
-    MYTHIC_GET_WEEKLY_REWARD = 101,
-    MYTHIC_GET_MAP_STATS = 102,
-    MYTHIC_GET_AFFIXES_LIST = 103,
-    MYTHIC_SET_AFFIXES_AND_START = 104,
-    MYTHIC_KEY_COMPLETED = 105, // send confirmation that key has ended
-    MYTHIC_OPEN_WINDOW = 106,
-    MYTHIC_UPDATE_TIMER = 107,
-    MYTHIC_UPDATE_DEATHS = 108,
-    MYTHIC_UPDATE_CRITERIA = 109,
-
-    // loadouts
-    LOADOUT_ERROR = 120,
-    GET_LOADOUTS = 121,
-    SAVE_LOADOUT = 122,
-    DELETE_LOADOUT = 123,
-};
-
-enum class ForgeError
-{
-    OK = 0,
-    UNKNOWN_SPELL = 1
-};
-
 enum SpellEffIndex : uint8
 {
     EFFECT_0 = 0,
@@ -163,61 +83,115 @@ enum Gender
 // EnumUtils: DESCRIBE THIS
 enum Races
 {
-    RACE_NONE               = 0,  // SKIP
-    RACE_HUMAN              = 1,  // TITLE Human
-    RACE_ORC                = 2,  // TITLE Orc
-    RACE_DWARF              = 3,  // TITLE Dwarf
-    RACE_NIGHTELF           = 4,  // TITLE Night Elf
-    RACE_UNDEAD_PLAYER      = 5,  // TITLE Undead
-    RACE_TAUREN             = 6,  // TITLE Tauren
-    RACE_GNOME              = 7,  // TITLE Gnome
-    RACE_TROLL              = 8,  // TITLE Troll
-    //RACE_GOBLIN             = 9,
-    RACE_BLOODELF           = 10, // TITLE Blood Elf
-    RACE_DRAENEI            = 11 //, TITLE Draenei
-    //RACE_FEL_ORC            = 12,
-    //RACE_NAGA               = 13,
-    //RACE_BROKEN             = 14,
-    //RACE_SKELETON           = 15,
-    //RACE_VRYKUL             = 16,
-    //RACE_TUSKARR            = 17,
-    //RACE_FOREST_TROLL       = 18,
-    //RACE_TAUNKA             = 19,
-    //RACE_NORTHREND_SKELETON = 20,
-    //RACE_ICE_TROLL          = 21
+    RACE_NONE                = 0,
+    RACE_HUMAN               = 1,
+    RACE_ORC                 = 2,
+    RACE_DWARF               = 3,
+    RACE_NIGHTELF            = 4,
+    RACE_UNDEAD_PLAYER       = 5,
+    RACE_TAUREN              = 6,
+    RACE_GNOME               = 7,
+    RACE_TROLL               = 8,
+    RACE_VULPERA             = 9,
+    RACE_BLOODELF            = 10,
+    RACE_DRAENEI             = 11,
+    RACE_WORGEN              = 12,
+    RACE_NIGHTBORNE          = 13,
+    RACE_PANDAREN            = 14,
+    RACE_VOIDELF             = 15,
+    RACE_EREDAR              = 16,
+    RACE_DRACTHYR            = 17,
+    RACE_ZANDALARI_TROLL     = 18,
+    RACE_OGRE                = 19,
+    RACE_DRAENEI_LIGHTFORGED = 20,
+    RACE_GOBLIN              = 21,
+    RACE_NAGA                = 22,
+    RACE_BROKEN              = 23,
+    RACE_TUSKARR             = 24,
+    RACE_FOREST_TROLL        = 25,
+    RACE_SKELETON            = 26,
+    RACE_DEMONHUNTERH        = 27,
+    RACE_ARAKKOA             = 28,
+    RACE_TAUNKA              = 29,
+    RACE_FELORC              = 30,
+    RACE_KULTIRAN            = 31,
+    RACE_DEMONHUNTERA        = 32
 };
 
 // max+1 for player race
 // @tswow-begin
-#define MAX_RACES         32
+#define MAX_RACES         33
 #define RACEMASK_ALL_PLAYABLE 4294967295
 // @tswow-end
 
-#define RACEMASK_ALLIANCE \
-    ((1<<(RACE_HUMAN-1)) | (1<<(RACE_DWARF-1)) | (1<<(RACE_NIGHTELF-1)) | \
-     (1<<(RACE_GNOME-1)) | (1<<(RACE_DRAENEI-1)))
+#define RACEMASK_ALL_PLAYABLE \
+    ((1<<(RACE_HUMAN-1))   |(1<<(RACE_ORC-1))          |(1<<(RACE_DWARF-1))   | \
+     (1<<(RACE_NIGHTELF-1))|(1<<(RACE_UNDEAD_PLAYER-1))|(1<<(RACE_TAUREN-1))  | \
+     (1<<(RACE_GNOME-1))   |(1<<(RACE_TROLL-1))        |(1<<(RACE_BLOODELF-1))| \
+     (1<<(RACE_VULPERA-1))   |(1<<(RACE_WORGEN-1))        |(1<<(RACE_NIGHTBORNE-1))   | \
+     (1<<(RACE_PANDAREN-1))   |(1<<(RACE_VOIDELF-1))        |(1<<(RACE_EREDAR-1))   | \
+     (1<<(RACE_DRACTHYR-1))   |(1<<(RACE_ZANDALARI_TROLL-1))        |(1<<(RACE_OGRE-1))   | \
+     (1<<(RACE_DRAENEI_LIGHTFORGED-1))   |(1<<(RACE_GOBLIN-1))  |(1<<(RACE_NAGA-1))   | \
+     (1<<(RACE_BROKEN-1))   |(1<<(RACE_TUSKARR-1))          |(1<<(RACE_FOREST_TROLL-1))   | \
+     (1<<(RACE_SKELETON-1))   |(1<<(RACE_DEMONHUNTERH-1))          |(1<<(RACE_ARAKKOA-1))   | \
+     (1<<(RACE_TAUNKA-1))   |(1<<(RACE_FELORC-1))          |(1<<(RACE_KULTIRAN-1))   | \
+     (1<<(RACE_DEMONHUNTERA-1))   | (1<<(RACE_DRAENEI-1)))
 
-#define RACEMASK_HORDE RACEMASK_ALL_PLAYABLE & ~RACEMASK_ALLIANCE
+#define RACEMASK_ALLIANCE \
+    ((1<<(RACE_HUMAN-1))    | \
+     (1<<(RACE_DWARF-1))    | \
+     (1<<(RACE_NIGHTELF-1)) | \
+     (1<<(RACE_GNOME-1))    | \
+     (1<<(RACE_DRAENEI-1))  | \
+     (1<<(RACE_WORGEN-1))  | \
+     (1<<(RACE_VOIDELF-1))   | \
+     (1<<(RACE_OGRE-1))   | \
+     (1<<(RACE_PANDAREN-1))   | \
+     (1<<(RACE_FOREST_TROLL-1))   | \
+     (1<<(RACE_SKELETON-1))   | \
+     (1<<(RACE_TAUNKA-1))   | \
+     (1<<(RACE_FELORC-1))   | \
+     (1<<(RACE_KULTIRAN-1))   | \
+     (1<<(RACE_DEMONHUNTERA-1))   | \
+     (1<<(RACE_DRAENEI_LIGHTFORGED-1)))
+
+#define RACEMASK_HORDE \
+    ((1<<(RACE_ORC-1))    | \
+     (1<<(RACE_UNDEAD_PLAYER-1))    | \
+     (1<<(RACE_TAUREN-1)) | \
+     (1<<(RACE_TROLL-1))    | \
+     (1<<(RACE_BLOODELF-1))  | \
+     (1<<(RACE_GOBLIN-1))  | \
+     (1<<(RACE_NIGHTBORNE-1))   | \
+     (1<<(RACE_DRACTHYR-1))   | \
+     (1<<(RACE_ZANDALARI_TROLL-1))   | \
+     (1<<(RACE_EREDAR-1))   | \
+     (1<<(RACE_NAGA-1))   | \
+     (1<<(RACE_BROKEN-1))   | \
+     (1<<(RACE_TUSKARR-1))   | \
+     (1<<(RACE_DEMONHUNTERH-1))   | \
+     (1<<(RACE_ARAKKOA-1))   | \
+     (1<<(RACE_VULPERA-1)))
 
 // Class value is index in ChrClasses.dbc
 // EnumUtils: DESCRIBE THIS
 enum Classes
 {
-    CLASS_NONE = 0,  // SKIP
-    CLASS_WARRIOR = 1,  // TITLE Warrior
-    CLASS_PALADIN = 2,  // TITLE Paladin
-    CLASS_HUNTER = 3,  // TITLE Hunter
-    CLASS_ROGUE = 4,  // TITLE Rogue
-    CLASS_PRIEST = 5,  // TITLE Priest
-    CLASS_DEATH_KNIGHT = 6,  // TITLE Death Knight
-    CLASS_SHAMAN = 7,  // TITLE Shaman
-    CLASS_MAGE = 8,  // TITLE Mage
-    CLASS_WARLOCK = 9,  // TITLE Warlock
-    CLASS_DEMON_HUNTER = 10, // TITLE DemonHunter
-    CLASS_DRUID = 11, // TITLE Druid
-    CLASS_MONK = 12, // TITLE Monk
-    CLASS_BARD = 13, // TITLE Bard
-    CLASS_TINKER = 14  // TITLE Tinker
+    CLASS_NONE          = 0,  // SKIP
+    CLASS_WARRIOR       = 1,  // TITLE Warrior
+    CLASS_PALADIN       = 2,  // TITLE Paladin
+    CLASS_HUNTER        = 3,  // TITLE Hunter
+    CLASS_ROGUE         = 4,  // TITLE Rogue
+    CLASS_PRIEST        = 5,  // TITLE Priest
+    CLASS_DEATH_KNIGHT  = 6,  // TITLE Death Knight
+    CLASS_SHAMAN        = 7,  // TITLE Shaman
+    CLASS_MAGE          = 8,  // TITLE Mage
+    CLASS_WARLOCK       = 9,  // TITLE Warlock
+    CLASS_DEMON_HUNTER  = 10, // TITLE DemonHunter
+    CLASS_DRUID         = 11, // TITLE Druid
+    CLASS_MONK          = 12, // TITLE Monk
+    CLASS_BARD          = 13, // TITLE Bard
+    CLASS_TINKER        = 14  // TITLE Tinker
 };
 
 // max+1 for player class
@@ -1044,17 +1018,7 @@ enum SpellEffects
     SPELL_EFFECT_TALENT_SPEC_SELECT                 = 162,
     SPELL_EFFECT_163                                = 163,
     SPELL_EFFECT_REMOVE_AURA                        = 164,
-    SPELL_EFFECT_LEARN_TRANSMOG_SET                 = 165, 
-    SPELL_EFFECT_CREATE_AREATRIGGER                 = 166,
-    SPELL_EFFECT_JUMP_CHARGE                        = 167,
-    SPELL_EFFECT_MODIFY_CURRENT_SPELL_COOLDOWN      = 168,
-    SPELL_EFFECT_REMOVE_CURRENT_SPELL_COOLDOWN      = 169,
-    SPELL_EFFECT_RESTORE_SPELL_CHARGE               = 170,
-    SPELL_EFFECT_GIVE_EXPERIENCE                    = 171,
-    SPELL_EFFECT_GIVE_RESTED_EXPERIENCE_BONUS       = 172,
-    SPELL_EFFECT_GIVE_HONOR                         = 173,
-    SPELL_EFFECT_RECEIVE_ITEM                       = 174,
-    TOTAL_SPELL_EFFECTS
+    TOTAL_SPELL_EFFECTS                             = 165
 };
 
 // EnumUtils: DESCRIBE THIS
@@ -1623,7 +1587,6 @@ enum Targets
     TARGET_UNK_DEST_AREA_UNK_107       = 107, // not enough info - only generic spells avalible
     TARGET_GAMEOBJECT_CONE             = 108,
     TARGET_UNIT_CONE_ENTRY_110         = 110, // 1 spell
-    TARGET_UNIT_CASTER_AREA_SUMMONS    = 111,
     TOTAL_SPELL_TARGETS
 };
 
@@ -3678,11 +3641,7 @@ enum SpellFamilyNames
     // 14 - unused
     SPELLFAMILY_DEATHKNIGHT = 15, // TITLE Death Knight
     // 16 - unused
-    SPELLFAMILY_PET         = 17, // TITLE Pet
-    SPELLFAMILY_MONK        = 18, // TITLE Monk
-    SPELLFAMILY_TINKER      = 19, // TITLE Tinker
-    SPELLFAMILY_DEMONHUNTER = 20, // TITLE Demon Hunter
-    SPELLFAMILY_BARD        = 21  // TITLE Bard
+    SPELLFAMILY_PET         = 17  // TITLE Pet
 };
 
 enum TradeStatus
