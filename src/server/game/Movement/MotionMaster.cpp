@@ -838,6 +838,28 @@ void MotionMaster::MoveJump(float x, float y, float z, float o, float speedXY, f
     Add(movement);
 }
 
+void MotionMaster::MoveJumpWithGravity(Position const& pos, float speedXY, float gravity, uint32 id, Unit const* target)
+{
+    TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveJump: Unit '{}', jumps to point: {}", _owner->GetGUID().ToString(), pos.ToString());
+    if (speedXY < 0.01f)
+        return;
+
+    std::function<void(Movement::MoveSplineInit&)> initializer = [=](Movement::MoveSplineInit& init)
+        {
+            init.MoveTo(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), false);
+            init.SetParabolic(gravity, 0);
+            init.SetVelocity(speedXY);
+            if (target)
+                init.SetFacing(target);
+        };
+
+    GenericMovementGenerator* movement = new GenericMovementGenerator(std::move(initializer), EFFECT_MOTION_TYPE, id);
+    movement->Priority = MOTION_PRIORITY_HIGHEST;
+    movement->BaseUnitState = UNIT_STATE_JUMPING;
+    movement->AddFlag(MOVEMENTGENERATOR_FLAG_PERSIST_ON_DEATH);
+    Add(movement);
+}
+
 void MotionMaster::MoveCirclePath(float x, float y, float z, float radius, bool clockwise, uint8 stepCount)
 {
     std::function<void(Movement::MoveSplineInit&)> initializer = [=, this](Movement::MoveSplineInit& init)

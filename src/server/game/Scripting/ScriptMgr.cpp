@@ -1992,6 +1992,11 @@ void ScriptMgr::OnPlayerChat(Player* player, uint32 type, uint32 lang, std::stri
     FOREACH_SCRIPT(PlayerScript)->OnChat(player, type, lang, msg, channel);
 }
 
+void ScriptMgr::OnBeforeSendChatMessage(Player* player, uint32& type, uint32& lang, std::string& msg)
+{
+    FOREACH_SCRIPT(PlayerScript)->OnBeforeSendChatMessage(player, type, lang, msg);
+}
+
 void ScriptMgr::OnPlayerEmote(Player* player, Emote emote)
 {
     FOREACH_SCRIPT(PlayerScript)->OnEmote(player, emote);
@@ -2238,6 +2243,23 @@ AuraScript* SpellScriptLoader::GetAuraScript() const
 {
     return nullptr;
 }
+
+// Database
+void ScriptMgr::OnAfterDatabasesLoaded()
+{
+    FOREACH_SCRIPT(DatabaseScript)->OnAfterDatabasesLoaded();
+}
+
+void ScriptMgr::OnAfterDatabaseLoadCreatureTemplates(CreatureTemplateContainer creatureTemplates)
+{
+    FOREACH_SCRIPT(DatabaseScript)->OnAfterDatabaseLoadCreatureTemplates(creatureTemplates);
+}
+
+DatabaseScript::DatabaseScript(const char* name) : ScriptObject(name)
+{
+    ScriptRegistry<DatabaseScript>::Instance()->AddScript(this);
+}
+
 
 ServerScript::ServerScript(char const* name)
     : ScriptObject(name)
@@ -2738,6 +2760,10 @@ void PlayerScript::OnChat(Player* /*player*/, uint32 /*type*/, uint32 /*lang*/, 
 {
 }
 
+void PlayerScript::OnBeforeSendChatMessage(Player* /*player*/, uint32& /*type*/, uint32& /*lang*/, std::string& /*msg*/)
+{
+}
+
 void PlayerScript::OnEmote(Player* /*player*/, Emote /*emote*/)
 {
 }
@@ -2934,3 +2960,4 @@ template class TC_GAME_API ScriptRegistry<GuildScript>;
 template class TC_GAME_API ScriptRegistry<GroupScript>;
 template class TC_GAME_API ScriptRegistry<UnitScript>;
 template class TC_GAME_API ScriptRegistry<AccountScript>;
+template class TC_GAME_API ScriptRegistry<DatabaseScript>;

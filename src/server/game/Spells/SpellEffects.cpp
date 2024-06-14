@@ -1631,6 +1631,16 @@ void Spell::DoCreateItem(uint32 itemId)
         if (pItem->GetTemplate()->HasSignature())
             pItem->SetGuidValue(ITEM_FIELD_CREATOR, player->GetGUID());
 
+        // @dh-begin
+        FIRE_ID(pItem->GetTemplate()->events.id,
+            Item,
+            OnItemCrafted,
+            TSItem(pItem),
+            TSPlayer(player),
+            num_to_add
+        );
+        // @dh-end
+
         // send info to the client
         player->SendNewItem(pItem, num_to_add, true, bgType == 0);
 

@@ -98,6 +98,19 @@ struct TC_GAME_API ChaseAngle
     bool IsAngleOkay(float relativeAngle) const;
 };
 
+struct TC_GAME_API JumpChargeParams
+{
+    union
+    {
+        float Speed;
+        float MoveTimeInSec;
+    };
+
+    bool TreatSpeedAsMoveTimeSeconds = false;
+
+    float JumpGravity = 0.0f;
+};
+
 inline bool IsInvalidMovementGeneratorType(uint8 const type) { return type == MAX_DB_MOTION_TYPE || type >= MAX_MOTION_TYPE; }
 inline bool IsInvalidMovementSlot(uint8 const slot) { return slot >= MAX_MOTION_SLOT; }
 

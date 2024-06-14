@@ -517,6 +517,10 @@ enum CharacterDatabaseStatements : uint32
     CHAR_DEL_JSON_DATA,
     // @tswow-end
 
+    CHAR_SEL_CHAR_BOSS_LOOT_LOCKOUT,
+
+    CHAR_SEL_CHARACTER_ACTIONS_SPEC_LOADOUT,
+
     MAX_CHARACTERDATABASE_STATEMENTS
 };
 

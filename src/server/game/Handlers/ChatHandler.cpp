@@ -282,6 +282,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
             return;
     }
 
+    sScriptMgr->OnBeforeSendChatMessage(_player, type, lang, msg);
+
     switch (type)
     {
         case CHAT_MSG_SAY:

@@ -1,0 +1,1 @@
+ALTER TABLE `spell_custom_attr` ADD `attributesEx` int unsigned NOT NULL DEFAULT '0';

@@ -15598,6 +15598,16 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver, 
                 if (CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, itemId, quest->RewardItemIdCount[i]) == EQUIP_ERR_OK)
                 {
                     Item* item = StoreNewItem(dest, itemId, true, GenerateItemRandomPropertyId(itemId));
+                    // @dh-begin
+                    FIRE_ID(
+                        quest->events.id,
+                        Quest, OnQuestRewardItem,
+                        TSQuest(quest),
+                        TSPlayer(this),
+                        TSItem(item)
+                        );
+                    // @dh-end
+
                     SendNewItem(item, quest->RewardItemIdCount[i], true, false, false, false);
                 }
                 else if (quest->IsDFQuest())
@@ -15614,6 +15624,15 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver, 
             if (CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, itemId, quest->RewardChoiceItemCount[reward]) == EQUIP_ERR_OK)
             {
                 Item* item = StoreNewItem(dest, itemId, true, GenerateItemRandomPropertyId(itemId));
+                // @dh-begin
+                FIRE_ID(
+                    quest->events.id,
+                    Quest, OnQuestRewardItem,
+                    TSQuest(quest),
+                    TSPlayer(this),
+                    TSItem(item)
+                );
+                // @dh-end
                 SendNewItem(item, quest->RewardChoiceItemCount[reward], true, false, false, false);
             }
         }

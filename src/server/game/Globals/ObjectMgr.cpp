@@ -565,7 +565,10 @@ void ObjectMgr::LoadCreatureTemplates()
         LoadCreatureTemplate(fields);
     } while (result->NextRow());
 
+    TC_LOG_INFO("server.loading", ">> Loading Creature Template Resistances...");
     LoadCreatureTemplateResistances();
+
+    TC_LOG_INFO("server.loading", ">> Loading Creature Template Spells...");
     LoadCreatureTemplateSpells();
 
     // Checking needs to be done after loading because of the difficulty self referencing
@@ -573,6 +576,8 @@ void ObjectMgr::LoadCreatureTemplates()
         CheckCreatureTemplate(&ctPair.second);
 
     TC_LOG_INFO("server.loading", ">> Loaded {} creature definitions in {} ms", _creatureTemplateStore.size(), GetMSTimeDiffToNow(oldMSTime));
+
+    sScriptMgr->OnAfterDatabaseLoadCreatureTemplates(_creatureTemplateStore);
 }
 
 void ObjectMgr::LoadCreatureTemplate(Field* fields)
@@ -668,6 +673,8 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     creatureTemplate.SpellSchoolImmuneMask = fields[61].GetUInt32();
     creatureTemplate.flags_extra           = fields[62].GetUInt32();
     creatureTemplate.ScriptID              = GetScriptId(fields[63].GetString());
+
+    sScriptMgr->OnAfterDatabaseLoadCreatureTemplates(_creatureTemplateStore);
 }
 
 void ObjectMgr::LoadCreatureTemplateResistances()
