@@ -6601,6 +6601,7 @@ int32 Unit::HealBySpell(HealInfo& healInfo, bool critical /*= false*/)
         , TSUnit(const_cast<Unit*>(healInfo.GetHealer()))
         , TSUnit(const_cast<Unit*>(healInfo.GetTarget()))
         , healInfo.GetEffectiveHeal()
+        , healInfo.GetHeal()
         , critical
     );
     // @tswow-end

@@ -43,6 +43,7 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 // @tswow-begin
+#include "TSCustomInstance.h"
 #include "TSMap.h"
 #include "TSEvents.h"
 #include "TSItemTemplate.h"
@@ -1551,18 +1552,6 @@ void ScriptMgr::OnMapUpdate(Map* map, uint32 diff)
 #undef SCR_MAP_BGN
 #undef SCR_MAP_END
 
-// @tswow-begin
-class TC_GAME_API CustomInstance : public InstanceScript{
-public:
-    CustomInstance(InstanceMap * map): InstanceScript(map) {
-        // Real loading in respective function
-        SetBossNumber(0);
-        LoadBossBoundaries({});
-        LoadDoorData(nullptr);
-    }
-};
-// @tswow-end
-
 InstanceScript* ScriptMgr::CreateInstanceData(InstanceMap* map)
 {
     ZoneScopedN("InstanceScript* ScriptMgr::CreateInstanceData");
@@ -1572,7 +1561,7 @@ InstanceScript* ScriptMgr::CreateInstanceData(InstanceMap* map)
     // @tswow-begin
     if (map->GetScriptName() == "custom_script")
     {
-        return new CustomInstance(map);
+        return new TSCustomInstance(map);
     }
     // @tswow-end
 

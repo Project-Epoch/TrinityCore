@@ -21,6 +21,8 @@
 #include "TSPlayer.h"
 #include "TSWorldPacket.h"
 #include "TSMutable.h"
+#include "TSCreature.h"
+#include "TSGameObject.h"
 // @tswow-end
 #include "InstanceScript.h"
 #include "AreaBoundary.h"
@@ -103,6 +105,13 @@ void InstanceScript::OnCreatureCreate(Creature* creature)
 {
     AddObject(creature, true);
     AddMinion(creature, true);
+
+    FIRE_ID(
+          instance->GetEntry()->ID
+        , Instance,OnCreatureCreate
+        , TSInstance(instance,this)
+        , TSCreature(creature)
+    );
 }
 
 void InstanceScript::OnCreatureRemove(Creature* creature)
@@ -115,6 +124,13 @@ void InstanceScript::OnGameObjectCreate(GameObject* go)
 {
     AddObject(go, true);
     AddDoor(go, true);
+
+    FIRE_ID(
+          instance->GetEntry()->ID
+        , Instance,OnGameObjectCreate
+        , TSInstance(instance,this)
+        , TSGameObject(go)
+    );
 }
 
 void InstanceScript::OnGameObjectRemove(GameObject* go)
