@@ -11451,6 +11451,96 @@ void ObjectMgr::InitializeQueriesData(QueryDataGroup mask)
     TC_LOG_INFO("server.loading", ">> Initialized query cache data in {} ms", GetMSTimeDiffToNow(oldMSTime));
 }
 
+void QuestPOIWrapper::InitializeQueryData()
+{
+    QueryDataBuffer = BuildQueryData();
+}
+
+ByteBuffer QuestPOIWrapper::BuildQueryData() const
+{
+    ByteBuffer tempBuffer;
+    tempBuffer << uint32(POIData.QuestID);                                      // quest ID
+    tempBuffer << uint32(POIData.QuestPOIBlobDataStats.size());                 // POI count
+
+    for (QuestPOIBlobData const& questPOIBlobData : POIData.QuestPOIBlobDataStats)
+    {
+        tempBuffer << uint32(questPOIBlobData.BlobIndex);                       // POI index
+        tempBuffer << int32(questPOIBlobData.ObjectiveIndex);                   // objective index
+        tempBuffer << uint32(questPOIBlobData.MapID);                           // mapid
+        tempBuffer << uint32(questPOIBlobData.WorldMapAreaID);                  // areaid
+        tempBuffer << uint32(questPOIBlobData.Floor);                           // floorid
+        tempBuffer << uint32(questPOIBlobData.Unk3);                            // unknown
+        tempBuffer << uint32(questPOIBlobData.Unk4);                            // unknown
+        tempBuffer << uint32(questPOIBlobData.QuestPOIBlobPointStats.size());   // POI points count
+
+        for (QuestPOIBlobPoint const& questPOIBlobPoint : questPOIBlobData.QuestPOIBlobPointStats)
+        {
+            tempBuffer << int32(questPOIBlobPoint.X); // POI point x
+            tempBuffer << int32(questPOIBlobPoint.Y); // POI point y
+        }
+    }
+
+    return tempBuffer;
+}
+
+
+// @dh-begin
+void ObjectMgr::BuildTSCustomCache()
+{
+    CharacterActiveSpecs.clear();
+    CharacterSpecs.clear();
+    CharacterPoints.clear();
+    MaxPointDefaults.clear();
+    SpellToTalentTabMap.clear();
+    TalentTabToSpellMap.clear();
+    TalentTabs.clear();
+    RaceAndClassTabMap.clear();
+    ClassSpecDetails.clear();
+    CharacterPointTypeToTalentTabIds.clear();
+
+    for (const auto& race : RACE_LIST)
+    {
+        for (const auto& wowClass : CLASS_LIST)
+        {
+            for (const auto& ptType : TALENT_POINT_TYPES)
+                RaceAndClassTabMap[race][wowClass];
+        }
+    }
+
+    TC_LOG_INFO("server.loading", "TSCustom | Loading character level spell map...");
+    AddLevelClassSpellMap();
+
+    TC_LOG_INFO("server.loading", "TSCustom | Loading talent trees...");
+    AddTalentTrees();
+    TC_LOG_INFO("server.loading", "TSCustom | Loading talents for trees...");
+    AddTalentsToTrees();
+    TC_LOG_INFO("server.loading", "TSCustom | Loading talent prereqs...");
+    AddTalentPrereqs();
+    TC_LOG_INFO("server.loading", "TSCustom | Loading talent choice nodes...");
+    AddTalentChoiceNodes();
+    TC_LOG_INFO("server.loading", "TSCustom | Loading talent ranks...");
+    AddTalentRanks();
+    TC_LOG_INFO("server.loading", "TSCustom | Loading talent unlearns...");
+    AddTalentUnlearn();
+
+    TC_LOG_INFO("server.loading", "TSCustom | Loading character specs...");
+    AddCharacterSpecs();
+    TC_LOG_INFO("server.loading", "TSCustom | Loading character points spent...");
+    AddTalentSpent();
+    TC_LOG_INFO("server.loading", "TSCustom | Loading character talents...");
+    AddCharacterTalents();
+    TC_LOG_INFO("server.loading", "TSCustom | Loading character talent loadouts...");
+    AddPlayerTalentLoadouts();
+
+    TC_LOG_INFO("server.loading", "TSCustom | Loading characters marked for talent reset...");
+    AddSpellUnlearnFlags();
+    TC_LOG_INFO("server.loading", "TSCustom | Loading talent additional spells...");
+    AddSpellLearnAdditionalSpells();
+
+    TC_LOG_INFO("server.loading", "TSCustom | Loading Jump Charge Params...");
+    sObjectMgr->LoadJumpChargeParams();
+}
+
 void ObjectMgr::LoadJumpChargeParams()
 {
     uint32 oldMSTime = getMSTime();
@@ -11498,34 +11588,1013 @@ void ObjectMgr::LoadJumpChargeParams()
     TC_LOG_INFO("server.loading", ">> Loaded {} jump charge params from forge_spell_jump_charge_params in {} ms", _jumpChargeParams.size(), GetMSTimeDiffToNow(oldMSTime));
 }
 
-void QuestPOIWrapper::InitializeQueryData()
+void ObjectMgr::AddSpellUnlearnFlags()
 {
-    QueryDataBuffer = BuildQueryData();
+    FlaggedForUnlearn.clear();
+
+    std::unordered_map<uint32 /*guid*/, std::vector<uint32 /*spell*/>> SpellLearnedAdditionalSpells;
+    QueryResult flag = WorldDatabase.Query("SELECT * FROM `forge_talent_spell_flagged_unlearn`");
+
+    if (!flag)
+        return;
+
+    do
+    {
+        Field* talentFields = flag->Fetch();
+        uint32 guid = talentFields[0].GetUInt32();
+        uint32 spell = talentFields[1].GetFloat();
+
+        FlaggedForUnlearn[guid] = spell;
+
+    } while (flag->NextRow());
 }
 
-ByteBuffer QuestPOIWrapper::BuildQueryData() const
+void ObjectMgr::AddSpellLearnAdditionalSpells()
 {
-    ByteBuffer tempBuffer;
-    tempBuffer << uint32(POIData.QuestID);                                      // quest ID
-    tempBuffer << uint32(POIData.QuestPOIBlobDataStats.size());                 // POI count
+    SpellLearnedAdditionalSpells.clear();
 
-    for (QuestPOIBlobData const& questPOIBlobData : POIData.QuestPOIBlobDataStats)
+    std::unordered_map<uint32 /*guid*/, std::vector<uint32 /*spell*/>> SpellLearnedAdditionalSpells;
+    QueryResult added = WorldDatabase.Query("SELECT * FROM `forge_talent_learn_additional_spell`");
+
+    if (!added)
+        return;
+
+    do
     {
-        tempBuffer << uint32(questPOIBlobData.BlobIndex);                       // POI index
-        tempBuffer << int32(questPOIBlobData.ObjectiveIndex);                   // objective index
-        tempBuffer << uint32(questPOIBlobData.MapID);                           // mapid
-        tempBuffer << uint32(questPOIBlobData.WorldMapAreaID);                  // areaid
-        tempBuffer << uint32(questPOIBlobData.Floor);                           // floorid
-        tempBuffer << uint32(questPOIBlobData.Unk3);                            // unknown
-        tempBuffer << uint32(questPOIBlobData.Unk4);                            // unknown
-        tempBuffer << uint32(questPOIBlobData.QuestPOIBlobPointStats.size());   // POI points count
+        Field* talentFields = added->Fetch();
+        uint32 rootSpell = talentFields[0].GetUInt32();
+        uint32 addedSpell = talentFields[1].GetFloat();
 
-        for (QuestPOIBlobPoint const& questPOIBlobPoint : questPOIBlobData.QuestPOIBlobPointStats)
+        SpellLearnedAdditionalSpells[rootSpell].push_back(addedSpell);
+
+    } while (added->NextRow());
+}
+
+void ObjectMgr::AddLevelClassSpellMap()
+{
+    _levelClassSpellMap.clear();
+
+    QueryResult maQuery = WorldDatabase.Query("select * from `acore_world`.`forge_character_spec_spells` order by `class` asc, `race` asc, `level` asc, `spell` asc");
+
+    if (!maQuery)
+        return;
+
+    do
+    {
+        Field* mapFields = maQuery->Fetch();
+        uint8 pClass = mapFields[0].GetUInt8();
+        uint32 race = mapFields[1].GetUInt32();
+        uint8 level = mapFields[2].GetUInt8();
+        uint32 spell = mapFields[3].GetUInt32();
+
+        _levelClassSpellMap[pClass][race][level].push_back(spell);
+    } while (maQuery->NextRow());
+}
+
+void ObjectMgr::AddPlayerTalentLoadouts()
+{
+    _playerTalentLoadouts.clear();
+    _playerActiveTalentLoadouts.clear();
+
+    QueryResult loadouts = WorldDatabase.Query("select * from `acore_characters`.`forge_character_talent_loadouts`");
+
+    if (!loadouts)
+        return;
+
+    do
+    {
+        Field* loadoutsFields = loadouts->Fetch();
+        uint32 guid = loadoutsFields[0].GetUInt32();
+        uint32 id = loadoutsFields[1].GetUInt32();
+        uint32 tabId = loadoutsFields[2].GetUInt32();
+        std::string name = loadoutsFields[3].GetString();
+        std::string talentString = loadoutsFields[4].GetString();
+        bool active = loadoutsFields[5].GetBool();
+
+        PlayerLoadout* plo = new PlayerLoadout();
+        plo->id = id;
+        plo->tabId = tabId;
+        plo->name = name;
+        plo->talentString = talentString;
+        plo->active = active;
+
+
+        _playerTalentLoadouts[guid][tabId][id] = plo;
+        _playerActiveTalentLoadouts[guid] = plo;
+    } while (loadouts->NextRow());
+}
+
+void ObjectMgr::AddTalentTrees()
+{
+    QueryResult talentTab = WorldDatabase.Query("SELECT * FROM forge_talent_tabs order by `id` asc");
+
+    if (!talentTab)
+        return;
+
+    _cacheClassNodeToClassTree.clear();
+    _cacheClassNodeToSpell.clear();
+    _playerClassFirstSpec.clear();
+
+    do
+    {
+        Field* talentFields = talentTab->Fetch();
+        CustomTalentTab* newTab = new CustomTalentTab();
+        newTab->Id = talentFields[0].GetUInt32();
+        newTab->ClassMask = talentFields[1].GetUInt32();
+        newTab->RaceMask = talentFields[2].GetUInt32();
+        newTab->Name = talentFields[3].GetString();
+        newTab->SpellIconId = talentFields[4].GetUInt32();
+        newTab->Background = talentFields[5].GetString();
+        newTab->Description = talentFields[6].GetString();
+        newTab->Role = talentFields[7].GetUInt8();
+        newTab->SpellString = talentFields[8].GetString();
+        newTab->TalentType = (CustomCharacterPointType)talentFields[9].GetUInt8();
+        newTab->TabIndex = talentFields[10].GetUInt32();
+
+        auto firstSpec = _playerClassFirstSpec.find(newTab->ClassMask);
+        if (firstSpec == _playerClassFirstSpec.end()) {
+            _playerClassFirstSpec[newTab->ClassMask] = newTab->Id;
+        }
+
+        if (newTab->TalentType == CustomCharacterPointType::CLASS_TREE) {
+            _cacheClassNodeToSpell[newTab->ClassMask] = {};
+            _cacheClassNodeToClassTree[newTab->ClassMask] = newTab->Id;
+        }
+
+        for (auto& race : RaceAndClassTabMap)
         {
-            tempBuffer << int32(questPOIBlobPoint.X); // POI point x
-            tempBuffer << int32(questPOIBlobPoint.Y); // POI point y
+            auto bit = (newTab->RaceMask & (1 << (race.first - 1)));
+
+            if (newTab->RaceMask != 0 && bit == 0)
+                continue;
+
+            for (const auto& wowClass : race.second)
+            {
+                auto classBit = (newTab->ClassMask & (1 << (wowClass.first - 1)));
+
+                if (classBit != 0 || newTab->ClassMask == 0)
+                {
+                    RaceAndClassTabMap[race.first][wowClass.first].insert(newTab->Id);
+                    SpellToTalentTabMap[newTab->SpellIconId] = newTab->Id;
+                    TalentTabToSpellMap[newTab->Id] = newTab->SpellIconId;
+                    CharacterPointTypeToTalentTabIds[newTab->TalentType].insert(newTab->Id);
+                }
+            }
+        }
+
+        TalentTabs[newTab->Id] = newTab;
+    } while (talentTab->NextRow());
+}
+
+void ObjectMgr::AddTalentsToTrees()
+{
+    QueryResult talents = WorldDatabase.Query("SELECT * FROM forge_talents order by `talentTabId` asc, `rowIndex` asc, `columnIndex` asc");
+
+    _cacheTreeMetaData.clear();
+    _cacheSpecNodeToSpell.clear();
+    _cacheClassNodeToSpell.clear();
+
+    if (!talents)
+        return;
+
+    int i = 1;
+    auto prevTab = -1;
+    do
+    {
+        Field* talentFields = talents->Fetch();
+        CustomTalent* newTalent = new CustomTalent();
+        newTalent->SpellId = talentFields[0].GetUInt32();
+        newTalent->TalentTabId = talentFields[1].GetUInt32();
+        newTalent->ColumnIndex = talentFields[2].GetUInt32();
+        newTalent->RowIndex = talentFields[3].GetUInt32();
+        newTalent->RankCost = talentFields[4].GetUInt8();
+        newTalent->RequiredLevel = talentFields[5].GetUInt8();
+        newTalent->TalentType = (CustomCharacterPointType)talentFields[6].GetUInt8();
+        newTalent->NumberOfRanks = talentFields[7].GetUInt8();
+        newTalent->PreReqType = (CustomPereqReqirementType)talentFields[8].GetUInt8();
+        newTalent->TabPointReq = talentFields[9].GetUInt16();
+        newTalent->nodeType = CustomNodeType(talentFields[10].GetUInt8());
+
+        if (prevTab != newTalent->TalentTabId) {
+            prevTab = newTalent->TalentTabId;
+            i = 1;
+        }
+
+        newTalent->nodeIndex = i++;
+        if (newTalent->TalentType != CustomCharacterPointType::CLASS_TREE)
+            _cacheSpecNodeToSpell[newTalent->TalentTabId][newTalent->nodeIndex] = newTalent->SpellId;
+        else {
+            _cacheClassNodeToSpell[TalentTabs[newTalent->TalentTabId]->ClassMask][newTalent->nodeIndex] = newTalent->SpellId;
+        }
+
+        auto tabItt = TalentTabs.find(newTalent->TalentTabId);
+
+        if (tabItt == TalentTabs.end())
+        {
+            TC_LOG_ERROR("server.loading", "Error loading talents, invalid tab id: {}", std::to_string(newTalent->TalentTabId));
+        }
+        else
+            tabItt->second->Talents[newTalent->SpellId] = newTalent;
+
+        // get treemeta from struct
+        auto found = _cacheTreeMetaData.find(newTalent->TalentTabId);
+        TreeMetaData* data;
+
+        if (found == _cacheTreeMetaData.end()) {
+            TreeMetaData* tree = new TreeMetaData();
+            tree->MaxXDim = newTalent->ColumnIndex;
+            tree->MaxYDim = newTalent->RowIndex;
+            tree->TabId = newTalent->TalentTabId;
+            _cacheTreeMetaData[tree->TabId] = tree;
+            data = _cacheTreeMetaData[tree->TabId];
+        }
+        else {
+            if (newTalent->RowIndex > found->second->MaxYDim)
+                found->second->MaxYDim = newTalent->RowIndex;
+            if (newTalent->ColumnIndex > found->second->MaxXDim)
+                found->second->MaxXDim = newTalent->ColumnIndex;
+
+            data = found->second;
+        }
+        NodeMetaData* node = new NodeMetaData();
+        node->spellId = newTalent->SpellId;
+        node->pointReq = newTalent->TabPointReq;
+        node->col = newTalent->ColumnIndex;
+        node->row = newTalent->RowIndex;
+        node->nodeIndex = newTalent->nodeIndex;
+
+        data->nodes[node->row][node->col] = node;
+        data->nodeLocation[node->spellId] = node;
+    } while (talents->NextRow());
+
+    // load meta data
+}
+
+void ObjectMgr::AddTalentPrereqs()
+{
+    QueryResult preReqTalents = WorldDatabase.Query("SELECT * FROM forge_talent_prereq");
+
+    if (!preReqTalents)
+        return;
+
+    do
+    {
+        Field* talentFields = preReqTalents->Fetch();
+        CustomTalentPrereq* newTalent = new CustomTalentPrereq();
+        newTalent->reqId = talentFields[0].GetUInt32();
+        newTalent->Talent = talentFields[3].GetUInt32();
+        newTalent->TalentTabId = talentFields[4].GetUInt32();
+        newTalent->RequiredRank = talentFields[5].GetUInt32();
+
+        auto reqdSpellId = talentFields[1].GetUInt32();
+        auto reqSpelltab = talentFields[2].GetUInt32();
+
+        if (!TalentTabs.empty()) {
+            auto tab = TalentTabs.find(reqSpelltab);
+            if (tab != TalentTabs.end()) {
+                auto talent = tab->second->Talents.find(reqdSpellId);
+                if (talent != tab->second->Talents.end()) {
+                    CustomTalent* lt = talent->second;
+                    if (lt != nullptr)
+                        lt->Prereqs.push_back(newTalent);
+                    else
+                        TC_LOG_ERROR("server.loading", "Error loading AddTalentPrereqs, invaild req id: {}", std::to_string(newTalent->reqId));
+
+                    auto found = _cacheTreeMetaData.find(reqSpelltab);
+                    if (found != _cacheTreeMetaData.end()) {
+                        TreeMetaData* tree = found->second;
+                        NodeMetaData* node = tree->nodeLocation[newTalent->Talent];
+                        node->unlocks.push_back(tree->nodeLocation[reqdSpellId]);
+                        tree->nodeLocation[newTalent->Talent] = node;
+                        tree->nodes[node->row][node->col] = node;
+                    }
+                    else
+                        TC_LOG_ERROR("server.loading", "Prereq cannot be mapped to existing talent meta data.");
+                }
+                else {
+                    TC_LOG_ERROR("server.loading", "Prereq spell not found in tab.");
+                }
+            }
+            else {
+                TC_LOG_ERROR("server.loading", "Prereq spell tab not found.");
+            }
+        }
+        else {
+            TC_LOG_ERROR("server.loading", "Talent tab store is empty.");
+        }
+    } while (preReqTalents->NextRow());
+}
+
+void ObjectMgr::AddTalentChoiceNodes()
+{
+    QueryResult exclTalents = WorldDatabase.Query("SELECT * FROM forge_talent_choice_nodes");
+
+    _choiceNodes.clear();
+    _choiceNodesRev.clear();
+    _choiceNodeIndexLookup.clear();
+
+    if (!exclTalents)
+        return;
+
+    do
+    {
+        Field* talentFields = exclTalents->Fetch();
+        uint32 choiceNodeId = talentFields[0].GetUInt32();
+        uint32 talentTabId = talentFields[1].GetUInt32();
+        uint8 choiceIndex = talentFields[2].GetUInt8();
+        uint32 spellChoice = talentFields[3].GetUInt32();
+
+        CustomTalentChoice* choice = new CustomTalentChoice();
+        choice->active = false;
+        choice->spellId = spellChoice;
+
+        _choiceNodes[choiceNodeId].push_back(spellChoice);
+        _choiceNodesRev[spellChoice] = choiceNodeId;
+        _choiceNodeIndexLookup[choiceIndex] = spellChoice;
+
+        CustomTalent* lt = TalentTabs[talentTabId]->Talents[choiceNodeId];
+        if (lt != nullptr)
+        {
+            lt->Choices[choiceIndex] = choice;
+        }
+        else
+        {
+            TC_LOG_ERROR("server.loading", "Error loading AddTalentChoiceNodes, invalid choiceNodeId id: {}", std::to_string(choiceNodeId));
+        }
+
+    } while (exclTalents->NextRow());
+}
+
+void ObjectMgr::AddCharacterChoiceNodes() {
+    QueryResult choiceQuery = CharacterDatabase.Query("SELECT * FROM forge_character_node_choices");
+
+    if (!choiceQuery)
+        return;
+
+    do
+    {
+        Field* fields = choiceQuery->Fetch();
+        uint32 id = fields[0].GetUInt32();
+        ObjectGuid characterGuid = ObjectGuid::Create<HighGuid::Player>(id);
+        uint32 specId = fields[1].GetUInt32();
+        uint32 TabId = fields[2].GetUInt32();
+        uint32 nodeId = fields[3].GetUInt32();
+        uint32 chosenSpell = fields[4].GetUInt32();
+
+        CustomTalent* ft = TalentTabs[TabId]->Talents[nodeId];
+        if (ft->nodeType == CustomNodeType::CHOICE) {
+            CustomPlayerSpec* spec = CharacterSpecs[characterGuid][specId];
+            spec->ChoiceNodesChosen[nodeId] = chosenSpell;
+        }
+
+    } while (choiceQuery->NextRow());
+}
+
+void ObjectMgr::AddTalentRanks()
+{
+    QueryResult talentRanks = WorldDatabase.Query("SELECT * FROM forge_talent_ranks");
+
+    if (!talentRanks)
+        return;
+
+    do
+    {
+        Field* talentFields = talentRanks->Fetch();
+        uint32 talentspellId = talentFields[0].GetUInt32();
+        uint32 talentTabId = talentFields[1].GetUInt32();
+        uint32 rank = talentFields[2].GetUInt32();
+        uint32 spellId = talentFields[3].GetUInt32();
+
+        CustomTalent* lt = TalentTabs[talentTabId]->Talents[talentspellId];
+
+        if (lt != nullptr)
+        {
+            lt->Ranks[rank] = spellId;
+            lt->RanksRev[spellId] = rank;
+        }
+        else
+        {
+            TC_LOG_ERROR("server.loading", "Error loading AddTalentRanks, invalid talentTabId id: {} Rank: {} SpellId: {}", std::to_string(talentTabId), std::to_string(rank), std::to_string(spellId));
+        }
+
+    } while (talentRanks->NextRow());
+}
+
+void ObjectMgr::AddTalentUnlearn()
+{
+    QueryResult exclTalents = WorldDatabase.Query("SELECT * FROM forge_talent_unlearn");
+
+    if (!exclTalents)
+        return;
+
+    do
+    {
+        Field* talentFields = exclTalents->Fetch();
+        uint32 spellId = talentFields[1].GetUInt32();
+        uint32 talentTabId = talentFields[0].GetUInt32();
+        uint32 exclusiveSpellId = talentFields[2].GetUInt32();
+
+        CustomTalent* lt = TalentTabs[talentTabId]->Talents[spellId];
+
+        if (lt != nullptr)
+        {
+            lt->UnlearnSpells.push_back(exclusiveSpellId);
+        }
+        else
+        {
+            TC_LOG_ERROR("server.loading", "Error loading AddTalentUnlearn, invaild talentTabId id: {} ExclusiveSpell: {} SpellId: {}", std::to_string(talentTabId), std::to_string(exclusiveSpellId), std::to_string(spellId));
+        }
+
+    } while (exclTalents->NextRow());
+}
+
+void ObjectMgr::AddCharacterSpecs()
+{
+    QueryResult charSpecs = CharacterDatabase.Query("SELECT * FROM forge_character_specs");
+
+    if (!charSpecs)
+        return;
+
+    do
+    {
+        Field* specFields = charSpecs->Fetch();
+        CustomPlayerSpec* spec = new CustomPlayerSpec();
+        spec->Id = specFields[0].GetUInt32();
+        spec->CharacterGuid = ObjectGuid::Create<HighGuid::Player>(specFields[1].GetUInt32());
+        spec->Name = specFields[2].GetString();
+        spec->Description = specFields[3].GetString();
+        spec->Active = specFields[4].GetBool();
+        spec->SpellIconId = specFields[5].GetUInt32();
+        spec->SpecTabId = specFields[7].GetUInt32();
+
+        if (spec->Active)
+            CharacterActiveSpecs[spec->CharacterGuid] = spec->Id;
+
+        CharacterSpecs[spec->CharacterGuid][spec->Id] = spec;
+    } while (charSpecs->NextRow());
+}
+
+void ObjectMgr::AddTalentSpent()
+{
+    QueryResult exclTalents = CharacterDatabase.Query("SELECT * FROM forge_character_talents_spent");
+
+    if (!exclTalents)
+        return;
+
+    do
+    {
+        Field* talentFields = exclTalents->Fetch();
+        uint32 id = talentFields[0].GetUInt32();
+        uint32 spec = talentFields[1].GetUInt32();
+        uint32 tabId = talentFields[2].GetUInt32();
+
+        if (spec != ACCOUNT_WIDE_KEY)
+        {
+            ObjectGuid guid = ObjectGuid::Create<HighGuid::Player>(id);
+
+            CharacterSpecs[guid][spec]->PointsSpent[tabId] = talentFields[3].GetUInt8();
+        }
+        else
+        {
+            auto aws = AccountWideCharacterSpecs.find(id);
+
+
+            if (aws == AccountWideCharacterSpecs.end())
+                AccountWideCharacterSpecs[id] = new CustomPlayerSpec();
+
+            AccountWideCharacterSpecs[id]->PointsSpent[tabId] = talentFields[3].GetUInt8();
+
+            for (auto& ch : PlayerCharacterMap[id])
+                for (auto& spec : CharacterSpecs[ch])
+                    spec.second->PointsSpent[tabId] = talentFields[3].GetUInt8();
+        }
+
+    } while (exclTalents->NextRow());
+}
+
+void ObjectMgr::AddCharacterTalents()
+{
+    QueryResult talentsQuery = CharacterDatabase.Query("SELECT * FROM forge_character_talents");
+
+    if (!talentsQuery)
+        return;
+
+    do
+    {
+        Field* talentFields = talentsQuery->Fetch();
+        uint32 id = talentFields[0].GetUInt32();
+        ObjectGuid characterGuid = ObjectGuid::Create<HighGuid::Player>(id);
+        uint32 specId = talentFields[1].GetUInt32();
+        CustomCharacterTalent* talent = new CustomCharacterTalent();
+        talent->SpellId = talentFields[2].GetUInt32();
+        talent->TabId = talentFields[3].GetUInt32();
+        talent->CurrentRank = talentFields[4].GetUInt8();
+
+        auto tab = TalentTabs.find(talent->TabId);
+        if (tab != TalentTabs.end()) {
+            auto spell = tab->second->Talents.find(talent->SpellId);
+            if (spell != tab->second->Talents.end()) {
+                if (specId != ACCOUNT_WIDE_KEY)
+                {
+                    CustomTalent* ft = TalentTabs[talent->TabId]->Talents[talent->SpellId];
+                    CustomPlayerSpec* spec = CharacterSpecs[characterGuid][specId];
+                    talent->type = ft->nodeType;
+                    spec->Talents[talent->TabId][talent->SpellId] = talent;
+                }
+                else
+                {
+                    AccountWideCharacterSpecs[id]->Talents[talent->TabId][talent->SpellId] = talent;
+
+                    for (auto& ch : PlayerCharacterMap[id])
+                        for (auto& spec : CharacterSpecs[ch])
+                        {
+                            CustomTalent* ft = TalentTabs[talent->TabId]->Talents[talent->SpellId];
+                            talent->type = ft->nodeType;
+                            spec.second->Talents[talent->TabId][talent->SpellId] = talent;
+                        }
+                }
+            }
+        }
+    } while (talentsQuery->NextRow());
+}
+
+void ObjectMgr::AddCharacterPointsFromDB()
+{
+    QueryResult pointsQuery = CharacterDatabase.Query("SELECT * FROM forge_character_points");
+
+    if (!pointsQuery)
+        return;
+    uint32 almostMax = UINT_MAX - 1;
+
+    do
+    {
+        Field* pointsFields = pointsQuery->Fetch();
+        uint32 guid = pointsFields[0].GetUInt32();
+        CustomCharacterPointType pt = (CustomCharacterPointType)pointsFields[1].GetUInt8();
+        CustomCharacterPoint* cp = new CustomCharacterPoint();
+        cp->PointType = pt;
+        cp->SpecId = pointsFields[2].GetUInt32();
+        cp->Sum = pointsFields[3].GetUInt32();
+        cp->Max = pointsFields[4].GetUInt32();
+
+        if (guid == UINT_MAX)
+        {
+            MaxPointDefaults[pt] = cp;
+        }
+        else
+        {
+            if (cp->SpecId == ACCOUNT_WIDE_KEY)
+            {
+                AccountWidePoints[guid][pt] = cp;
+
+                for (auto& ch : PlayerCharacterMap[guid])
+                    for (auto& spec : CharacterSpecs[ch])
+                        CharacterPoints[ch][cp->PointType][spec.first] = cp;
+
+            }
+            else
+            {
+                ObjectGuid og = ObjectGuid::Create<HighGuid::Player>(guid);
+                CharacterPoints[og][cp->PointType][cp->SpecId] = cp;
+            }
+        }
+
+    } while (pointsQuery->NextRow());
+}
+
+void ObjectMgr::AddDefaultLoadout(Player* player)
+{
+    std::list<CustomTalentTab*> tabs;
+    if (TryGetCustomTalentTabs(player, CustomCharacterPointType::TALENT_TREE, tabs)) {
+        for (auto tab : tabs) {
+            std::string loadout = "A";
+            loadout += base64_char.substr(tab->Id, 1);
+            loadout += base64_char.substr(player->GetClass(), 1);
+
+            auto classMap = _cacheClassNodeToSpell[player->GetClassMask()];
+            for (int i = 1; i <= classMap.size(); i++)
+                loadout += base64_char.substr(1, 1);
+
+            auto specMap = _cacheSpecNodeToSpell[tab->Id];
+            for (int i = 1; i <= specMap.size(); i++) {
+                loadout += base64_char.substr(1, 1);
+            }
+
+            auto guid = player->GetGUID().GetCounter();
+
+            PlayerLoadout* plo = new PlayerLoadout();
+            plo->active = true;
+            plo->id = 1;
+            plo->name = "Default";
+            plo->tabId = tab->Id;
+            plo->talentString = loadout;
+
+            _playerTalentLoadouts[guid][tab->Id][plo->id] = plo;
+            _playerActiveTalentLoadouts[guid] = plo;
+
+            CharacterDatabase.PExecute("insert into `forge_character_talent_loadouts` (`guid`, `id`, `talentTabId`, `name`, `talentString`, `active`) values ({}, {}, {}, '{}', '{}', {})",
+                guid, plo->id, tab->Id, plo->name, loadout, true);
+        }
+    }
+}
+
+bool ObjectMgr::TryGetTabIdForSpell(Player* player, uint32 spellId, uint32& tabId)
+{
+    auto tabItt = SpellToTalentTabMap.find(spellId);
+
+    if (tabItt == SpellToTalentTabMap.end())
+        return false;
+
+    tabId = tabItt->second;
+    return true;
+}
+
+bool ObjectMgr::TryGetSpellIddForTab(Player* player, uint32 tabId, uint32& skillId)
+{
+    auto tabItt = TalentTabToSpellMap.find(tabId);
+
+    if (tabItt == TalentTabToSpellMap.end())
+        return false;
+
+    skillId = tabItt->second;
+    return true;
+}
+
+bool ObjectMgr::TryGetCharacterTalents(Player* player, uint32 tabId, std::unordered_map<uint32, CustomCharacterTalent*>& spec)
+{
+    CustomPlayerSpec* charSpec;
+
+    if (!TryGetCharacterActiveSpec(player, charSpec))
+        return false;
+
+    auto tabItt = charSpec->Talents.find(tabId);
+
+    if (tabItt == charSpec->Talents.end())
+        return false;
+
+    spec = tabItt->second;
+    return true;
+}
+
+bool ObjectMgr::TryGetAllCharacterSpecs(Player* player, std::list<CustomPlayerSpec*>& specs)
+{
+    auto charSpecItt = CharacterSpecs.find(player->GetGUID());
+
+    if (charSpecItt == CharacterSpecs.end())
+        return false;
+
+    for (auto& specKvp : charSpecItt->second)
+        specs.push_back(specKvp.second);
+
+    return true;
+}
+
+bool ObjectMgr::TryGetCharacterActiveSpec(Player* player, CustomPlayerSpec*& spec)
+{
+    auto cas = CharacterActiveSpecs.find(player->GetGUID());
+
+    if (cas == CharacterActiveSpecs.end())
+        return false;
+
+    return TryGetCharacterSpec(player, cas->second, spec);
+}
+
+bool ObjectMgr::TryGetCharacterSpec(Player* player, uint32 specId, CustomPlayerSpec*& spec)
+{
+    auto charSpecItt = CharacterSpecs.find(player->GetGUID());
+
+    if (charSpecItt == CharacterSpecs.end())
+        return false;
+
+    auto sp = charSpecItt->second.find(specId);
+
+    if (sp == charSpecItt->second.end())
+        return false;
+
+    spec = sp->second;
+    return true;
+}
+
+ObjectMgr::CustomCharacterTalent* ObjectMgr::GetTalent(Player* player, uint32 spellId)
+{
+    auto tabItt = SpellToTalentTabMap.find(spellId);
+
+    if (tabItt == SpellToTalentTabMap.end())
+        return nullptr;
+
+    auto* tab = TalentTabs[tabItt->second];
+
+    CustomPlayerSpec* spec;
+    if (TryGetCharacterActiveSpec(player, spec))
+    {
+        auto talTabItt = spec->Talents.find(tab->Id);
+
+        if (talTabItt == spec->Talents.end())
+            return nullptr;
+
+        auto spellItt = talTabItt->second.find(spellId);
+
+        if (spellItt == talTabItt->second.end())
+            return nullptr;
+
+        return spellItt->second;
+    }
+
+    return nullptr;
+}
+
+ObjectMgr::CustomCharacterPoint* ObjectMgr::GetSpecPoints(Player* player, CustomCharacterPointType pointType, uint32 specId)
+{
+
+    auto charGuid = player->GetGUID();
+    auto cpItt = CharacterPoints.find(charGuid);
+
+    if (cpItt != CharacterPoints.end())
+    {
+        auto ptItt = cpItt->second.find(pointType);
+
+        if (ptItt != cpItt->second.end())
+        {
+            auto talItt = ptItt->second.find(specId);
+
+            if (talItt != ptItt->second.end())
+                return talItt->second;
         }
     }
 
-    return tempBuffer;
+
+    CustomCharacterPoint* fcp = new CustomCharacterPoint();
+    fcp->PointType = pointType;
+    fcp->SpecId = specId;
+
+
+    UpdateCharPoints(player, fcp);
+
+    return fcp;
 }
+
+void ObjectMgr::UpdateCharPoints(Player* player, CustomCharacterPoint*& fp)
+{
+    auto charGuid = player->GetGUID();
+    auto acct = player->GetSession()->GetAccountId();
+
+    CharacterPoints[charGuid][fp->PointType][fp->SpecId] = fp;
+
+    auto trans = CharacterDatabase.BeginTransaction();
+
+    trans->PAppend("INSERT INTO `forge_character_points` (`guid`,`type`,`spec`,`sum`,`max`) VALUES ({},{},{},{},{}) ON DUPLICATE KEY UPDATE `sum` = {}, `max` = {}", charGuid.GetCounter(), (int)fp->PointType, fp->SpecId, fp->Sum, fp->Max, fp->Sum, fp->Max);
+
+    CharacterDatabase.CommitTransaction(trans);
+}
+
+void ObjectMgr::UpdateCharacterSpec(Player* player, CustomPlayerSpec* spec)
+{
+    uint32 charId = player->GetGUID().GetCounter();
+    uint32 acct = player->GetSession()->GetAccountId();
+
+    auto trans = CharacterDatabase.BeginTransaction();
+
+    if (spec->Active)
+        CharacterActiveSpecs[player->GetGUID()] = spec->Id;
+
+    UpdateForgeSpecInternal(player, trans, spec);
+
+    for (auto& tabIdKvp : spec->Talents)
+        for (auto& tabTypeKvp : tabIdKvp.second)
+            UpdateCharacterTalentInternal(acct, charId, trans, spec->Id, tabTypeKvp.second->SpellId, tabTypeKvp.second->TabId, tabTypeKvp.second->CurrentRank);
+
+    CharacterDatabase.CommitTransaction(trans);
+}
+
+ObjectMgr::CustomCharacterPoint* ObjectMgr::GetCommonCharacterPoint(Player* player, CustomCharacterPointType pointType)
+{
+    return GetSpecPoints(player, pointType);
+}
+
+ObjectMgr::CustomCharacterPoint* ObjectMgr::GetMaxPointDefaults(CustomCharacterPointType cpt)
+{
+    auto fpd = MaxPointDefaults.find(cpt);
+
+    // Get default skill max and current. Happens at level 10. Players start with 10 forge points. can be changed in DB with UINT_MAX entry.
+    if (fpd == MaxPointDefaults.end())
+    {
+        CustomCharacterPoint* fp = new CustomCharacterPoint();
+        fp->PointType = cpt;
+        fp->SpecId = UINT_MAX;
+        fp->Max = 0;
+        fp->Sum = 0;
+
+        return fp;
+    }
+    else
+        return fpd->second;
+}
+
+bool ObjectMgr::TryGetTabPointType(uint32 tabId, CustomCharacterPointType& pointType)
+{
+    auto fttItt = TalentTabs.find(tabId);
+
+    if (fttItt == TalentTabs.end())
+        return false;
+
+    pointType = fttItt->second->TalentType;
+    return true;
+}
+
+bool ObjectMgr::TryGetTalentTab(Player* player, uint32 tabId, CustomTalentTab*& tab)
+{
+    auto charRaceItt = RaceAndClassTabMap.find(player->GetRace());
+
+    if (charRaceItt == RaceAndClassTabMap.end())
+        return false;
+
+    auto charClassItt = charRaceItt->second.find(player->GetClass());
+
+    if (charClassItt == charRaceItt->second.end())
+        return false;
+
+    // all logic before this is to ensure player has access to the tab.
+
+    auto fttItt = charClassItt->second.find(tabId);
+
+    if (fttItt == charClassItt->second.end())
+        return false;
+
+    tab = TalentTabs[tabId];
+    return true;
+}
+
+bool ObjectMgr::TryGetCustomTalentTabs(Player* player, CustomCharacterPointType cpt, std::list<CustomTalentTab*>& talentTabs)
+{
+    auto race = player->GetRace();
+    auto pClass = player->GetClass();
+
+    auto charRaceItt = RaceAndClassTabMap.find(race);
+
+    if (charRaceItt == RaceAndClassTabMap.end())
+        return false;
+
+    auto charClassItt = charRaceItt->second.find(pClass);
+
+    if (charClassItt == charRaceItt->second.end())
+        return false;
+
+    auto ptItt = CharacterPointTypeToTalentTabIds.find(cpt);
+
+    if (ptItt == CharacterPointTypeToTalentTabIds.end())
+        return false;
+
+    for (auto iter : charClassItt->second)
+    {
+        if (ptItt->second.find(iter) != ptItt->second.end())
+            talentTabs.push_back(TalentTabs[iter]);
+    }
+
+    return true;
+}
+
+void ObjectMgr::AddCharacterSpecSlot(Player* player)
+{
+    uint32 act = player->GetSession()->GetAccountId();
+    uint8 num = player->GetSpecsCount();
+
+    num = num + 1;
+
+    CustomPlayerSpec* spec = new CustomPlayerSpec();
+    spec->Id = num;
+    spec->Active = num == 1;
+    spec->CharacterGuid = player->GetGUID();
+    spec->Name = "Specialization " + std::to_string(num);
+    spec->Description = "Skill Specilization";
+    spec->SpellIconId = 133743;
+    spec->SpecTabId = _playerClassFirstSpec[player->GetClassMask()];
+
+    player->SetSpecsCount(num);
+
+    if (spec->Active)
+        player->ActivateSpec(num);
+
+    auto actItt = AccountWideCharacterSpecs.find(act);
+
+    if (actItt != AccountWideCharacterSpecs.end())
+    {
+        for (auto& talent : actItt->second->Talents)
+            for (auto& tal : talent.second)
+                spec->Talents[talent.first][tal.first] = tal.second;
+
+
+        for (auto& pointsSpent : actItt->second->PointsSpent)
+            spec->PointsSpent[pointsSpent.first] = pointsSpent.second;
+    }
+
+    std::list<CustomTalentTab*> tabs;
+    if (TryGetCustomTalentTabs(player, CustomCharacterPointType::TALENT_TREE, tabs)) {
+        for (auto tab : tabs) {
+            for (auto talent : tab->Talents) {
+                CustomCharacterTalent* ct = new CustomCharacterTalent();
+                ct->CurrentRank = 0;
+                ct->SpellId = talent.second->SpellId;
+                ct->TabId = tab->Id;
+                ct->type = talent.second->nodeType;
+
+                spec->Talents[tab->Id][ct->SpellId] = ct;
+            }
+        }
+    }
+    if (TryGetCustomTalentTabs(player, CustomCharacterPointType::CLASS_TREE, tabs)) {
+        for (auto tab : tabs) {
+            for (auto talent : tab->Talents) {
+                CustomCharacterTalent* ct = new CustomCharacterTalent();
+                ct->CurrentRank = 0;
+                ct->SpellId = talent.second->SpellId;
+                ct->TabId = tab->Id;
+                ct->type = talent.second->nodeType;
+
+                spec->Talents[tab->Id][ct->SpellId] = ct;
+            }
+        }
+    }
+
+    for (auto pt : TALENT_POINT_TYPES)
+    {
+        CustomCharacterPoint* fpt = GetCommonCharacterPoint(player, pt);
+        CustomCharacterPoint* maxCp = GetMaxPointDefaults(pt);
+
+        CustomCharacterPoint* newFp = new CustomCharacterPoint();
+        newFp->Max = maxCp->Max;
+        newFp->PointType = pt;
+        newFp->SpecId = spec->Id;
+        newFp->Sum = fpt->Sum;
+
+        UpdateCharPoints(player, newFp);
+    }
+
+    UpdateCharacterSpec(player, spec);
+}
+
+ObjectMgr::CustomCharacterPoint* ObjectMgr::GetSpecPoints(Player* player, CustomCharacterPointType pointType)
+{
+    CustomPlayerSpec* spec;
+
+    if (TryGetCharacterActiveSpec(player, spec))
+    {
+        return GetSpecPoints(player, pointType, spec->Id);
+    }
+
+    AddCharacterSpecSlot(player);
+
+    return GetSpecPoints(player, pointType);
+}
+
+uint32 ObjectMgr::GetChoiceNodeFromindex(uint8 index) {
+    auto out = _choiceNodeIndexLookup.find(index);
+    if (out != _choiceNodeIndexLookup.end())
+        return out->second;
+
+    return 0;
+}
+
+void ObjectMgr::UpdateForgeSpecInternal(Player* player, CharacterDatabaseTransaction& trans, CustomPlayerSpec*& spec)
+{
+    ObjectGuid charId = player->GetGUID();
+    uint32 actId = player->GetSession()->GetAccountId();
+    CharacterSpecs[charId][spec->Id] = spec;
+
+    auto activeSpecItt = CharacterActiveSpecs.find(charId);
+
+    if (activeSpecItt != CharacterActiveSpecs.end() && spec->Active && activeSpecItt->second != spec->Id)
+    {
+        CustomPlayerSpec* activeSpec;
+        if (TryGetCharacterSpec(player, activeSpecItt->second, activeSpec))
+        {
+            activeSpec->Active = false;
+            AddCharSpecUpdateToTransaction(actId, trans, activeSpec);
+        }
+    }
+
+    if (spec->Active)
+        CharacterActiveSpecs[charId] = spec->Id;
+
+    AddCharSpecUpdateToTransaction(actId, trans, spec);
+}
+
+void ObjectMgr::AddCharSpecUpdateToTransaction(uint32 accountId, CharacterDatabaseTransaction& trans, CustomPlayerSpec*& spec)
+{
+    auto guid = spec->CharacterGuid.GetCounter();
+    trans->PAppend("INSERT INTO `forge_character_specs` (`id`,`guid`,`name`,`description`,`active`,`spellicon`,`visability`,`charSpec`) VALUES ({},{},\"{}\",\"{}\",{},{},1,{}) ON DUPLICATE KEY UPDATE `name` = \"{}\", `description` = \"{}\", `active` = {}, `spellicon` = {}, `charSpec` = {}",
+        spec->Id, guid, spec->Name, spec->Description, spec->Active, spec->SpellIconId, spec->SpecTabId,
+        spec->Name, spec->Description, spec->Active, spec->SpellIconId, spec->SpecTabId);
+
+    for (auto& kvp : spec->PointsSpent)
+    {
+        trans->PAppend("INSERT INTO forge_character_talents_spent(`guid`,`spec`,`tabid`,`spent`) VALUES({}, {}, {}, {}) ON DUPLICATE KEY UPDATE spent = {}",
+            guid, spec->Id, kvp.first, kvp.second, kvp.second);
+    }
+}
+
+void ObjectMgr::UpdateCharacterTalentInternal(uint32 account, uint32 charId, CharacterDatabaseTransaction& trans, uint32 spec, uint32 spellId, uint32 tabId, uint8 known)
+{
+    trans->PAppend("INSERT INTO `forge_character_talents` (`guid`,`spec`,`spellid`,`tabId`,`currentrank`) VALUES ({},{},{},{},{}) ON DUPLICATE KEY UPDATE `currentrank` = {}", charId, spec, spellId, tabId, known, known);
+}
+
+// @dh-end
