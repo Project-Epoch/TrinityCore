@@ -102,6 +102,11 @@ enum ShamanSpellIcons
     SHAMAN_ICON_ID_TOTEM_OF_WRATH               = 2019
 };
 
+enum SpellHelpers
+{
+    SPELL_MAGE_TEMPORAL_DISPLACEMENT            = 1280021
+};
+
 // -51556 - Ancestral Awakening
 class spell_sha_ancestral_awakening : public AuraScript
 {
@@ -255,11 +260,18 @@ class spell_sha_bloodlust : public SpellScript
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_SHAMAN_SATED });
+        return ValidateSpellInfo(
+        {
+            SPELL_MAGE_TEMPORAL_DISPLACEMENT,
+            SPELL_SHAMAN_EXHAUSTION,
+            SPELL_SHAMAN_SATED,
+        });
     }
 
     void RemoveInvalidTargets(std::list<WorldObject*>& targets)
     {
+        targets.remove_if(Trinity::UnitAuraCheck(true, SPELL_MAGE_TEMPORAL_DISPLACEMENT));
+        targets.remove_if(Trinity::UnitAuraCheck(true, SPELL_SHAMAN_EXHAUSTION));
         targets.remove_if(Trinity::UnitAuraCheck(true, SPELL_SHAMAN_SATED));
     }
 
@@ -852,12 +864,19 @@ class spell_sha_heroism : public SpellScript
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_SHAMAN_EXHAUSTION });
+        return ValidateSpellInfo(
+        {
+            SPELL_MAGE_TEMPORAL_DISPLACEMENT,
+            SPELL_SHAMAN_EXHAUSTION,
+            SPELL_SHAMAN_SATED
+        });
     }
 
     void RemoveInvalidTargets(std::list<WorldObject*>& targets)
     {
+        targets.remove_if(Trinity::UnitAuraCheck(true, SPELL_MAGE_TEMPORAL_DISPLACEMENT));
         targets.remove_if(Trinity::UnitAuraCheck(true, SPELL_SHAMAN_EXHAUSTION));
+        targets.remove_if(Trinity::UnitAuraCheck(true, SPELL_SHAMAN_SATED));
     }
 
     void ApplyDebuff()
