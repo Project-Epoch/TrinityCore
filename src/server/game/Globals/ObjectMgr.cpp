@@ -12165,7 +12165,7 @@ void ObjectMgr::AddCharacterPointsFromDB()
 void ObjectMgr::AddDefaultLoadout(Player* player)
 {
     std::list<CustomTalentTab*> tabs;
-    if (TryGetCustomTalentTabs(player, CustomCharacterPointType::TALENT_TREE, tabs)) {
+    if (!TryGetCustomTalentTabs(player, CustomCharacterPointType::TALENT_TREE).empty()) {
         for (auto tab : tabs) {
             std::string loadout = "A";
             loadout += base64_char.substr(tab->Id, 1);
@@ -12198,84 +12198,82 @@ void ObjectMgr::AddDefaultLoadout(Player* player)
     }
 }
 
-bool ObjectMgr::TryGetTabIdForSpell(Player* player, uint32 spellId, uint32& tabId)
+uint32 ObjectMgr::TryGetTabIdForSpell(Player* player, uint32 spellId)
 {
     auto tabItt = SpellToTalentTabMap.find(spellId);
 
     if (tabItt == SpellToTalentTabMap.end())
-        return false;
+        return 0;
 
-    tabId = tabItt->second;
-    return true;
+    return tabItt->second;
 }
 
-bool ObjectMgr::TryGetSpellIddForTab(Player* player, uint32 tabId, uint32& skillId)
+uint32 ObjectMgr::TryGetSpellIdForTab(Player* player, uint32 tabId)
 {
     auto tabItt = TalentTabToSpellMap.find(tabId);
 
     if (tabItt == TalentTabToSpellMap.end())
-        return false;
+        return 0;
 
-    skillId = tabItt->second;
-    return true;
+    return tabItt->second;
 }
 
-bool ObjectMgr::TryGetCharacterTalents(Player* player, uint32 tabId, std::unordered_map<uint32, CustomCharacterTalent*>& spec)
+std::unordered_map<uint32, CustomCharacterTalent*> ObjectMgr::TryGetCharacterTalents(Player* player, uint32 tabId)
 {
     CustomPlayerSpec* charSpec;
 
-    if (!TryGetCharacterActiveSpec(player, charSpec))
-        return false;
+    if (auto spec = TryGetCharacterActiveSpec(player)) {
 
-    auto tabItt = charSpec->Talents.find(tabId);
+        auto tabItt = charSpec->Talents.find(tabId);
 
-    if (tabItt == charSpec->Talents.end())
-        return false;
+        if (tabItt == charSpec->Talents.end())
+            return {};
 
-    spec = tabItt->second;
-    return true;
+        return tabItt->second;
+    }
+    return {};
 }
 
-bool ObjectMgr::TryGetAllCharacterSpecs(Player* player, std::list<CustomPlayerSpec*>& specs)
+std::list<CustomPlayerSpec*> ObjectMgr::TryGetAllCharacterSpecs(Player* player)
 {
+    std::list<CustomPlayerSpec*> specs = {};
     auto charSpecItt = CharacterSpecs.find(player->GetGUID());
 
     if (charSpecItt == CharacterSpecs.end())
-        return false;
+        return specs;
 
     for (auto& specKvp : charSpecItt->second)
         specs.push_back(specKvp.second);
 
-    return true;
+    return specs;
 }
 
-bool ObjectMgr::TryGetCharacterActiveSpec(Player* player, CustomPlayerSpec*& spec)
+CustomPlayerSpec* ObjectMgr::TryGetCharacterActiveSpec(Player* player)
 {
     auto cas = CharacterActiveSpecs.find(player->GetGUID());
 
     if (cas == CharacterActiveSpecs.end())
-        return false;
+        return nullptr;
 
-    return TryGetCharacterSpec(player, cas->second, spec);
+    return TryGetCharacterSpec(player, cas->second);
 }
 
-bool ObjectMgr::TryGetCharacterSpec(Player* player, uint32 specId, CustomPlayerSpec*& spec)
+CustomPlayerSpec* ObjectMgr::TryGetCharacterSpec(Player* player, uint32 specId)
 {
     auto charSpecItt = CharacterSpecs.find(player->GetGUID());
 
     if (charSpecItt == CharacterSpecs.end())
-        return false;
+        return nullptr;
 
     auto sp = charSpecItt->second.find(specId);
 
     if (sp == charSpecItt->second.end())
-        return false;
+        return nullptr;
 
-    spec = sp->second;
-    return true;
+    return sp->second;
 }
 
-ObjectMgr::CustomCharacterTalent* ObjectMgr::GetTalent(Player* player, uint32 spellId)
+CustomCharacterTalent* ObjectMgr::GetTalent(Player* player, uint32 spellId)
 {
     auto tabItt = SpellToTalentTabMap.find(spellId);
 
@@ -12285,7 +12283,7 @@ ObjectMgr::CustomCharacterTalent* ObjectMgr::GetTalent(Player* player, uint32 sp
     auto* tab = TalentTabs[tabItt->second];
 
     CustomPlayerSpec* spec;
-    if (TryGetCharacterActiveSpec(player, spec))
+    if (TryGetCharacterActiveSpec(player))
     {
         auto talTabItt = spec->Talents.find(tab->Id);
 
@@ -12303,7 +12301,7 @@ ObjectMgr::CustomCharacterTalent* ObjectMgr::GetTalent(Player* player, uint32 sp
     return nullptr;
 }
 
-ObjectMgr::CustomCharacterPoint* ObjectMgr::GetSpecPoints(Player* player, CustomCharacterPointType pointType, uint32 specId)
+CustomCharacterPoint* ObjectMgr::GetSpecPoints(Player* player, CustomCharacterPointType pointType, uint32 specId)
 {
 
     auto charGuid = player->GetGUID();
@@ -12327,13 +12325,10 @@ ObjectMgr::CustomCharacterPoint* ObjectMgr::GetSpecPoints(Player* player, Custom
     fcp->PointType = pointType;
     fcp->SpecId = specId;
 
-
-    UpdateCharPoints(player, fcp);
-
-    return fcp;
+    return UpdateCharPoints(player, fcp);
 }
 
-void ObjectMgr::UpdateCharPoints(Player* player, CustomCharacterPoint*& fp)
+CustomCharacterPoint* ObjectMgr::UpdateCharPoints(Player* player, CustomCharacterPoint* fp)
 {
     auto charGuid = player->GetGUID();
     auto acct = player->GetSession()->GetAccountId();
@@ -12366,12 +12361,12 @@ void ObjectMgr::UpdateCharacterSpec(Player* player, CustomPlayerSpec* spec)
     CharacterDatabase.CommitTransaction(trans);
 }
 
-ObjectMgr::CustomCharacterPoint* ObjectMgr::GetCommonCharacterPoint(Player* player, CustomCharacterPointType pointType)
+CustomCharacterPoint* ObjectMgr::GetCommonCharacterPoint(Player* player, CustomCharacterPointType pointType)
 {
     return GetSpecPoints(player, pointType);
 }
 
-ObjectMgr::CustomCharacterPoint* ObjectMgr::GetMaxPointDefaults(CustomCharacterPointType cpt)
+CustomCharacterPoint* ObjectMgr::GetMaxPointDefaults(CustomCharacterPointType cpt)
 {
     auto fpd = MaxPointDefaults.find(cpt);
 
@@ -12390,59 +12385,59 @@ ObjectMgr::CustomCharacterPoint* ObjectMgr::GetMaxPointDefaults(CustomCharacterP
         return fpd->second;
 }
 
-bool ObjectMgr::TryGetTabPointType(uint32 tabId, CustomCharacterPointType& pointType)
+CustomCharacterPointType ObjectMgr::TryGetTabPointType(uint32 tabId)
 {
     auto fttItt = TalentTabs.find(tabId);
 
     if (fttItt == TalentTabs.end())
-        return false;
+        return MISSING;
 
-    pointType = fttItt->second->TalentType;
-    return true;
+    return fttItt->second->TalentType;
 }
 
-bool ObjectMgr::TryGetTalentTab(Player* player, uint32 tabId, CustomTalentTab*& tab)
+CustomTalentTab* ObjectMgr::TryGetTalentTab(Player* player, uint32 tabId)
 {
     auto charRaceItt = RaceAndClassTabMap.find(player->GetRace());
 
     if (charRaceItt == RaceAndClassTabMap.end())
-        return false;
+        return nullptr;
 
     auto charClassItt = charRaceItt->second.find(player->GetClass());
 
     if (charClassItt == charRaceItt->second.end())
-        return false;
+        return nullptr;
 
     // all logic before this is to ensure player has access to the tab.
 
     auto fttItt = charClassItt->second.find(tabId);
 
     if (fttItt == charClassItt->second.end())
-        return false;
+        return nullptr;
 
-    tab = TalentTabs[tabId];
-    return true;
+    return TalentTabs[tabId];
 }
 
-bool ObjectMgr::TryGetCustomTalentTabs(Player* player, CustomCharacterPointType cpt, std::list<CustomTalentTab*>& talentTabs)
+std::list<CustomTalentTab*> ObjectMgr::TryGetCustomTalentTabs(Player* player, CustomCharacterPointType cpt)
 {
+    std::list<CustomTalentTab*> talentTabs = {};
+
     auto race = player->GetRace();
     auto pClass = player->GetClass();
 
     auto charRaceItt = RaceAndClassTabMap.find(race);
 
     if (charRaceItt == RaceAndClassTabMap.end())
-        return false;
+        return talentTabs;
 
     auto charClassItt = charRaceItt->second.find(pClass);
 
     if (charClassItt == charRaceItt->second.end())
-        return false;
+        return talentTabs;
 
     auto ptItt = CharacterPointTypeToTalentTabIds.find(cpt);
 
     if (ptItt == CharacterPointTypeToTalentTabIds.end())
-        return false;
+        return talentTabs;
 
     for (auto iter : charClassItt->second)
     {
@@ -12450,7 +12445,7 @@ bool ObjectMgr::TryGetCustomTalentTabs(Player* player, CustomCharacterPointType 
             talentTabs.push_back(TalentTabs[iter]);
     }
 
-    return true;
+    return talentTabs;
 }
 
 void ObjectMgr::AddCharacterSpecSlot(Player* player)
@@ -12488,7 +12483,7 @@ void ObjectMgr::AddCharacterSpecSlot(Player* player)
     }
 
     std::list<CustomTalentTab*> tabs;
-    if (TryGetCustomTalentTabs(player, CustomCharacterPointType::TALENT_TREE, tabs)) {
+    if (!TryGetCustomTalentTabs(player, CustomCharacterPointType::TALENT_TREE).empty()) {
         for (auto tab : tabs) {
             for (auto talent : tab->Talents) {
                 CustomCharacterTalent* ct = new CustomCharacterTalent();
@@ -12501,7 +12496,7 @@ void ObjectMgr::AddCharacterSpecSlot(Player* player)
             }
         }
     }
-    if (TryGetCustomTalentTabs(player, CustomCharacterPointType::CLASS_TREE, tabs)) {
+    if (!TryGetCustomTalentTabs(player, CustomCharacterPointType::CLASS_TREE).empty()) {
         for (auto tab : tabs) {
             for (auto talent : tab->Talents) {
                 CustomCharacterTalent* ct = new CustomCharacterTalent();
@@ -12532,11 +12527,10 @@ void ObjectMgr::AddCharacterSpecSlot(Player* player)
     UpdateCharacterSpec(player, spec);
 }
 
-ObjectMgr::CustomCharacterPoint* ObjectMgr::GetSpecPoints(Player* player, CustomCharacterPointType pointType)
+CustomCharacterPoint* ObjectMgr::GetSpecPoints(Player* player, CustomCharacterPointType pointType)
 {
-    CustomPlayerSpec* spec;
 
-    if (TryGetCharacterActiveSpec(player, spec))
+    if (CustomPlayerSpec* spec = TryGetCharacterActiveSpec(player))
     {
         return GetSpecPoints(player, pointType, spec->Id);
     }
@@ -12564,8 +12558,7 @@ void ObjectMgr::UpdateForgeSpecInternal(Player* player, CharacterDatabaseTransac
 
     if (activeSpecItt != CharacterActiveSpecs.end() && spec->Active && activeSpecItt->second != spec->Id)
     {
-        CustomPlayerSpec* activeSpec;
-        if (TryGetCharacterSpec(player, activeSpecItt->second, activeSpec))
+        if (CustomPlayerSpec* activeSpec = TryGetCharacterSpec(player, activeSpecItt->second))
         {
             activeSpec->Active = false;
             AddCharSpecUpdateToTransaction(actId, trans, activeSpec);

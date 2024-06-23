@@ -62,6 +62,143 @@ struct WorldSafeLocsEntry;
 struct NPCSoundsEntry;
 struct JumpChargeParams;
 
+// @dh-begin
+#define ACCOUNT_WIDE_KEY 0xfffffffe
+
+enum CustomCharacterPointType : uint32
+{
+    MISSING = 999999,
+    TALENT_TREE = 0,
+    CLASS_TREE = 7,
+};
+
+enum CustomNodeType : uint8
+{
+    AURA = 0,
+    SPELL = 1,
+    CHOICE = 2
+};
+
+enum CustomPereqReqirementType : uint8
+{
+    REQ_ALL = 0,
+    ONE_OF = 1
+};
+
+struct CustomCharacterPoint
+{
+    CustomCharacterPointType PointType;
+    uint32 SpecId;
+    uint32 Sum;
+    uint32 Max;
+};
+
+struct CustomClassSpecDetail
+{
+    std::string Name;
+    uint32 SpellIconId;
+    uint32 SpecId;
+};
+
+struct CustomCharacterTalent
+{
+    uint32 SpellId;
+    uint32 TabId;
+    uint8 CurrentRank;
+    uint8 type;
+};
+
+struct CustomTalentPrereq
+{
+    uint32 reqId;
+    uint32 Talent;
+    uint32 TalentTabId;
+    uint32 RequiredRank;
+};
+
+struct CustomPlayerSpec {
+    uint32 Id;
+    ObjectGuid CharacterGuid;
+    std::string Name;
+    std::string Description;
+    bool Active;
+    uint32 SpellIconId;
+    uint32 SpecTabId;
+    std::unordered_map<uint32 /*tabId*/, std::unordered_map<uint32 /*spellId*/, CustomCharacterTalent*>> Talents;
+    std::unordered_map<uint32 /*tabId*/, uint8> PointsSpent;
+    std::unordered_map<uint32 /*node id*/, uint32/*spell picked*/> ChoiceNodesChosen;
+};
+
+struct CustomTalentChoice
+{
+    uint32 spellId;
+    bool active;
+};
+
+struct CustomTalent
+{
+    uint32 SpellId;
+    uint32 TalentTabId;
+    uint32 ColumnIndex;
+    uint32 RowIndex;
+    uint8 RankCost;
+    uint16 TabPointReq;
+    uint8 RequiredLevel;
+    CustomCharacterPointType TalentType;
+    CustomNodeType nodeType;
+    uint8 nodeIndex;
+
+    uint8 NumberOfRanks;
+    CustomPereqReqirementType PreReqType;
+    std::list<CustomTalentPrereq*> Prereqs;
+    std::map<uint8 /*index*/, CustomTalentChoice*> Choices;
+    std::list<uint32> UnlearnSpells;
+    std::unordered_map<uint8 /*rank*/, uint32 /*spellId*/> Ranks;
+    std::unordered_map<uint32 /*spellId*/, uint8 /*rank*/> RanksRev;
+};
+
+struct CustomTalentTab
+{
+    uint32 Id;
+    uint32 ClassMask;
+    uint32 RaceMask;
+    std::string Name;
+    uint32 SpellIconId;
+    std::string Background;
+    std::string Description;
+    uint8 Role;
+    std::string SpellString;
+    CustomCharacterPointType TalentType;
+    uint32 TabIndex;
+    std::unordered_map<uint32 /*spellId*/, CustomTalent*> Talents;
+};
+
+struct PlayerLoadout {
+    bool active;
+    uint8 id;
+    uint32 tabId;
+    std::string name;
+    std::string talentString;
+};
+
+struct NodeMetaData {
+    uint32 spellId;
+    uint8 row;
+    uint8 col;
+    uint8 pointReq;
+    uint8 nodeIndex;
+    std::vector<NodeMetaData*> unlocks;
+};
+
+struct TreeMetaData {
+    uint32 TabId;
+    uint8 MaxXDim = 0;
+    uint8 MaxYDim = 0;
+    std::unordered_map<uint8/*row*/, std::unordered_map<uint8 /*col*/, NodeMetaData*>> nodes;
+    std::unordered_map<uint32/*spellId*/, NodeMetaData*> nodeLocation;
+};
+// @dh-end
+
 struct PageText
 {
     std::string Text;
@@ -1829,141 +1966,6 @@ class TC_GAME_API ObjectMgr
         VehicleSeatAddonContainer _vehicleSeatAddonStore;
 
     // @dh-begin
-    public:
-        #define ACCOUNT_WIDE_KEY 0xfffffffe
-
-        enum CustomCharacterPointType
-        {
-            TALENT_TREE = 0,
-            CLASS_TREE = 7,
-        };
-
-        enum CustomNodeType
-        {
-            AURA = 0,
-            SPELL = 1,
-            CHOICE = 2
-        };
-
-        enum class CustomPereqReqirementType
-        {
-            ALL = 0,
-            ONE = 1
-        };
-
-        struct CustomCharacterPoint
-        {
-            CustomCharacterPointType PointType;
-            uint32 SpecId;
-            uint32 Sum;
-            uint32 Max;
-        };
-
-        struct CustomClassSpecDetail
-        {
-            std::string Name;
-            uint32 SpellIconId;
-            uint32 SpecId;
-        };
-
-        struct CustomCharacterTalent
-        {
-            uint32 SpellId;
-            uint32 TabId;
-            uint8 CurrentRank;
-            uint8 type;
-        };
-
-        struct CustomTalentPrereq
-        {
-            uint32 reqId;
-            uint32 Talent;
-            uint32 TalentTabId;
-            uint32 RequiredRank;
-        };
-
-        struct CustomPlayerSpec {
-            uint32 Id;
-            ObjectGuid CharacterGuid;
-            std::string Name;
-            std::string Description;
-            bool Active;
-            uint32 SpellIconId;
-            uint32 SpecTabId;
-            std::unordered_map<uint32 /*tabId*/, std::unordered_map<uint32 /*spellId*/, CustomCharacterTalent*>> Talents;
-            std::unordered_map<uint32 /*tabId*/, uint8> PointsSpent;
-            std::unordered_map<uint32 /*node id*/, uint32/*spell picked*/> ChoiceNodesChosen;
-        };
-
-        struct CustomTalentChoice
-        {
-            uint32 spellId;
-            bool active;
-        };
-
-        struct CustomTalent
-        {
-            uint32 SpellId;
-            uint32 TalentTabId;
-            uint32 ColumnIndex;
-            uint32 RowIndex;
-            uint8 RankCost;
-            uint16 TabPointReq;
-            uint8 RequiredLevel;
-            CustomCharacterPointType TalentType;
-            CustomNodeType nodeType;
-            uint8 nodeIndex;
-
-            uint8 NumberOfRanks;
-            CustomPereqReqirementType PreReqType;
-            std::list<CustomTalentPrereq*> Prereqs;
-            std::map<uint8 /*index*/, CustomTalentChoice*> Choices;
-            std::list<uint32> UnlearnSpells;
-            std::unordered_map<uint8 /*rank*/, uint32 /*spellId*/> Ranks;
-            std::unordered_map<uint32 /*spellId*/, uint8 /*rank*/> RanksRev;
-        };
-
-        struct CustomTalentTab
-        {
-            uint32 Id;
-            uint32 ClassMask;
-            uint32 RaceMask;
-            std::string Name;
-            uint32 SpellIconId;
-            std::string Background;
-            std::string Description;
-            uint8 Role;
-            std::string SpellString;
-            CustomCharacterPointType TalentType;
-            uint32 TabIndex;
-            std::unordered_map<uint32 /*spellId*/, CustomTalent*> Talents;
-        };
-
-        struct PlayerLoadout {
-            bool active;
-            uint8 id;
-            uint32 tabId;
-            std::string name;
-            std::string talentString;
-        };
-
-        struct NodeMetaData {
-            uint32 spellId;
-            uint8 row;
-            uint8 col;
-            uint8 pointReq;
-            uint8 nodeIndex;
-            std::vector<NodeMetaData*> unlocks;
-        };
-
-        struct TreeMetaData {
-            uint32 TabId;
-            uint8 MaxXDim = 0;
-            uint8 MaxYDim = 0;
-            std::unordered_map<uint8/*row*/, std::unordered_map<uint8 /*col*/, NodeMetaData*>> nodes;
-            std::unordered_map<uint32/*spellId*/, NodeMetaData*> nodeLocation;
-        };
-
     private:
         const std::string base64_char = "|ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -2027,7 +2029,6 @@ class TC_GAME_API ObjectMgr
         void AddCharacterPointsFromDB();
         void AddSpellUnlearnFlags();
         void AddSpellLearnAdditionalSpells();
-
         void AddCharacterChoiceNodes();
 
     public:
@@ -2039,23 +2040,23 @@ class TC_GAME_API ObjectMgr
 
         NPCSoundsEntry* GetNpcSounds(uint32 id);
 
-        bool TryGetTabIdForSpell(Player* player, uint32 spellId, uint32& tabId);
+        uint32 TryGetTabIdForSpell(Player* player, uint32 spellId);
 
-        bool TryGetSpellIddForTab(Player* player, uint32 tabId, uint32& skillId);
+        uint32 TryGetSpellIdForTab(Player* player, uint32 tabId);
 
-        bool TryGetCharacterTalents(Player* player, uint32 tabId, std::unordered_map<uint32, CustomCharacterTalent*>& spec);
+        std::unordered_map<uint32, CustomCharacterTalent*> TryGetCharacterTalents(Player* player, uint32 tabId);
 
-        bool TryGetAllCharacterSpecs(Player* player, std::list<CustomPlayerSpec*>& specs);
+        std::list<CustomPlayerSpec*> TryGetAllCharacterSpecs(Player* player);
 
-        bool TryGetCharacterActiveSpec(Player* player, CustomPlayerSpec*& spec);
+        CustomPlayerSpec* TryGetCharacterActiveSpec(Player* player);
 
-        bool TryGetCharacterSpec(Player* player, uint32 specId, CustomPlayerSpec*& spec);
+        CustomPlayerSpec* TryGetCharacterSpec(Player* player, uint32 specId);
 
         CustomCharacterTalent* GetTalent(Player* player, uint32 spellId);
 
         CustomCharacterPoint* GetSpecPoints(Player* player, CustomCharacterPointType pointType, uint32 specId);
 
-        void UpdateCharPoints(Player* player, CustomCharacterPoint*& fp);
+        CustomCharacterPoint* UpdateCharPoints(Player* player, CustomCharacterPoint* points);
 
         void UpdateCharacterSpec(Player* player, CustomPlayerSpec* spec);
 
@@ -2063,11 +2064,11 @@ class TC_GAME_API ObjectMgr
 
         CustomCharacterPoint* GetMaxPointDefaults(CustomCharacterPointType cpt);
 
-        bool TryGetTabPointType(uint32 tabId, CustomCharacterPointType& pointType);
+        CustomCharacterPointType TryGetTabPointType(uint32 tabId);
 
-        bool TryGetTalentTab(Player* player, uint32 tabId, CustomTalentTab*& tab);
+        CustomTalentTab* TryGetTalentTab(Player* player, uint32 tabId);
 
-        bool TryGetCustomTalentTabs(Player* player, CustomCharacterPointType cpt, std::list<CustomTalentTab*>& talentTabs);
+        std::list<CustomTalentTab*> TryGetCustomTalentTabs(Player* player, CustomCharacterPointType cpt);
 
         void AddCharacterSpecSlot(Player* player);
 
