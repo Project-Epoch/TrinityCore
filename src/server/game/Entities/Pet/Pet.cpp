@@ -1084,6 +1084,9 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
                         SetCreateMana(28 + 30*petlevel);
                         SetCreateHealth(28 + 10*petlevel);
                     }
+
+                    if (GetOwner()->HasAura(1280057) && !HasAura(1280058))//Reduplication talent & Reduplication passive
+                        AddAura(1280058, this);
                     break;
                 }
                 case 27829: // Ebon Gargoyle
