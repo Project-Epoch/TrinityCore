@@ -7588,13 +7588,16 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
 
     switch (spellProto->DmgClass)
     {
+        // Aleist3r: splitting melee and ranged cases for specific aura-related cases
         case SPELL_DAMAGE_CLASS_MELEE:                      // for melee based spells is 100%
+            crit_bonus += damage + CalculatePct(damage, caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_BASE_CRIT_DAMAGE, SPELL_DAMAGE_CLASS_MASK_MELEE));
+            break;
         case SPELL_DAMAGE_CLASS_RANGED:
             /// @todo write here full calculation for melee/ranged spells
-            crit_bonus += damage;
+            crit_bonus += damage + CalculatePct(damage, caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_BASE_CRIT_DAMAGE, SPELL_DAMAGE_CLASS_MASK_RANGED));
             break;
-        default:
-            crit_bonus += damage / 2;                       // for spells is 50%
+        default: // for spells is 50%
+            crit_bonus += damage / 2 + CalculatePct(damage, caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_BASE_CRIT_DAMAGE, SPELL_DAMAGE_CLASS_MASK_MAGIC));
             break;
     }
 
