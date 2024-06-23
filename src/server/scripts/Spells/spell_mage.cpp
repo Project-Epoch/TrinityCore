@@ -267,6 +267,7 @@ class spell_mage_blazing_speed : public AuraScript
 
 // -54747 - Burning Determination
 // 54748 - Burning Determination
+// 1280052, 1280053 - Intense Focus
 class spell_mage_burning_determination : public AuraScript
 {
     PrepareAuraScript(spell_mage_burning_determination);

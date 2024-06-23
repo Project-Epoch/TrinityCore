@@ -493,6 +493,7 @@ class TC_GAME_API SpellInfo
         bool CheckTargetCreatureType(Unit const* target) const;
 
         SpellSchoolMask GetSchoolMask() const;
+        SpellDmgClassMask GetDmgClassMask() const;
         uint32 GetAllEffectsMechanicMask() const;
         uint32 GetEffectMechanicMask(SpellEffIndex effIndex) const;
         uint32 GetSpellMechanicMaskByEffectMask(uint32 effectMask) const;
