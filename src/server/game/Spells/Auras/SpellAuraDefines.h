@@ -401,7 +401,7 @@ enum AuraType : uint32
     SPELL_AURA_MOD_CRITICAL_BLOCK_PCT                       = 321,
     SPELL_AURA_MOD_SPELL_CHARGES                            = 322,
     SPELL_AURA_MOD_TRIGGER_SPELL_ON_STACKS                  = 323,
-    SPELL_AURA_324                                          = 324,
+    SPELL_AURA_MOD_BASE_CRIT_DAMAGE                         = 324,
     SPELL_AURA_MOD_DAMAGE_TAKEN_PCT_BEFORE_BLOCK            = 325,
     SPELL_AURA_ADD_SPELL_BLOCK                              = 326,
     SPELL_AURA_MOD_TOGGLE_AURA_COMBAT_STATE                 = 327,

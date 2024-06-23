@@ -2109,6 +2109,11 @@ SpellSchoolMask SpellInfo::GetSchoolMask() const
     return SpellSchoolMask(SchoolMask);
 }
 
+SpellDmgClassMask SpellInfo::GetDmgClassMask() const
+{
+    return SpellDmgClassMask(DmgClass);
+}
+
 uint32 SpellInfo::GetAllEffectsMechanicMask() const
 {
     uint32 mask = 0;

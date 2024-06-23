@@ -388,7 +388,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //321 SPELL_AURA_MOD_CRITICAL_BLOCK_PCT
     &AuraEffect::HandleAuraAddCharges,                            //322 SPELL_AURA_MOD_SPELL_CHARGES
     &AuraEffect::HandleModTriggerSpellOnStacks,                   //323 SPELL_AURA_MOD_TRIGGER_SPELL_ON_STACKS
-    &AuraEffect::HandleNULL,                                      //324 REUSE
+    &AuraEffect::HandleNoImmediateEffect,                         //324 SPELL_AURA_MOD_CRIT_DAMAGE implemented in Unit::SpellCriticalDamageBonus
     &AuraEffect::HandleNoImmediateEffect,                         //325 SPELL_AURA_MOD_DAMAGE_TAKEN_PCT_BEFORE_BLOCK
     &AuraEffect::HandleNoImmediateEffect,                         //326 SPELL_AURA_ADD_SPELL_BLOCK
     &AuraEffect::HandleNoImmediateEffect,                         //327 SPELL_AURA_MOD_MOVEMENT_SPEED_COMBAT

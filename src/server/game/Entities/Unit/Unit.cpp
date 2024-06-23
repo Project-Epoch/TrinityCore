@@ -7074,7 +7074,7 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
             // Ice Lance
             if (spellProto->SpellIconID == 186)
             {
-                if (victim->HasAuraState(AURA_STATE_FROZEN, spellProto, this) || owner->HasAura(1290010))
+                if (victim->HasAuraState(AURA_STATE_FROZEN, spellProto, this) || owner->HasAura(1290004))
                 {
                     // Glyph of Ice Lance
                     if (owner->HasAura(1280020) && victim->GetLevel() > owner->GetLevel())
@@ -7085,7 +7085,7 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
             }
 
             // Torment the weak
-            if (spellProto->SpellFamilyFlags[2] & 0x200000)
+            if (spellProto->SpellFamilyFlags[2] & 0x80000000)
             {
                 if (victim->HasAuraWithMechanic((1 << MECHANIC_SNARE) | (1 << MECHANIC_SLOW_ATTACK)))
                 {
@@ -7426,6 +7426,9 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
                     float modChance = 0.f;
                     switch (aurEff->GetMiscValue())
                     {
+                        case 91111: // Shatter (Duskhaven)
+                            modChance += 15.f;
+                            [[fallthrough]];
                         case 911: // Shatter (Rank 3)
                             modChance += 16.f;
                             [[fallthrough]];
@@ -7585,13 +7588,16 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
 
     switch (spellProto->DmgClass)
     {
+        // Aleist3r: splitting melee and ranged cases for specific aura-related cases
         case SPELL_DAMAGE_CLASS_MELEE:                      // for melee based spells is 100%
+            crit_bonus += damage + CalculatePct(damage, caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_BASE_CRIT_DAMAGE, SPELL_DAMAGE_CLASS_MASK_MELEE));
+            break;
         case SPELL_DAMAGE_CLASS_RANGED:
             /// @todo write here full calculation for melee/ranged spells
-            crit_bonus += damage;
+            crit_bonus += damage + CalculatePct(damage, caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_BASE_CRIT_DAMAGE, SPELL_DAMAGE_CLASS_MASK_RANGED));
             break;
-        default:
-            crit_bonus += damage / 2;                       // for spells is 50%
+        default: // for spells is 50%
+            crit_bonus += damage / 2 + CalculatePct(damage, caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_BASE_CRIT_DAMAGE, SPELL_DAMAGE_CLASS_MASK_MAGIC));
             break;
     }
 

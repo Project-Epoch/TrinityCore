@@ -762,8 +762,8 @@ void Spell::EffectTriggerSpell()
                 if (!unitCaster)
                     break;
 
-                // Glyph of Mirror Image
-                if (unitCaster->HasAura(63093))
+                // Glyph of Mirror Image || Five's a Party
+                if (unitCaster->HasAura(63093) || unitCaster->HasAura(1280056))
                     unitCaster->CastSpell(nullptr, 65047, true); // Mirror Image
                 break;
             }
