@@ -11735,8 +11735,6 @@ void ObjectMgr::AddTalentTrees()
                 if (classBit != 0 || newTab->ClassMask == 0)
                 {
                     RaceAndClassTabMap[race.first][wowClass.first].insert(newTab->Id);
-                    SpellToTalentTabMap[newTab->SpellIconId] = newTab->Id;
-                    TalentTabToSpellMap[newTab->Id] = newTab->SpellIconId;
                     CharacterPointTypeToTalentTabIds[newTab->TalentType].insert(newTab->Id);
                 }
             }
@@ -12008,6 +12006,8 @@ void ObjectMgr::AddTalentUnlearn()
     } while (exclTalents->NextRow());
 }
 
+
+
 void ObjectMgr::AddCharacterSpecs()
 {
     QueryResult charSpecs = CharacterDatabase.Query("SELECT * FROM forge_character_specs");
@@ -12054,20 +12054,6 @@ void ObjectMgr::AddTalentSpent()
 
             CharacterSpecs[guid][spec]->PointsSpent[tabId] = talentFields[3].GetUInt8();
         }
-        else
-        {
-            auto aws = AccountWideCharacterSpecs.find(id);
-
-
-            if (aws == AccountWideCharacterSpecs.end())
-                AccountWideCharacterSpecs[id] = new CustomPlayerSpec();
-
-            AccountWideCharacterSpecs[id]->PointsSpent[tabId] = talentFields[3].GetUInt8();
-
-            for (auto& ch : PlayerCharacterMap[id])
-                for (auto& spec : CharacterSpecs[ch])
-                    spec.second->PointsSpent[tabId] = talentFields[3].GetUInt8();
-        }
 
     } while (exclTalents->NextRow());
 }
@@ -12100,18 +12086,6 @@ void ObjectMgr::AddCharacterTalents()
                     CustomPlayerSpec* spec = CharacterSpecs[characterGuid][specId];
                     talent->type = ft->nodeType;
                     spec->Talents[talent->TabId][talent->SpellId] = talent;
-                }
-                else
-                {
-                    AccountWideCharacterSpecs[id]->Talents[talent->TabId][talent->SpellId] = talent;
-
-                    for (auto& ch : PlayerCharacterMap[id])
-                        for (auto& spec : CharacterSpecs[ch])
-                        {
-                            CustomTalent* ft = TalentTabs[talent->TabId]->Talents[talent->SpellId];
-                            talent->type = ft->nodeType;
-                            spec.second->Talents[talent->TabId][talent->SpellId] = talent;
-                        }
                 }
             }
         }
