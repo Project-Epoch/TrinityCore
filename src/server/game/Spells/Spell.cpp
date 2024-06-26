@@ -1353,6 +1353,24 @@ void Spell::SelectImplicitCasterDestTargets(SpellEffectInfo const& spellEffectIn
                 return;
             }
 
+            /** @epoch-start */
+            SpellCastResult scriptCheck = SPELL_CAST_OK;
+            FIRE_ID(m_spellInfo->events.id
+                , Spell, OnCheckFishingCast
+                , TSSpell(this)
+                , TSWorldObject(m_caster)
+                , TSNumber<uint32>(liquidData.type_flags)
+                , TSMutableNumber<uint8>(reinterpret_cast<uint8_t*>(&scriptCheck))
+            );
+            if (scriptCheck != SPELL_CAST_OK)
+            {
+                SendCastResult(scriptCheck);
+                SendChannelUpdate(0);
+                finish(false);
+                return;
+            }
+            /** @epoch-end */
+
             dest = SpellDestination(x, y, liquidLevel, m_caster->GetOrientation());
             break;
         }
