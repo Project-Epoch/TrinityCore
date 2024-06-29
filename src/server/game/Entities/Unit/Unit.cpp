@@ -7074,7 +7074,7 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
             // Ice Lance
             if (spellProto->SpellIconID == 186)
             {
-                if (victim->HasAuraState(AURA_STATE_FROZEN, spellProto, this) || owner->HasAura(1290004))
+                if (victim->HasAuraState(AURA_STATE_FROZEN, spellProto, this) || owner->HasAura(1290004) || victim->HasAura(1290013)) // Fingers of Frost || Brittlefrost
                 {
                     // Glyph of Ice Lance
                     if (owner->HasAura(1280020) && victim->GetLevel() > owner->GetLevel())
@@ -7437,7 +7437,7 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
                             [[fallthrough]];
                         case 849: // Shatter (Rank 1)
                             modChance += 17.f;
-                            if (!HasAuraState(AURA_STATE_FROZEN, spellInfo, caster))
+                            if (!HasAuraState(AURA_STATE_FROZEN, spellInfo, caster) || !HasAura(1290013)) // Brittlefrost
                                 break;
 
                             crit_chance += modChance;
