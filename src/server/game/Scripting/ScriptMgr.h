@@ -174,9 +174,6 @@ class TC_GAME_API ScriptObject
 
     public:
 
-        virtual bool IsDatabaseBound() const { return false; }
-        virtual bool isAfterLoadScript() const { return IsDatabaseBound(); }
-
         std::string const& GetName() const;
 
     protected:
@@ -687,8 +684,6 @@ class TC_GAME_API PlayerScript : public ScriptObject
 
         virtual void OnChat(Player* player, uint32 type, uint32 lang, std::string& msg, Channel* channel);
 
-        virtual void OnBeforeSendChatMessage(Player* player, uint32& type, uint32& lang, std::string& msg);
-
         // Both of the below are called on emote opcodes.
         virtual void OnEmote(Player* player, Emote emote);
 
@@ -836,29 +831,6 @@ class TC_GAME_API GroupScript : public ScriptObject
 
         // Called when a group is disbanded.
         virtual void OnDisband(Group* group);
-};
-
-class TC_GAME_API DatabaseScript : public ScriptObject
-{
-    protected:
-        explicit DatabaseScript(char const* name);
-
-    public:
-        bool IsDatabaseBound() const override { return false; }
-
-    /**
-     * @brief Called after all databases are loaded
-     *
-     * @param updateFlags Update flags from the loader
-     */
-    virtual void OnAfterDatabasesLoaded() { }
-
-    /**
-     * @brief Called after all creature template data has been loaded from the database. This hook could be called multiple times, not just at server startup.
-     *
-     * @param creatureTemplates Pointer to a modifiable vector of creature templates. Indexed by Entry ID.
-     */
-    virtual void OnAfterDatabaseLoadCreatureTemplates(CreatureTemplateContainer /*creatureTemplates*/) { }
 };
 
 // Manages registration, loading, and execution of scripts.
@@ -1071,7 +1043,6 @@ class TC_GAME_API ScriptMgr
         void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string& msg, Group* group);
         void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string& msg, Guild* guild);
         void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string& msg, Channel* channel);
-        void OnBeforeSendChatMessage(Player* player, uint32& type, uint32& lang, std::string& msg);
         void OnPlayerEmote(Player* player, Emote emote);
         void OnPlayerTextEmote(Player* player, uint32 textEmote, uint32 emoteNum, ObjectGuid guid);
         void OnPlayerSpellCast(Player* player, Spell* spell, bool skipCheck);
@@ -1131,11 +1102,6 @@ class TC_GAME_API ScriptMgr
         void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage);
         void ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage);
         void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage);
-
-    public: /* DatabaseScript */
-
-        void OnAfterDatabasesLoaded();
-        void OnAfterDatabaseLoadCreatureTemplates(CreatureTemplateContainer creatureTemplateStore);
 
     private:
         uint32 _scriptCount;

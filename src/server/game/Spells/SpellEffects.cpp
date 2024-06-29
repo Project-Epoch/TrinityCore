@@ -5706,26 +5706,28 @@ void Spell::EffectLearnTransmogSet()
 
 void Spell::EffectJumpCharge()
 {
-    if (effectHandleMode != SPELL_EFFECT_HANDLE_LAUNCH)
-        return;
+    // if (effectHandleMode != SPELL_EFFECT_HANDLE_LAUNCH)
+    //     return;
 
-    if (!m_caster || !m_caster->ToUnit())
-        return;
+    // if (!m_caster || !m_caster->ToUnit())
+    //     return;
 
-    if (m_caster->ToUnit()->HasUnitState(UNIT_STATE_IN_FLIGHT))
-        return;
+    // if (m_caster->ToUnit()->HasUnitState(UNIT_STATE_IN_FLIGHT))
+    //     return;
 
-    JumpChargeParams const* params = sObjectMgr->GetJumpChargeParams(effectInfo->MiscValue);
+    // JumpChargeParams const* params = sObjectMgr->GetJumpChargeParams(effectInfo->MiscValue);
 
-    if (!params)
-        return;
+    // if (!params)
+    //     return;
 
-    float speed = params->Speed;
+    // float speed = params->Speed;
 
-    if (params->TreatSpeedAsMoveTimeSeconds)
-        speed = m_caster->GetExactDist(destTarget) / params->MoveTimeInSec;
+    // if (params->TreatSpeedAsMoveTimeSeconds)
+    //     speed = m_caster->GetExactDist(destTarget) / params->MoveTimeInSec;
 
-    m_caster->ToUnit()->GetMotionMaster()->MoveJumpWithGravity(*destTarget, speed, params->JumpGravity, 0, ObjectAccessor::GetUnit(*m_caster, m_caster->GetGuidValue(UNIT_FIELD_TARGET)));
+    // m_caster->ToUnit()->GetMotionMaster()->MoveJumpWithGravity(*destTarget, speed, params->JumpGravity, 0, ObjectAccessor::GetUnit(*m_caster, m_caster->GetGuidValue(UNIT_FIELD_TARGET)));
+
+    // TODO MOVE THIS TO TSWOW
 
     //if (m_caster->GetTypeId() == TYPEID_PLAYER)
     //{

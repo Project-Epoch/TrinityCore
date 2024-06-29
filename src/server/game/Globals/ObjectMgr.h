@@ -1706,6 +1706,8 @@ class TC_GAME_API ObjectMgr
         std::shared_ptr<CreatureOutfit> const & GetOutfit(uint32 modelid) const;
         uint32 GetRealDisplayId(uint32 modelid) const;
 
+        void LoadCreatureOutfits();
+
         Trainer::Trainer const* GetTrainer(uint32 creatureId) const;
         std::vector<Trainer::Trainer const*> const& GetClassTrainers(uint8 classId) const { return _classTrainers.at(classId); }
 
@@ -1964,130 +1966,6 @@ class TC_GAME_API ObjectMgr
 
         PlayerTotemModelMap _playerTotemModel;
         VehicleSeatAddonContainer _vehicleSeatAddonStore;
-
-    // @dh-begin
-    private:
-        const std::string base64_char = "|ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-        std::unordered_map<uint32, NPCSoundsEntry*> _npcSounds;
-        std::unordered_map<int32, JumpChargeParams> _jumpChargeParams;
-
-        std::unordered_map<ObjectGuid, uint32> CharacterActiveSpecs;
-        std::unordered_map<ObjectGuid, std::unordered_map<uint32, CustomPlayerSpec*>> CharacterSpecs;
-        std::unordered_map<uint32, CustomPlayerSpec*> AccountWideCharacterSpecs;
-
-        std::unordered_map<ObjectGuid, std::unordered_map<CustomCharacterPointType, std::unordered_map<uint32, CustomCharacterPoint*>>> CharacterPoints;
-        std::unordered_map<CustomCharacterPointType, CustomCharacterPoint*> MaxPointDefaults;
-        std::unordered_map < uint32, std::unordered_map<uint32, CustomCharacterPoint*>> AccountWidePoints;
-
-        std::unordered_map<uint32, uint32> SpellToTalentTabMap;
-
-        std::unordered_map<uint32, uint32> TalentTabToSpellMap;
-        std::unordered_map<CustomCharacterPointType, std::unordered_set<uint32>> CharacterPointTypeToTalentTabIds;
-
-        std::unordered_map<uint8, std::unordered_map<uint8, std::unordered_set<uint32>>> RaceAndClassTabMap;
-        std::unordered_map<uint8, std::unordered_map<uint8, std::vector<CustomClassSpecDetail*>>> ClassSpecDetails;
-
-        std::unordered_map<uint32, std::vector<ObjectGuid>> PlayerCharacterMap;
-
-        std::vector<uint32 /*guid*/> FlaggedForReset;
-        std::unordered_map<uint32 /*guid*/, uint32 /*spell*/> FlaggedForUnlearn;
-        std::unordered_map<uint32 /*guid*/, std::vector<uint32 /*spell*/>> SpellLearnedAdditionalSpells;
-
-        std::vector<uint32> RACE_LIST;
-        std::vector<uint32> CLASS_LIST;
-        std::vector<CustomCharacterPointType> TALENT_POINT_TYPES;
-
-        // tabId
-        std::unordered_map<uint32, CustomTalentTab*> TalentTabs;
-
-        // choiceNodeId is the id of the node in forge_talents
-        std::unordered_map<uint32 /*nodeid*/, std::vector<uint32/*choice spell id*/>> _choiceNodes;
-        std::unordered_map<uint32 /*choice spell id*/, uint32 /*nodeid*/> _choiceNodesRev;
-        std::unordered_map<uint8, uint32> _choiceNodeIndexLookup;
-
-        std::unordered_map<uint8 /*class*/, std::unordered_map<uint32 /*racemask*/, std::unordered_map<uint8/*level*/, std::vector<uint32 /*spell*/>>>> _levelClassSpellMap;
-
-        /* hater: cached tree meta data */
-        std::unordered_map<uint32 /*tabId*/, TreeMetaData*> _cacheTreeMetaData;
-
-        std::unordered_map<uint32 /*tabid*/, std::unordered_map<uint8 /*node*/, uint32 /*spell*/>> _cacheSpecNodeToSpell;
-        std::unordered_map<uint32 /*class*/, std::unordered_map<uint8 /*node*/, uint32 /*spell*/>> _cacheClassNodeToSpell;
-        std::unordered_map<uint32, uint32> _cacheClassNodeToClassTree;
-
-        void AddTalentTrees();
-        void AddTalentsToTrees();
-        void AddLevelClassSpellMap();
-        void AddTalentPrereqs();
-        void AddTalentChoiceNodes();
-        void AddTalentRanks();
-        void AddTalentUnlearn();
-        void AddCharacterSpecs();
-        void AddTalentSpent();
-        void AddCharacterTalents();
-        void AddPlayerTalentLoadouts();
-        void AddCharacterPointsFromDB();
-        void AddSpellUnlearnFlags();
-        void AddSpellLearnAdditionalSpells();
-        void AddCharacterChoiceNodes();
-
-    public:
-        void LoadCreatureOutfits();
-        void LoadNpcSounds();
-        void LoadJumpChargeParams();
-
-        JumpChargeParams const* GetJumpChargeParams(int32 id) const;
-
-        NPCSoundsEntry* GetNpcSounds(uint32 id);
-
-        uint32 TryGetTabIdForSpell(Player* player, uint32 spellId);
-
-        uint32 TryGetSpellIdForTab(Player* player, uint32 tabId);
-
-        std::unordered_map<uint32, CustomCharacterTalent*> TryGetCharacterTalents(Player* player, uint32 tabId);
-
-        std::list<CustomPlayerSpec*> TryGetAllCharacterSpecs(Player* player);
-
-        CustomPlayerSpec* TryGetCharacterActiveSpec(Player* player);
-
-        CustomPlayerSpec* TryGetCharacterSpec(Player* player, uint32 specId);
-
-        CustomCharacterTalent* GetTalent(Player* player, uint32 spellId);
-
-        CustomCharacterPoint* GetSpecPoints(Player* player, CustomCharacterPointType pointType, uint32 specId);
-
-        CustomCharacterPoint* UpdateCharPoints(Player* player, CustomCharacterPoint* points);
-
-        void UpdateCharacterSpec(Player* player, CustomPlayerSpec* spec);
-
-        CustomCharacterPoint* GetCommonCharacterPoint(Player* player, CustomCharacterPointType pointType);
-
-        CustomCharacterPoint* GetMaxPointDefaults(CustomCharacterPointType cpt);
-
-        CustomCharacterPointType TryGetTabPointType(uint32 tabId);
-
-        CustomTalentTab* TryGetTalentTab(Player* player, uint32 tabId);
-
-        std::list<CustomTalentTab*> TryGetCustomTalentTabs(Player* player, CustomCharacterPointType cpt);
-
-        void AddCharacterSpecSlot(Player* player);
-
-        CustomCharacterPoint* GetSpecPoints(Player* player, CustomCharacterPointType pointType);
-
-        uint32 GetChoiceNodeFromindex(uint8 index);
-
-        void BuildTSCustomCache();
-        void AddDefaultLoadout(Player* player);
-    private:
-        std::unordered_map<uint32 /*guid*/, std::unordered_map<uint32 /*tabId*/, std::unordered_map<uint8 /*id*/, PlayerLoadout*>>> _playerTalentLoadouts;
-        std::unordered_map<uint32 /*guid*/, PlayerLoadout*> _playerActiveTalentLoadouts;
-
-        std::unordered_map<uint32 /*class*/, uint32 /*spec*/> _playerClassFirstSpec;
-
-        void UpdateForgeSpecInternal(Player* player, CharacterDatabaseTransaction& trans, CustomPlayerSpec*& spec);
-        void AddCharSpecUpdateToTransaction(uint32 accountId, CharacterDatabaseTransaction& trans, CustomPlayerSpec*& spec);
-        void UpdateCharacterTalentInternal(uint32 account, uint32 charId, CharacterDatabaseTransaction& trans, uint32 spec, uint32 spellId, uint32 tabId, uint8 known);
-    // @dh-end
 };
 
 #define sObjectMgr ObjectMgr::instance()

@@ -2346,11 +2346,6 @@ void World::SetInitialWorldSettings()
         });
     }
 
-    // @dh-begin
-    TC_LOG_INFO("server.loading", "Loading TS Custom Data...");
-    sObjectMgr->BuildTSCustomCache();
-    // @dh-end
-
     uint32 startupDuration = GetMSTimeDiffToNow(startupBegin);
 
     TC_LOG_INFO("server.worldserver", "World initialized in {} minutes {} seconds", (startupDuration / 60000), ((startupDuration % 60000) / 1000));

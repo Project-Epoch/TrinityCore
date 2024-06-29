@@ -225,8 +225,6 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
     if (msg.size() > 255)
         return;
 
-    sScriptMgr->OnBeforeSendChatMessage(_player, type, lang, msg);
-
     // Our Warden module also uses SendAddonMessage as a way to communicate Lua check results to the server, see if this is that
     if ((type == CHAT_MSG_GUILD) && (lang == LANG_ADDON))
     {
@@ -281,8 +279,6 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         if (!ValidateHyperlinksAndMaybeKick(msg))
             return;
     }
-
-    sScriptMgr->OnBeforeSendChatMessage(_player, type, lang, msg);
 
     switch (type)
     {

@@ -672,9 +672,6 @@ bool StartDB()
     sWorld->LoadDBVersion();
 
     TC_LOG_INFO("server.worldserver", "Using World DB: {}", sWorld->GetDBVersion());
-
-    sScriptMgr->OnAfterDatabasesLoaded();
-
     return true;
 }
 
