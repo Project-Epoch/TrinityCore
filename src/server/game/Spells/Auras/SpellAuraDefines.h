@@ -432,6 +432,7 @@ enum AuraType : uint32
     SPELL_AURA_MOD_RESTED_XP_MAX_AMOUNT                     = 352,
     SPELL_AURA_MOD_RESTED_XP_RECOVERY_RATE                  = 353,
     SPELL_AURA_MOD_CHANGE_DAMAGE_SCHOOL_OF_SPELL            = 354,
+    SPELL_AURA_ADD_COMBAT_RATING_PCT_TO_SPELL_EFFECT        = 355,
     TOTAL_AURAS                                             
 };
 

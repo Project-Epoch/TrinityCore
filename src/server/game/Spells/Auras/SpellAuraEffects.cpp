@@ -388,7 +388,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //321 SPELL_AURA_MOD_CRITICAL_BLOCK_PCT
     &AuraEffect::HandleAuraAddCharges,                            //322 SPELL_AURA_MOD_SPELL_CHARGES
     &AuraEffect::HandleModTriggerSpellOnStacks,                   //323 SPELL_AURA_MOD_TRIGGER_SPELL_ON_STACKS
-    &AuraEffect::HandleNoImmediateEffect,                         //324 SPELL_AURA_MOD_CRIT_DAMAGE implemented in Unit::SpellCriticalDamageBonus
+    &AuraEffect::HandleNoImmediateEffect,                         //324 SPELL_AURA_MOD_BASE_CRIT_DAMAGE implemented in Unit::SpellCriticalDamageBonus
     &AuraEffect::HandleNoImmediateEffect,                         //325 SPELL_AURA_MOD_DAMAGE_TAKEN_PCT_BEFORE_BLOCK
     &AuraEffect::HandleNoImmediateEffect,                         //326 SPELL_AURA_ADD_SPELL_BLOCK
     &AuraEffect::HandleNoImmediateEffect,                         //327 SPELL_AURA_MOD_MOVEMENT_SPEED_COMBAT
@@ -418,7 +418,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleAuraModForgeStat,                          //351 SPELL_AURA_MOD_FORGE_STAT
     &AuraEffect::HandleNoImmediateEffect,                         //352 SPELL_AURA_MOD_RESTED_XP_MAX_AMOUNT implemented in Player::SetRestBonus, Spell::EffectGiveRestedExperience
     &AuraEffect::HandleNoImmediateEffect,                         //355 SPELL_AURA_MOD_RESTED_XP_RECOVERY_RATE implemented in Player::Update
-
+    &AuraEffect::HandleNoImmediateEffect,                         //356 SPELL_AURA_ADD_COMBAT_RATING_PCT_TO_SPELL_EFFECT implemented in AuraEffect::CalculateSpellMod()
 };
 
 AuraEffect::AuraEffect(Aura* base, SpellEffectInfo const& spellEfffectInfo, int32 const* baseAmount, Unit* caster):
@@ -708,22 +708,34 @@ void AuraEffect::CalculateSpellMod()
 
                 switch (tempMisc)
                 {
-                case 2:
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-                    break;
-                case 3:
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-                    break;
-                case 4:
-                    m_spellmod->op = SpellModOp(SPELLMOD_ALL_EFFECTS);
-                    break;
-                case 1:
-                default:
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-                    break;
+                    case 2:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        break;
+                    case 3:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 4:
+                        m_spellmod->op = SpellModOp(SPELLMOD_ALL_EFFECTS);
+                        break;
+                    case 5:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        break;
+                    case 6:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 7:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 1:
+                    default:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        break;
                 }
             }
-            m_spellmod->value = GetCaster()->GetUInt32Value(static_cast<uint16>(PLAYER_FIELD_COMBAT_RATING_1) + CR_MASTERY);
+            m_spellmod->value = GetCaster()->ToPlayer()->GetRatingBonusValue(CR_MASTERY) * (GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100);
             break;
         case SPELL_AURA_ADD_MASTERY_RATING_TO_SPELL_EFFECT:
             if (!m_spellmod)
@@ -739,22 +751,77 @@ void AuraEffect::CalculateSpellMod()
 
                 switch (tempMisc)
                 {
-                case 2:
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-                    break;
-                case 3:
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-                    break;
-                case 4:
-                    m_spellmod->op = SpellModOp(SPELLMOD_ALL_EFFECTS);
-                    break;
-                case 1:
-                default:
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-                    break;
+                    case 2:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        break;
+                    case 3:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 4:
+                        m_spellmod->op = SpellModOp(SPELLMOD_ALL_EFFECTS);
+                        break;
+                    case 5:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        break;
+                    case 6:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 7:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 1:
+                    default:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        break;
                 }
             }
-            m_spellmod->value = GetCaster()->ToPlayer()->GetRatingBonusValue(CR_MASTERY);
+            m_spellmod->value = GetCaster()->GetUInt32Value(static_cast<uint16>(PLAYER_FIELD_COMBAT_RATING_1) + CR_MASTERY) * (GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100);
+            break;
+        case SPELL_AURA_ADD_COMBAT_RATING_PCT_TO_SPELL_EFFECT:
+            if (!m_spellmod)
+            {
+                m_spellmod = new SpellModifier(GetBase());
+
+                m_spellmod->type = SPELLMOD_FLAT;
+                m_spellmod->spellId = GetId();
+                m_spellmod->mask = GetSpellInfo()->GetEffect(GetEffIndex()).SpellClassMask;
+                m_spellmod->charges = GetBase()->GetCharges();
+
+                int32 tempMisc = GetMiscValue();
+
+                switch (tempMisc)
+                {
+                    case 2:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        break;
+                    case 3:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 4:
+                        m_spellmod->op = SpellModOp(SPELLMOD_ALL_EFFECTS);
+                        break;
+                    case 5:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        break;
+                    case 6:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 7:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 1:
+                    default:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        break;
+                }
+            }
+            m_spellmod->value = GetCaster()->ToPlayer()->GetRatingBonusValue(CombatRating(GetMiscValueB())) * (GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100);
             break;
         default:
             break;

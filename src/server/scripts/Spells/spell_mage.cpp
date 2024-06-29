@@ -73,9 +73,14 @@ enum MageSpells
     SPELL_MAGE_ARCANE_MISSILES_R1                = 5143,
 
     // Duskhaven
+    SPELL_MAGE_BITTING_FROST                     = 1290000,
     SPELL_MAGE_BLAZING_BARRIER                   = 1280024,
     SPELL_MAGE_BLAZING_BARRIER_PROC              = 1280025,
     SPELL_MAGE_BLINK                             = 1280011,
+    SPELL_MAGE_BLIZZARD                          = 1290005,
+    SPELL_MAGE_BRAIN_CHILL                       = 1290049,
+    SPELL_MAGE_BRAIN_FREEZE_PROC                 = 1290018,
+    SPELL_MAGE_CHAIN_REACTION_PROC               = 1290046,
     SPELL_MAGE_CHILLED_ENERGIZE                  = 1290002,
     SPELL_MAGE_CHILLING_SIPHON                   = 1290001,
     SPELL_MAGE_COLD_WINDS                        = 1280032,
@@ -84,12 +89,33 @@ enum MageSpells
     SPELL_MAGE_DISPLACEMENT_DUMMY_TALENT         = 1280073,
     SPELL_MAGE_DISPLACEMENT_SUMMON               = 1280071,
     SPELL_MAGE_DISPLACEMENT_TELEPORT             = 1280070,
+    SPELL_MAGE_FINGERS_OF_FROST_PROC             = 1290004,
+    SPELL_MAGE_FLURRY_BRITTLEFROST               = 1290013,
     SPELL_MAGE_FRICTION_BARRIER_PROC             = 1280029,
     SPELL_MAGE_FRICTION_BARRIER_TALENT           = 1280028,
     SPELL_MAGE_FROST_ARMOR_AURA                  = 1280043,
     SPELL_MAGE_FROST_ARMOR_TALENT                = 1280042,
+    SPELL_MAGE_FROST_BOMB_PROC                   = 1290063,
+    SPELL_MAGE_FROST_BOMB_TALENT                 = 1290048,
+    SPELL_MAGE_FROST_MASTERY_ICICLE              = 1290019,
+    SPELL_MAGE_FROST_MASTERY_ICICLE_AURA         = 1290021,
+    SPELL_MAGE_FROST_MASTERY_ICICLE_VIS1         = 1290022,
+    SPELL_MAGE_FROST_MASTERY_ICICLE_VIS2         = 1290023,
+    SPELL_MAGE_FROST_MASTERY_ICICLE_VIS3         = 1290024,
+    SPELL_MAGE_FROST_MASTERY_ICICLE_VIS4         = 1290025,
+    SPELL_MAGE_FROST_MASTERY_ICICLE_VIS5         = 1290026,
+    SPELL_MAGE_FROST_MASTERY_ICICLE_SPELL        = 1290027,
+    SPELL_MAGE_FROZEN_ORB_DOT                    = 1290035,
+    SPELL_MAGE_GALEFURY                          = 1290061,
+    SPELL_MAGE_GALEFURY_CONE_OF_COLD             = 1290062,
     SPELL_MAGE_HEAT_WAVE                         = 1280045,
     SPELL_MAGE_HEAT_WAVE_PROC                    = 1280046,
+    SPELL_MAGE_ICEFALL_PROC                      = 1290041,
+    SPELL_MAGE_ICEFALL_PROC_DMG                  = 1290042,
+    SPELL_MAGE_ICEFALL_TALENT                    = 1290040,
+    SPELL_MAGE_ICEFLURRY                         = 1290016,
+    SPELL_MAGE_ICE_LANCE                         = 1290008,
+    SPELL_MAGE_ICY_GALE                          = 1290054,
     SPELL_MAGE_MANA_BARRIER                      = 1280030,
     SPELL_MAGE_MANA_GEM                          = 1280013,
     SPELL_MAGE_MANA_GEM_ENERGIZE                 = 1280062,
@@ -97,6 +123,13 @@ enum MageSpells
     SPELL_MAGE_MOLTEN_ARMOR_TALENT               = 1280040,
     SPELL_MAGE_MANA_BARRIER_PROC                 = 1280031,
     SPELL_MAGE_PRISTINE_MANA_GEM                 = 1280061,
+    SPELL_MAGE_SLICE_AND_ICE_BUFF                = 1290029,
+    SPELL_MAGE_SNOWCONE                          = 1290071,
+    SPELL_MAGE_SNOWSTORM_PROC                    = 1290056,
+    SPELL_MAGE_SNOWSTORM_TALENT                  = 1290055,
+    SPELL_MAGE_SPLITTING_ICE                     = 1290030,
+    SPELL_MAGE_SPLITTING_ICE_ICE_LANCE           = 1290031,
+    SPELL_MAGE_SPLITTING_ICE_ICICLE              = 1290032,
     SPELL_MAGE_TEMPORAL_DISPLACEMENT             = 1280021,
 };
 
@@ -325,7 +358,7 @@ class spell_mage_burnout : public AuraScript
     }
 };
 
-// 11958 - Cold Snap
+// 1290044 - Cold Snap
 class spell_mage_cold_snap : public SpellScript
 {
     PrepareSpellScript(spell_mage_cold_snap);
@@ -341,7 +374,7 @@ class spell_mage_cold_snap : public SpellScript
         {
             SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(itr->first);
             return spellInfo->SpellFamilyName == SPELLFAMILY_MAGE && (spellInfo->GetSchoolMask() & SPELL_SCHOOL_MASK_FROST) &&
-                spellInfo->Id != SPELL_MAGE_COLD_SNAP && spellInfo->GetRecoveryTime() > 0;
+                spellInfo->SpellFamilyFlags[0] & 0x28420 && spellInfo->GetRecoveryTime() > 0;
         }, true);
     }
 
@@ -1216,6 +1249,39 @@ class spell_mage_summon_water_elemental : public SpellScript
 };
 
 // Duskhaven
+class SpellMageCastEvent : public BasicEvent
+{
+public:
+    SpellMageCastEvent(Unit* caster, Unit* victim, uint32 spellId) : _caster(caster), _victim(victim), _spellId(spellId) {}
+
+    bool Execute(uint64 /*time*/, uint32 /*diff*/) override
+    {
+        _caster->CastSpell(_victim, _spellId);
+        return true;
+    }
+
+private:
+    Unit* _caster;
+    Unit* _victim;
+    uint32 _spellId;
+};
+
+class SpellMageRemoveAuraChargeEvent : public BasicEvent
+{
+public:
+    SpellMageRemoveAuraChargeEvent(Unit* target, uint32 spellId) : _target(target), _spellId(spellId) {}
+
+    bool Execute(uint64 /*time*/, uint32 /*diff*/) override
+    {
+        _target->GetAura(_spellId)->DropCharge();
+        return true;
+    }
+
+private:
+    Unit* _target;
+    uint32 _spellId;
+};
+
 // 1280011 - Blink
 class spell_mage_blink : public SpellScript
 {
@@ -1338,6 +1404,41 @@ class spell_mage_blazing_barrier : public spell_mage_incanters_absorbtion_base_A
     }
 };
 
+// 1290005 - Blizzard
+class spell_mage_blizzard : public SpellScript
+{
+    PrepareSpellScript(spell_mage_blizzard);
+
+    void HandleOnCast()
+    {
+        if (Unit* caster = GetCaster())
+        {
+            if (caster->HasAura(SPELL_MAGE_ICEFALL_PROC) && caster->HasAura(SPELL_MAGE_ICEFALL_PROC_DMG))
+            {
+                caster->RemoveAura(SPELL_MAGE_ICEFALL_PROC);
+                int32 duration = sSpellMgr->GetSpellInfo(SPELL_MAGE_BLIZZARD)->GetDuration();
+                caster->m_Events.AddEvent(new SpellMageRemoveAuraChargeEvent(caster, SPELL_MAGE_ICEFALL_PROC_DMG), caster->m_Events.CalculateTime(Milliseconds(duration + 10)));
+            }
+
+            if (caster->HasAura(SPELL_MAGE_BRAIN_CHILL))
+            {
+                int32 chance = sSpellMgr->GetSpellInfo(SPELL_MAGE_BRAIN_CHILL)->GetEffect(EFFECT_0).CalcValue();
+
+                if (irand(1, 100) <= chance)
+                    caster->CastSpell(caster, SPELL_MAGE_BRAIN_FREEZE_PROC, true);
+            }
+
+            if (caster->HasAura(SPELL_MAGE_SNOWSTORM_TALENT))
+                caster->CastSpell(caster, SPELL_MAGE_SNOWSTORM_PROC, true);
+        }
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_mage_blizzard::HandleOnCast);
+    }
+};
+
 // 1280003 - Chilled
 class spell_mage_chilled : public AuraScript
 {
@@ -1356,10 +1457,81 @@ class spell_mage_chilled : public AuraScript
             }
     }
 
+    void HandleDamageTick(AuraEffect const* aurEff)
+    {
+        if (Unit* caster = GetCaster())
+            if (!caster->HasAura(SPELL_MAGE_BITTING_FROST))
+                PreventDefaultAction();
+    }
+
     void Register() override
     {
         OnEffectPeriodic += AuraEffectPeriodicFn(spell_mage_chilled::HandleDummyTick, EFFECT_1, SPELL_AURA_PERIODIC_DUMMY);
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_mage_chilled::HandleDamageTick, EFFECT_2, SPELL_AURA_PERIODIC_DAMAGE);
     }
+};
+
+// 1280014 - Cone of Cold
+class spell_mage_cone_of_cold : public SpellScript
+{
+    PrepareSpellScript(spell_mage_cone_of_cold);
+
+    void HandleOnCast()
+    {
+        if (Unit* caster = GetCaster())
+            if (caster->HasAura(SPELL_MAGE_ICY_GALE))
+            {
+                caster->CastSpell(caster, SPELL_MAGE_FROST_MASTERY_ICICLE_AURA, true);
+
+                if (AuraEffect* aurEff = caster->GetAuraEffect(SPELL_MAGE_FROST_MASTERY_ICICLE, EFFECT_1))
+                    if (irand(1, 100) <= aurEff->GetAmount())
+                        caster->CastSpell(caster, SPELL_MAGE_FROST_MASTERY_ICICLE_AURA, true);
+            }
+
+    }
+
+    void Register() override
+    {
+        OnCast += SpellCastFn(spell_mage_cone_of_cold::HandleOnCast);
+    }
+};
+
+// 1280014, 1290061 - Cone of Cold, Galefury talent proc
+class spell_mage_cone_of_cold_galefury : public SpellScript
+{
+    PrepareSpellScript(spell_mage_cone_of_cold_galefury);
+
+    void HandleOnCast()
+    {
+        if (caster = GetCaster())
+            if (caster->HasAura(SPELL_MAGE_GALEFURY))
+                damage = GetHitDamage();
+    }
+
+    void HandleAfterCast()
+    {
+        if (caster && caster->HasAura(SPELL_MAGE_GALEFURY))
+        {
+            int32 chance = sSpellMgr->GetSpellInfo(SPELL_MAGE_GALEFURY)->GetEffect(EFFECT_0).CalcValue();
+            if (irand(1, 100) <= chance)
+            {
+                damage *= sSpellMgr->GetSpellInfo(SPELL_MAGE_GALEFURY)->GetEffect(EFFECT_1).CalcValue() / 100;
+                CastSpellExtraArgs args(TRIGGERED_FULL_MASK);
+                args.AddSpellBP0(damage);
+                caster->CastSpell(caster, SPELL_MAGE_GALEFURY_CONE_OF_COLD, args);
+            }
+        }
+    }
+
+    void Register() override
+    {
+        OnCast += SpellCastFn(spell_mage_cone_of_cold_galefury::HandleOnCast);
+        AfterCast += SpellCastFn(spell_mage_cone_of_cold_galefury::HandleAfterCast);
+    }
+
+private:
+    int32 damage;
+    Unit* caster;
 };
 
 // 1280070 - Displacement
@@ -1421,6 +1593,48 @@ class spell_mage_displacement_summon : public AuraScript
     }
 };
 
+// 1290011 - Flurry
+class spell_mage_flurry : public SpellScript
+{
+    PrepareSpellScript(spell_mage_flurry);
+
+    void HandleAfterCast()
+    {
+        Unit* caster = GetCaster();
+
+        if (caster->HasAura(SPELL_MAGE_ICEFLURRY))
+        {
+            uint32 stacks = sSpellMgr->GetSpellInfo(SPELL_MAGE_ICEFLURRY)->GetEffect(EFFECT_0).CalcValue();
+
+            for (uint32 i = 0; i < stacks; ++i)
+                caster->CastSpell(caster, SPELL_MAGE_FROST_MASTERY_ICICLE_AURA, true);
+        }
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_mage_flurry::HandleAfterCast);
+    }
+};
+
+// 1290038 - Flurry
+class spell_mage_flurry_tick : public SpellScript
+{
+    PrepareSpellScript(spell_mage_flurry_tick);
+
+    void HandleAfterHit()
+    {
+        if (Unit* caster = GetCaster())
+            if (caster->HasAura(SPELL_MAGE_BRAIN_FREEZE_PROC))
+                caster->RemoveAura(SPELL_MAGE_BRAIN_FREEZE_PROC);
+    }
+
+    void Register() override
+    {
+        AfterHit += SpellHitFn(spell_mage_flurry_tick::HandleAfterHit);
+    }
+};
+
 // 1280023 - Frost Barrier
 class spell_mage_frost_barrier : public spell_mage_incanters_absorbtion_base_AuraScript
 {
@@ -1429,6 +1643,109 @@ class spell_mage_frost_barrier : public spell_mage_incanters_absorbtion_base_Aur
     void Register() override
     {
         AfterEffectAbsorb += AuraEffectAbsorbFn(spell_mage_frost_barrier::Trigger, EFFECT_0);
+    }
+};
+
+// 1290033 - Frozen Orn
+class spell_mage_frozen_orb : public SpellScript
+{
+    PrepareSpellScript(spell_mage_frozen_orb);
+
+    void HandleOnCast()
+    {
+        if (Unit* caster = GetCaster())
+            if (caster->HasAura(SPELL_MAGE_ICEFALL_TALENT))
+            {
+                caster->CastSpell(caster, SPELL_MAGE_ICEFALL_PROC, true);
+                caster->CastSpell(caster, SPELL_MAGE_ICEFALL_PROC_DMG, true);
+            }
+    }
+
+    void Register() override
+    {
+        OnCast += SpellCastFn(spell_mage_frozen_orb::HandleOnCast);
+    }
+};
+
+// 1290035 - Frozen Orb
+class spell_mage_frozen_orb_dot : public AuraScript
+{
+    PrepareAuraScript(spell_mage_frozen_orb_dot);
+
+    void OnPeriodic(AuraEffect const* aurEff)
+    {
+        uint32 tickNumber = aurEff->GetTickNumber();
+        uint32 maxTick = aurEff->GetTotalTicks();
+
+        if (Unit* caster = GetCaster())
+            if (tickNumber == maxTick)
+                if (caster->HasAura(SPELL_MAGE_FROST_BOMB_TALENT))
+                {
+                    PreventDefaultAction();
+                    caster->CastSpell(GetTarget(), SPELL_MAGE_FROST_BOMB_PROC, true);
+                }
+    }
+
+    void Register() override
+    {
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_mage_frozen_orb_dot::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
+    }
+};
+
+// 1290000 - Ice Lance
+class spell_mage_ice_lance : public SpellScript
+{
+    PrepareSpellScript(spell_mage_ice_lance);
+
+    void HandleHit()
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+
+        if (caster && caster->HasAura(SPELL_MAGE_FROST_MASTERY_ICICLE_AURA))
+        {
+            Aura* icicleStack = caster->GetAura(SPELL_MAGE_FROST_MASTERY_ICICLE_AURA);
+            uint32 stacks = icicleStack->GetStackAmount();
+            if (target)
+                for (uint32 i = 0; i < stacks; ++i)
+                {
+                    caster->RemoveAuraFromStack(SPELL_MAGE_FROST_MASTERY_ICICLE_AURA);
+                    caster->m_Events.AddEvent(new SpellMageCastEvent(caster, target, SPELL_MAGE_FROST_MASTERY_ICICLE_SPELL), caster->m_Events.CalculateTime(Milliseconds(i * 200)));
+                    caster->RemoveAura(SPELL_MAGE_FROST_MASTERY_ICICLE_VIS1 + i);
+                }
+        }
+    }
+
+    void HandleAfterHit()
+    {
+        if (Unit* caster = GetCaster())
+            if (Unit* target = GetHitUnit())
+                if (target->HasAuraState(AURA_STATE_FROZEN) || target->HasAura(SPELL_MAGE_FLURRY_BRITTLEFROST) || caster->HasAura(SPELL_MAGE_FINGERS_OF_FROST_PROC))
+                    caster->CastSpell(caster, SPELL_MAGE_CHAIN_REACTION_PROC, true);
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_mage_ice_lance::HandleHit);
+        AfterHit += SpellHitFn(spell_mage_ice_lance::HandleAfterHit);
+    }
+};
+
+// 1290064 - Ice Skating
+class spell_mage_ice_skating : public AuraScript
+{
+    PrepareAuraScript(spell_mage_ice_skating);
+    
+    void OnPeriodic(AuraEffect const* aurEff)
+    {
+        if (Unit* target = GetTarget())
+            if (!target->isMoving())
+                PreventDefaultAction();
+    }
+
+    void Register() override
+    {
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_mage_ice_skating::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
     }
 };
 
@@ -1514,6 +1831,33 @@ class spell_mage_mana_gem : public SpellScript
     }
 };
 
+// 1290021 - Mastery: Icicle
+class spell_mage_mastery_icicle_aura : public SpellScript
+{
+    PrepareSpellScript(spell_mage_mastery_icicle_aura);
+
+    void HandleOnHit()
+    {
+        Unit* caster = GetCaster();
+        uint32 stacks = 0;
+
+        if (!caster->HasAura(SPELL_MAGE_FROST_MASTERY_ICICLE_AURA))
+            caster->CastSpell(caster, SPELL_MAGE_FROST_MASTERY_ICICLE_VIS1, true);
+        else
+        {
+            stacks = caster->GetAura(SPELL_MAGE_FROST_MASTERY_ICICLE_AURA)->GetStackAmount();
+
+            if (stacks < 5)
+                caster->CastSpell(caster, SPELL_MAGE_FROST_MASTERY_ICICLE_VIS1 + stacks, true);
+        }
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_mage_mastery_icicle_aura::HandleOnHit);
+    }
+};
+
 // 1280026 - Prismatic Barrier
 class spell_mage_prismatic_barrier : public spell_mage_incanters_absorbtion_base_AuraScript
 {
@@ -1552,6 +1896,118 @@ class spell_mage_prismatic_barrier : public spell_mage_incanters_absorbtion_base
 
 private:
     int32 absorbed = 0;
+};
+
+// 1290029 - Slice and Ice
+class spell_mage_slice_and_ice : public SpellScript
+{
+    PrepareSpellScript(spell_mage_slice_and_ice);
+
+    void HandleOnHit()
+    {
+        target = GetHitUnit();
+
+        if (target && target->HasAura(SPELL_MAGE_SLICE_AND_ICE_BUFF))
+            duration = target->GetAura(SPELL_MAGE_SLICE_AND_ICE_BUFF)->GetDuration();
+    }
+
+    void HandleAfterHit()
+    {
+        if (target && target->HasAura(SPELL_MAGE_SLICE_AND_ICE_BUFF))
+        {
+            Aura* aura = target->GetAura(SPELL_MAGE_SLICE_AND_ICE_BUFF);
+
+            if (duration && aura->GetStackAmount() > 1)
+                aura->SetDuration(duration);
+        }
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_mage_slice_and_ice::HandleOnHit);
+        AfterHit += SpellHitFn(spell_mage_slice_and_ice::HandleAfterHit);
+    }
+
+private:
+    Unit* target;
+    float duration = 0;
+};
+
+// 1290068 - Snowball
+class spell_mage_snowball : public SpellScript
+{
+    PrepareSpellScript(spell_mage_snowball);
+
+    void HandleOnCast()
+    {
+        if (Unit* caster = GetCaster())
+            if (caster->HasAura(SPELL_MAGE_SNOWCONE))
+                caster->GetSpellHistory()->ResetCooldowns([](SpellHistory::CooldownStorageType::iterator itr) -> bool
+                    {
+                        SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(itr->first);
+                        return spellInfo->SpellFamilyName == SPELLFAMILY_MAGE && (spellInfo->GetSchoolMask() & SPELL_SCHOOL_MASK_FROST) &&
+                            spellInfo->SpellFamilyFlags[0] & 0x400 && spellInfo->GetRecoveryTime() > 0;
+                    }, true);
+    }
+
+    void Register() override
+    {
+        OnCast += SpellCastFn(spell_mage_snowball::HandleOnCast);
+    }
+};
+
+// 1290030 - Splitting Ice
+class spell_mage_splitting_ice : public AuraScript
+{
+    PrepareAuraScript(spell_mage_splitting_ice);
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        float range = sSpellMgr->GetSpellInfo(SPELL_MAGE_SPLITTING_ICE)->GetEffect(EFFECT_2).CalcValue();
+        _procTarget = eventInfo.GetActor()->SelectNearbyTarget(eventInfo.GetProcTarget(), range);
+        return _procTarget != nullptr;
+    }
+
+    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+        DamageInfo* damageInfo = eventInfo.GetDamageInfo();
+        uint32 spellId = damageInfo->GetSpellInfo()->Id;
+        CastSpellExtraArgs args(aurEff);
+        args.SetOriginalCaster(GetCasterGUID());
+
+        if (spellId == SPELL_MAGE_ICE_LANCE)
+            _procTarget->CastSpell(_procTarget, SPELL_MAGE_SPLITTING_ICE_ICE_LANCE, args);
+        else if (spellId == SPELL_MAGE_FROST_MASTERY_ICICLE_SPELL)
+            _procTarget->CastSpell(_procTarget, SPELL_MAGE_SPLITTING_ICE_ICICLE, args);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_mage_splitting_ice::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_mage_splitting_ice::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+
+private:
+    Unit* _procTarget = nullptr;
+};
+
+// 1290031, 1290032 - Splitting Ice - Icicle, Ice Lance
+class spell_mage_splitting_ice_damage : public SpellScript
+{
+    PrepareSpellScript(spell_mage_splitting_ice_damage);
+
+    void RecalculateDamage()
+    {
+        int32 damage = GetHitDamage() * (sSpellMgr->GetSpellInfo(SPELL_MAGE_SPLITTING_ICE)->GetEffect(EFFECT_0).CalcValue()/100);
+
+        SetHitDamage(damage);
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_mage_splitting_ice_damage::RecalculateDamage);
+    }
 };
 
 // 1280020 - Time Warp
