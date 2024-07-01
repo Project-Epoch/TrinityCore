@@ -3271,6 +3271,8 @@ void Spell::cancel()
         if (m_spellInfo->IsChanneled()) // if not channeled then the object for the current cast wasn't summoned yet
             m_originalCaster->RemoveGameObject(m_spellInfo->Id, true);
     }
+    if (auto caster = m_caster->ToUnit())
+        FIRE(Unit, OnCastCancelled, TSUnit(static_cast<Unit*>(m_caster)), GetSpellInfo());
 
     //set state back so finish will be processed
     m_spellState = oldState;
