@@ -7451,6 +7451,10 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
                             if (HasAura(6788))
                                 crit_chance += aurEff->GetAmount();
                             break;
+                        case 69420: // Instant Blaze (Duskhaven)
+                            if (GetHealthPct() > aurEff->GetAmount())
+                                crit_chance = 100.f;
+                            break;
                         default:
                             break;
                     }
