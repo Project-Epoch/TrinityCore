@@ -1602,17 +1602,20 @@ struct npc_training_dummy : NullCreatureAI
 
     void JustEnteredCombat(Unit* who) override
     {
-        _combatTimer[who->GetGUID()] = 5s;
+        // @epoch-start
+        _combatTimer[who->GetGUID()] = 15s;
+        me->SetRegenerateHealth(false);
     }
 
     void DamageTaken(Unit* attacker, uint32& damage, DamageEffectType damageType, SpellInfo const* /*spellInfo = nullptr*/) override
     {
-        damage = 0;
+        if (damage >= me->GetHealth() - 1)
+            damage = me->GetHealth() - 1;
 
         if (!attacker || damageType == DOT)
             return;
 
-        _combatTimer[attacker->GetGUID()] = 5s;
+        _combatTimer[attacker->GetGUID()] = 15s;
     }
 
     void UpdateAI(uint32 diff) override
@@ -1622,11 +1625,14 @@ struct npc_training_dummy : NullCreatureAI
             itr->second -= Milliseconds(diff);
             if (itr->second <= 0s)
             {
-                // The attacker has not dealt any damage to the dummy for over 5 seconds. End combat.
+                // The attacker has not dealt any damage to the dummy for over 15 seconds. End combat.
                 auto const& pveRefs = me->GetCombatManager().GetPvECombatRefs();
                 auto it = pveRefs.find(itr->first);
                 if (it != pveRefs.end())
                     it->second->EndCombat();
+
+                if (! me->GetCombatManager().HasCombat())
+                    me->SetRegenerateHealth(true);
 
                 itr = _combatTimer.erase(itr);
             }
@@ -1636,6 +1642,7 @@ struct npc_training_dummy : NullCreatureAI
     }
 private:
     std::unordered_map<ObjectGuid /*attackerGUID*/, Milliseconds /*combatTime*/> _combatTimer;
+    // @epoch-end
 };
 
 /*######
