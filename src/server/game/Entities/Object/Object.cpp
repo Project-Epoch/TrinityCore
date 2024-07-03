@@ -1742,19 +1742,17 @@ bool WorldObject::CanDetectStealthOf(WorldObject const* obj, bool checkAlert) co
     if (!obj->m_stealth.GetFlags())
         return true;
 
-    float distance = GetExactDist(obj);
+    /** @epoch-start */
+    // add collisions of both objects and subtract from distance so that the distance is from the edge of collision instead of the center of collision
+    float distance = GetExactDist(obj) - (obj->GetCollisionRadius() + this->GetCollisionRadius());
     float combatReach = 0.0f;
 
     Unit const* unit = ToUnit();
     if (unit)
         combatReach = unit->GetCombatReach();
 
-    if (distance < combatReach)
+    if (GetExactDist(obj) < combatReach)
         return true;
-
-    // Only check back for units, it does not make sense for gameobjects
-    if (unit && !HasInArc(float(M_PI), obj))
-        return false;
 
     // Traps should detect stealth always
     if (GameObject const* go = ToGameObject())
@@ -1767,35 +1765,44 @@ bool WorldObject::CanDetectStealthOf(WorldObject const* obj, bool checkAlert) co
         if (!(obj->m_stealth.GetFlags() & (1 << i)))
             continue;
 
+        // If unit, and this unit can detect stealth fully, nothing else has to be checked
         if (unit && unit->HasAuraTypeWithMiscvalue(SPELL_AURA_DETECT_STEALTH, i))
             return true;
 
-        // Starting points
-        int32 detectionValue = 30;
+        float visibilityRange = IsPlayer() ? ((obj->IsPlayer()) ? 9.0f : 21.f) : (5.0f / 6.0f);
+        float yardsPerLevel = IsPlayer() ? 1.5f : 5.0f / 6.0f;
+        // if player, only use stealth value (includes stealth level modifier), if non-player do level * 5 and ignore stealth value
+        int32 stealthSkill = obj->IsPlayer() ? obj->m_stealth.GetValue(StealthType(i)) : obj->GetLevelForTarget(this) * 5;
+        // if non-player and non-gameobject, add stealth level modifier if any exists
+        if (obj->ToCreature())
+            stealthSkill += obj->ToCreature()->GetTotalAuraModifier(SPELL_AURA_MOD_STEALTH_LEVEL);
 
-        // Level difference: 5 point / level, starting from level 1.
-        // There may be spells for this and the starting points too, but
-        // not in the DBCs of the client.
-        detectionValue += int32(GetLevelForTarget(obj) - 1) * 5;
+        // if the enemy is more than 3 levels above the stealther then yards per level doubles
+        int32 const levelDiff = int32(GetLevelForTarget(obj)) - int32(obj->GetLevelForTarget(this));
+        if (levelDiff > 3)
+            yardsPerLevel *= 2;
 
-        // Apply modifiers
-        detectionValue += m_stealthDetect.GetValue(StealthType(i));
+        // Detection is level * 5 plus any modifiers
+        int32 detectSkill = int32(GetLevelForTarget(obj)) * 5 + m_stealthDetect.GetValue(StealthType(i));
         if (go)
             if (Unit* owner = go->GetOwner())
-                detectionValue -= int32(owner->GetLevelForTarget(this) - 1) * 5;
-
-        detectionValue -= obj->m_stealth.GetValue(StealthType(i));
+                detectSkill -= int32(owner->GetLevelForTarget(this)) * 5;
 
         // Calculate max distance
-        float visibilityRange = float(detectionValue) * 0.3f + combatReach;
+        visibilityRange += (detectSkill - stealthSkill) * yardsPerLevel / 5.0f;
 
         // If this unit is an NPC then player detect range doesn't apply
         if (unit && unit->GetTypeId() == TYPEID_PLAYER && visibilityRange > MAX_PLAYER_STEALTH_DETECT_RANGE)
             visibilityRange = MAX_PLAYER_STEALTH_DETECT_RANGE;
 
-        // When checking for alert state, look 8% further, and then 1.5 yards more than that.
+        // Only check back for units, it does not make sense for gameobjects
+        if (unit && !HasInArc(float(M_PI), obj))
+            visibilityRange -= 9.0f;
+
+        // When checking for alert state, 5 yards further.
         if (checkAlert)
-            visibilityRange += (visibilityRange * 0.08f) + 1.5f;
+            visibilityRange += 5.0f;
+        /** @epoch-end */
 
         // If checking for alert, and creature's visibility range is greater than aggro distance, No alert
         Unit const* tunit = obj->ToUnit();
