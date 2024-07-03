@@ -2608,7 +2608,9 @@ void Spell::TargetInfo::DoDamageAndTriggers(Spell* spell)
         spell->m_hitMask |= hitMask;
 
         // Do not take combo points on dodge and miss
-        if (MissCondition != SPELL_MISS_NONE && spell->m_needComboPoints && spell->m_targets.GetUnitTargetGUID() == TargetGUID)
+        // @epoch-start
+        if (MissCondition != SPELL_MISS_NONE && (MissCondition != SPELL_MISS_BLOCK && !spell->GetSpellInfo()->HasAttribute(SPELL_ATTR3_COMPLETELY_BLOCKED)) && spell->m_needComboPoints && spell->m_targets.GetUnitTargetGUID() == TargetGUID)
+        // @epoch-end
             spell->m_needComboPoints = false;
 
         // _spellHitTarget can be null if spell is missed in DoSpellHitOnUnit
