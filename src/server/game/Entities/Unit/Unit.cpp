@@ -732,6 +732,8 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
 
     // Hook for OnDamage Event
     sScriptMgr->OnDamage(attacker, victim, damage);
+    // FIRE
+    FIRE(Unit, OnDamageDealt, TSUnit(attacker), TSUnit(victim), damage)
 
     // Signal to pets that their owner was attacked - except when DOT.
     if (attacker != victim && damagetype != DOT)
@@ -909,6 +911,8 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
             victim->ToPlayer()->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_TOTAL_DAMAGE_RECEIVED, damage);
 
         victim->ModifyHealth(-(int32)damage);
+        // Damage taken
+        FIRE(Unit, OnDamageTaken, TSUnit(victim), TSUnit(attacker), damage)
 
         if (damagetype == DIRECT_DAMAGE || damagetype == SPELL_DIRECT_DAMAGE)
             victim->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_DIRECT_DAMAGE, spellProto ? spellProto->Id : 0);
@@ -3446,6 +3450,9 @@ Aura* Unit::_TryStackingOrRefreshingExistingAura(AuraCreateInfo& createInfo)
 
             // try to increase stack amount
             foundAura->ModStackAmount(1, AURA_REMOVE_BY_DEFAULT, createInfo.ResetPeriodicTimer);
+            // @tswow-begin
+            FIRE_ID(createInfo.GetSpellInfo()->events.id, Spell, OnAuraApplied, TSUnit(foundAura->GetCaster()), TSAura(const_cast<Aura*>(foundAura)), TSUnit(this));
+            // @tswow-end
             return foundAura;
         }
     }
@@ -3683,6 +3690,8 @@ void Unit::_UnapplyAura(AuraApplicationMap::iterator& i, AuraRemoveMode removeMo
             player->UpdateVisibleGameobjectsOrSpellClicks();
 
     i = m_appliedAuras.begin();
+
+    FIRE_ID(aura->GetSpellInfo()->events.id, Spell, OnAuraRemoved, TSAura(const_cast<Aura*>(aura)), TSUnit(this), removeMode);
 }
 
 void Unit::_UnapplyAura(AuraApplication* aurApp, AuraRemoveMode removeMode)

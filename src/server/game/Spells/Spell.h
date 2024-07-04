@@ -133,6 +133,7 @@ struct SpellValue
     float     RadiusMod;
     uint8     AuraStackAmount;
     float     CriticalChance;
+    uint32    EffectDuration;
 };
 
 enum SpellState

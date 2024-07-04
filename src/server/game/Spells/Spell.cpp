@@ -492,6 +492,7 @@ SpellValue::SpellValue(SpellInfo const* proto)
     RadiusMod = 1.0f;
     AuraStackAmount = 1;
     CriticalChance = 0.0f;
+    EffectDuration = 0;
 }
 
 class TC_GAME_API SpellEvent : public BasicEvent
@@ -2894,6 +2895,10 @@ void Spell::DoSpellEffectHit(Unit* unit, SpellEffectInfo const& spellEffectInfo,
                             hitInfo.HitAura->SetStackAmount(m_spellValue->AuraStackAmount);
                         else
                             hitInfo.HitAura->ModStackAmount(m_spellValue->AuraStackAmount);
+                    }
+
+                    if (m_spellValue->EffectDuration > 0) {
+                        hitInfo.HitAura->SetDuration(m_spellValue->EffectDuration);
                     }
 
                     hitInfo.HitAura->SetDiminishGroup(hitInfo.DRGroup);
@@ -7894,6 +7899,8 @@ void Spell::SetSpellValue(SpellValueMod mod, int32 value)
         case SPELLVALUE_CRIT_CHANCE:
             m_spellValue->CriticalChance = value / 100.0f; // @todo ugly /100 remove when basepoints are double
             break;
+        case SPELLVALUE_DURATION:
+            m_spellValue->EffectDuration = (uint32)value;
     }
 }
 

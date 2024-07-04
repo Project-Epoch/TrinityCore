@@ -2896,8 +2896,10 @@ void UnitAura::_UnapplyForTarget(Unit* target, Unit* caster, AuraApplication* au
 
 void UnitAura::Remove(AuraRemoveMode removeMode)
 {
+
     if (IsRemoved())
         return;
+
     GetUnitOwner()->RemoveOwnedAura(this, removeMode);
 }
 
