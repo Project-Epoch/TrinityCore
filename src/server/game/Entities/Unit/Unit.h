@@ -146,7 +146,7 @@ enum UnitModifierPctType
     MODIFIER_TYPE_PCT_END = 2
 };
 
-enum WeaponDamageRange
+enum WeaponDamageRange : uint8
 {
     MINDAMAGE,
     MAXDAMAGE

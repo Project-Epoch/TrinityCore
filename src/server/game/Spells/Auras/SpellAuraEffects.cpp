@@ -693,6 +693,7 @@ void AuraEffect::CalculateSpellMod()
                 m_spellmod->mask = GetSpellEffectInfo().SpellClassMask;
             }
             m_spellmod->value = GetAmount();
+            //TC_LOG_INFO('server.worldserver', 'spell mod for {}: {} {} {}', m_spellmod->spellId, m_spellmod->op, m_spellmod->type, m_spellmod->value);
             break;
         case SPELL_AURA_ADD_MASTERY_PCT_TO_SPELL_EFFECT:
             if (!m_spellmod)
