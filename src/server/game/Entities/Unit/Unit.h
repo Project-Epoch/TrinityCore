@@ -1690,6 +1690,9 @@ class TC_GAME_API Unit : public WorldObject
         void SetLastManaUse(uint32 spellCastTime) { m_lastManaUse = spellCastTime; }
         bool IsUnderLastManaUseEffect() const;
 
+        void SetLastPowerCost(int32 spellPowerCost) { m_lastPowerCost = spellPowerCost; }
+        int32 GetLastPowerCost() const { return m_lastPowerCost; }
+
         uint32 GetCastingTimeForBonus(SpellInfo const* spellProto, DamageEffectType damagetype, uint32 CastingTime) const;
         float CalculateDefaultCoefficient(SpellInfo const* spellInfo, DamageEffectType damagetype) const;
 
@@ -1999,6 +2002,8 @@ class TC_GAME_API Unit : public WorldObject
         uint32 m_state;                                     // Even derived shouldn't modify
         uint32 m_lastManaUse;                               // msecs
         TimeTracker m_splineSyncTimer;
+
+        int32 m_lastPowerCost;
 
         Diminishing m_Diminishing;
 

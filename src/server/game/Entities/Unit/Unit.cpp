@@ -377,6 +377,7 @@ Unit::Unit(bool isWorldObject) :
     m_baseSpellCritChance = 5;
 
     m_lastManaUse = 0;
+    m_lastPowerCost = 0;
 
     for (uint8 i = 0; i < MAX_MOVE_TYPE; ++i)
         m_speed_rate[i] = 1.0f;
@@ -7459,6 +7460,10 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
                         case 7998:
                             if (HasAura(6788))
                                 crit_chance += aurEff->GetAmount();
+                            break;
+                        case 69420: // Instant Blaze (Duskhaven)
+                            if (GetHealthPct() > aurEff->GetAmount())
+                                crit_chance = 100.f;
                             break;
                         default:
                             break;

@@ -736,7 +736,7 @@ void AuraEffect::CalculateSpellMod()
                         break;
                 }
             }
-            m_spellmod->value = GetCaster()->ToPlayer()->GetRatingBonusValue(CR_MASTERY) * (GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100);
+            m_spellmod->value = int32(GetCaster()->ToPlayer()->GetRatingBonusValue(CR_MASTERY) * float(GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100));
             break;
         case SPELL_AURA_ADD_MASTERY_RATING_TO_SPELL_EFFECT:
             if (!m_spellmod)
@@ -779,7 +779,7 @@ void AuraEffect::CalculateSpellMod()
                         break;
                 }
             }
-            m_spellmod->value = GetCaster()->GetUInt32Value(static_cast<uint16>(PLAYER_FIELD_COMBAT_RATING_1) + CR_MASTERY) * (GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100);
+            m_spellmod->value = int32(GetCaster()->GetUInt32Value(static_cast<uint16>(PLAYER_FIELD_COMBAT_RATING_1) + CR_MASTERY) * float(GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100));
             break;
         case SPELL_AURA_ADD_COMBAT_RATING_PCT_TO_SPELL_EFFECT:
             if (!m_spellmod)
@@ -822,7 +822,7 @@ void AuraEffect::CalculateSpellMod()
                         break;
                 }
             }
-            m_spellmod->value = GetCaster()->ToPlayer()->GetRatingBonusValue(CombatRating(GetMiscValueB())) * (GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100);
+            m_spellmod->value = int32(GetCaster()->ToPlayer()->GetRatingBonusValue(CombatRating(GetMiscValueB())) * float(GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100));
             break;
         default:
             break;
