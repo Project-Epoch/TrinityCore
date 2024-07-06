@@ -638,46 +638,6 @@ class spell_warr_retaliation : public AuraScript
     }
 };
 
-// -29834 - Second Wind
-class spell_warr_second_wind : public AuraScript
-{
-    PrepareAuraScript(spell_warr_second_wind);
-
-    bool Validate(SpellInfo const* /*spellInfo*/) override
-    {
-        return ValidateSpellInfo(
-        {
-            SPELL_WARRIOR_SECOND_WIND_TRIGGER_1,
-            SPELL_WARRIOR_SECOND_WIND_TRIGGER_2
-        });
-    }
-
-    bool CheckProc(ProcEventInfo& eventInfo)
-    {
-        SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
-        if (!spellInfo)
-            return false;
-
-        return (spellInfo->GetAllEffectsMechanicMask() & ((1 << MECHANIC_ROOT) | (1 << MECHANIC_STUN))) != 0;
-    }
-
-    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
-    {
-        static uint32 const triggeredSpells[2] = { SPELL_WARRIOR_SECOND_WIND_TRIGGER_1, SPELL_WARRIOR_SECOND_WIND_TRIGGER_2 };
-
-        PreventDefaultAction();
-        Unit* caster = eventInfo.GetActionTarget();
-        uint32 spellId = triggeredSpells[GetSpellInfo()->GetRank() - 1];
-        caster->CastSpell(caster, spellId, aurEff);
-    }
-
-    void Register() override
-    {
-        DoCheckProc += AuraCheckProcFn(spell_warr_second_wind::CheckProc);
-        OnEffectProc += AuraEffectProcFn(spell_warr_second_wind::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
-    }
-};
-
 // 64380, 65941 - Shattering Throw
 class spell_warr_shattering_throw : public SpellScript
 {
@@ -934,7 +894,6 @@ void AddSC_warrior_spell_scripts()
     RegisterSpellScript(spell_warr_overpower);
     RegisterSpellScript(spell_warr_rend);
     RegisterSpellScript(spell_warr_retaliation);
-    RegisterSpellScript(spell_warr_second_wind);
     RegisterSpellScript(spell_warr_shattering_throw);
     RegisterSpellScript(spell_warr_slam);
     RegisterSpellScript(spell_warr_sweeping_strikes);

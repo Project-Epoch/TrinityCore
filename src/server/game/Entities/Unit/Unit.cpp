@@ -11970,7 +11970,9 @@ void Unit::SetControlled(bool apply, UnitState state)
         if (state & UNIT_STATE_CONTROLLED)
             CastStop();
 
+
         AddUnitState(state);
+        FIRE(Unit, OnLossOfControl, TSUnit(this), state)
         switch (state)
         {
             case UNIT_STATE_STUNNED:

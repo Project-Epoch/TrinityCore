@@ -457,8 +457,7 @@ int32 SpellEffectInfo::CalcValue(WorldObject const* caster /*= nullptr*/, int32 
             basePoints += int32(level * basePointsPerLevel);
         } else if (basePoints && casterUnit->IsPlayer()) {
             // Aleist3r: this conditional is just fucking beautiful; I need this formula to work in certain cases outside of just damage or healing effect
-            if ((_spellInfo->CanScaleDamagingOrHealing() && _spellInfo->ComputeIsDamagingOrHealingEffect()) ||
-                (!_spellInfo->CanScaleDamagingOrHealing() && !_spellInfo->ComputeIsDamagingOrHealingEffect()))
+            if (_spellInfo->CanScaleDamagingOrHealing())
             {
                 if (Player* player = ((Unit*)caster)->ToPlayer())
                 {
