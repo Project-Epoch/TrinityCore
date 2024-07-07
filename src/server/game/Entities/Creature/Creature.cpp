@@ -941,6 +941,14 @@ void Creature::Update(uint32 diff)
             if (!IsAlive())
                 break;
 
+            if (CanNotReachTarget() && !IsInEvadeMode() && !GetMap()->IsRaid())
+            {
+                m_cannotReachTimer += diff;
+                if (m_cannotReachTimer >= CREATURE_NOPATH_EVADE_TIME)
+                    if (CreatureAI* ai = AI())
+                        ai->EnterEvadeMode(CreatureAI::EVADE_REASON_NO_PATH);
+            }
+
             if (m_regenTimer > 0)
             {
                 if (diff >= m_regenTimer)
@@ -956,7 +964,7 @@ void Creature::Update(uint32 diff)
                     // regenerate health if not in combat or if polymorphed)
                     if (!IsEngaged() || IsPolymorphed())
                         RegenerateHealth();
-                    else if (CanNotReachTarget())
+                    else if (CanNotReachTarget() && m_cannotReachTimer >= CREATURE_NOPATH_REGEN_TIME)
                     {
                         // regenerate health if cannot reach the target and the setting is set to do so.
                         // this allows to disable the health regen of raid bosses if pathfinding has issues for whatever reason
@@ -978,13 +986,6 @@ void Creature::Update(uint32 diff)
                 m_regenTimer = CREATURE_REGEN_INTERVAL;
             }
 
-            if (CanNotReachTarget() && !IsInEvadeMode() && !GetMap()->IsRaid())
-            {
-                m_cannotReachTimer += diff;
-                if (m_cannotReachTimer >= CREATURE_NOPATH_EVADE_TIME)
-                    if (CreatureAI* ai = AI())
-                        ai->EnterEvadeMode(CreatureAI::EVADE_REASON_NO_PATH);
-            }
             break;
         }
         default:
@@ -1290,7 +1291,7 @@ Unit* Creature::SelectVictim()
     else
         return nullptr;
 
-    if (target && _IsTargetAcceptable(target) && CanCreatureAttack(target))
+    if (target && _IsTargetAcceptable(target) && CanCreatureAttack(target, true , false))
     {
         if (!HasSpellFocus())
             SetInFront(target);
@@ -2653,7 +2654,7 @@ void Creature::SaveRespawnTime(uint32 forceDelay)
 }
 
 // this should not be called by petAI or
-bool Creature::CanCreatureAttack(Unit const* victim, bool /*force*/) const
+bool Creature::CanCreatureAttack(Unit const* victim, bool /*force*/, bool checkAccessible) const
 {
     if (!victim->IsInMap(this))
         return false;
@@ -2661,7 +2662,7 @@ bool Creature::CanCreatureAttack(Unit const* victim, bool /*force*/) const
     if (!IsValidAttackTarget(victim))
         return false;
 
-    if (!victim->isInAccessiblePlaceFor(this))
+    if (checkAccessible && !victim->isInAccessiblePlaceFor(this))
         return false;
 
     if (CreatureAI* ai = AI())

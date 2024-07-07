@@ -3862,6 +3862,14 @@ enum WorldState : uint32
     WS_DAILY_CALENDAR_DELETION_OLD_EVENTS_TIME = 20009,      // Next daily calendar deletions of old events time
 };
 
+enum LiquidTypes : uint32
+{
+    LIQUID_TYPE_WATER =       0x01,
+    LIQUID_TYPE_OCEAN =       0x02,
+    LIQUID_TYPE_MAGMA =       0x04,
+    LIQUID_TYPE_SLIME =       0x08,
+};
+
 namespace Trinity
 {
 namespace Impl

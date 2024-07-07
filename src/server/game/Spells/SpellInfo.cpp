@@ -528,10 +528,12 @@ int32 SpellEffectInfo::CalcValue(WorldObject const* caster /*= nullptr*/, int32 
 
             if (canEffectScale)
             {
-                GtNPCManaCostScalerEntry const* spellScaler = sGtNPCManaCostScalerStore.LookupEntry(_spellInfo->SpellLevel - 1);
-                GtNPCManaCostScalerEntry const* casterScaler = sGtNPCManaCostScalerStore.LookupEntry(casterUnit->GetLevel() - 1);
-                if (spellScaler && casterScaler)
-                    value *= casterScaler->Data / spellScaler->Data;
+                CreatureTemplate const* cInfo = caster->ToCreature()->GetCreatureTemplate();
+
+                CreatureBaseStats const* pCBS = sObjectMgr->GetCreatureBaseStats(caster->ToCreature()->GetLevel(), caster->ToCreature()->GetClass());
+                CreatureBaseStats const* spellCBS = sObjectMgr->GetCreatureBaseStats(_spellInfo->SpellLevel, caster->ToCreature()->GetClass());
+
+                value *= pCBS->BaseDamage[cInfo->expansion] / spellCBS->BaseDamage[cInfo->expansion];
             }
         }
     }

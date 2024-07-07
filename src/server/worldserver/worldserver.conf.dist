@@ -1738,15 +1738,15 @@ WorldBossLevelDiff = 3
 #    Corpse.Decay.WORLDBOSS
 #        Description: Time (in seconds) until creature corpse will decay if not looted or skinned.
 #        Default:     300  - (5 Minutes, Corpse.Decay.NORMAL)
-#                     300  - (5 Minutes, Corpse.Decay.RARE)
-#                     300  - (5 Minutes, Corpse.Decay.ELITE)
-#                     300  - (5 Minutes, Corpse.Decay.RAREELITE)
+#                     900  - (5 Minutes, Corpse.Decay.RARE)
+#                     600  - (5 Minutes, Corpse.Decay.ELITE)
+#                     1200 - (5 Minutes, Corpse.Decay.RAREELITE)
 #                     3600 - (1 Hour, Corpse.Decay.WORLDBOSS)
 
 Corpse.Decay.NORMAL    = 300
-Corpse.Decay.RARE      = 300
-Corpse.Decay.ELITE     = 300
-Corpse.Decay.RAREELITE = 300
+Corpse.Decay.RARE      = 900
+Corpse.Decay.ELITE     = 600
+Corpse.Decay.RAREELITE = 1200
 Corpse.Decay.WORLDBOSS = 3600
 
 #

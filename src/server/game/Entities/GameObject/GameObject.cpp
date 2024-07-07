@@ -1937,15 +1937,9 @@ void GameObject::Use(Unit* user)
 
                     int32 skill = player->GetSkillValue(SKILL_FISHING);
 
-                    int32 chance;
-                    if (skill < zone_skill)
-                    {
-                        chance = int32(pow((double)skill/zone_skill, 2) * 100);
-                        if (chance < 1)
-                            chance = 1;
-                    }
-                    else
-                        chance = 100;
+                    /** @epoch-start */
+                    int32 chance = int32(skill - zone_skill + 5);
+                    /** @epoch-end */
 
                     int32 roll = irand(1, 100);
 
@@ -1958,7 +1952,9 @@ void GameObject::Use(Unit* user)
 
                     // If fishing skill is high enough, or if fishing on a pool, send correct loot.
                     // Fishing pools have no skill requirement as of patch 3.3.0 (undocumented change).
-                    if (chance >= roll || fishingPool)
+                    /** @epoch-start */
+                    if (chance >= roll) //|| fishingPool)
+                    /** @epoch-end */
                     {
                         /// @todo I do not understand this hack. Need some explanation.
                         // prevent removing GO at spell cancel

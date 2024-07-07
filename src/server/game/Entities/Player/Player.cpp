@@ -5904,10 +5904,9 @@ uint8 GetFishingStepsNeededToLevelUp(uint32 SkillValue)
     if (SkillValue < 75)
         return 1;
 
-    if (SkillValue <= 300)
-        return SkillValue / 44;
-
-    return SkillValue / 31;
+    // @epoch-start
+    return SkillValue / 20;
+    // @epoch-end
 }
 
 bool Player::UpdateFishingSkill()
@@ -5924,10 +5923,12 @@ bool Player::UpdateFishingSkill()
 
     if (m_fishingSteps >= stepsNeededToLevelUp)
     {
-        m_fishingSteps = 0;
-
+        // @epoch-start
+        //m_fishingSteps = 0; // moved down to UpdateSkillPro so the steps only reset if the skillup was a success
         uint32 gathering_skill_gain = sWorld->getIntConfig(CONFIG_SKILL_GAIN_GATHERING);
-        return UpdateSkillPro(SKILL_FISHING, 100*10, gathering_skill_gain);
+        
+        return UpdateSkillPro(SKILL_FISHING, 75*10, gathering_skill_gain);
+        // @epoch-end
     }
 
     return false;
@@ -5970,6 +5971,12 @@ bool Player::UpdateSkillPro(uint16 SkillId, int32 Chance, uint32 step)
 
     if (Roll <= Chance)
     {
+        // @epoch-start
+        if (SkillId == SKILL_FISHING)
+        {
+            m_fishingSteps = 0;
+        }
+        // @epoch-end
         uint32 new_value = SkillValue+step;
         if (new_value > MaxValue)
             new_value = MaxValue;

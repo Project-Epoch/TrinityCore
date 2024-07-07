@@ -1580,7 +1580,7 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
         uint32 const victimDefense = victim->GetDefenseSkillValue();
         uint32 const attackerMeleeSkill = GetMaxSkillValueForLevel();
 
-        chance *= attackerMeleeSkill / float(victimDefense) * 0.16f;
+        chance += (attackerMeleeSkill - float(victimDefense)) * 0.16f;
 
         // -probability is between 0% and 40%
         RoundToInterval(chance, 0.0f, 40.0f);
@@ -3316,7 +3316,10 @@ bool Unit::isInBackInMap(Unit const* target, float distance, float arc) const
 
 bool Unit::isInAccessiblePlaceFor(Creature const* c) const
 {
-    if (IsInWater())
+    ZLiquidStatus liquidStatus = GetLiquidStatus();
+
+    // In water or jumping in water
+    if ((liquidStatus & (LIQUID_MAP_IN_WATER | LIQUID_MAP_UNDER_WATER)) || (liquidStatus == LIQUID_MAP_ABOVE_WATER && (IsFalling() || (ToPlayer() && ToPlayer()->IsFalling()))))
         return c->CanEnterWater();
     else
         return c->CanWalk() || c->CanFly();
