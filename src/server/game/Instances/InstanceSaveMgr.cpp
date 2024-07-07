@@ -110,7 +110,7 @@ InstanceSave* InstanceSaveManager::AddInstanceSave(uint32 mapId, uint32 instance
             resetTime = GetResetTimeFor(mapId, difficulty);
         else
         {
-            resetTime = GameTime::GetGameTime() + 2 * HOUR;
+            resetTime = GameTime::GetGameTime() + sWorld->getIntConfig(CONFIG_INSTANCE_NORMAL_RESET_DELAY);
             // normally this will be removed soon after in InstanceMap::Add, prevent error
             ScheduleReset(true, resetTime, InstResetEvent(0, mapId, difficulty, instanceId));
         }
