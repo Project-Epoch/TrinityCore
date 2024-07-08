@@ -30,6 +30,7 @@
 #include "SpellInfo.h"
 #include "UnitAI.h"
 #include "UpdateData.h"
+#include "World.h"
 
 namespace Trinity
 {
@@ -1761,6 +1762,40 @@ namespace Trinity
             uint32 _spellId;
             ObjectGuid _casterGUID;
     };
+
+    class DynamicCreatureRespawnRatesChecker
+    {
+        public:
+            DynamicCreatureRespawnRatesChecker(Creature* crea) : _count(0), _hasNearbyEscort(false)
+            {
+                _myLevel = crea->GetLevel();
+                _maxLevelDiff = sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_PLAYER_MAX_LEVEL_DIFF);
+            }
+
+            void operator()(Player* player) const
+            {
+                // TODO
+                // if (_hasNearbyEscort || player->Escort())
+                // {
+                //     _hasNearbyEscort = true;
+                //     return;
+                // }
+
+                if (uint32(abs(int32(player->GetLevel()) - (int32)_myLevel)) > _maxLevelDiff)
+                    return;
+
+                ++_count;
+            }
+
+            uint32 GetCount() const { return _count; }
+            bool HasNearbyEscort() const { return _hasNearbyEscort; }
+
+        private:
+            uint32 _count;
+            uint32 _myLevel;
+            uint32 _maxLevelDiff;
+            bool _hasNearbyEscort;
+    }
 
     // Player checks and do
 

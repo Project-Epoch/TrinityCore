@@ -3456,7 +3456,8 @@ void Map::ApplyDynamicModeRespawnScaling(WorldObject const* obj, ObjectGuid::Low
     ASSERT(mode == 1);
     ASSERT(obj->GetMap() == this);
 
-    if (IsBattlegroundOrArena())
+    // Force to continents.
+    if (IsBattlegroundOrArena() || IsDungeon() || IsRaid())
         return;
 
     SpawnObjectType type;
@@ -3472,6 +3473,7 @@ void Map::ApplyDynamicModeRespawnScaling(WorldObject const* obj, ObjectGuid::Low
             return;
     }
 
+    // Only those opted in.
     SpawnMetadata const* data = sObjectMgr->GetSpawnMetadata(type, spawnId);
     if (!data)
         return;
@@ -3479,20 +3481,96 @@ void Map::ApplyDynamicModeRespawnScaling(WorldObject const* obj, ObjectGuid::Low
     if (!(data->spawnGroupData->flags & SPAWNGROUP_FLAG_DYNAMIC_SPAWN_RATE))
         return;
 
-    auto it = _zonePlayerCountMap.find(obj->GetZoneId());
-    if (it == _zonePlayerCountMap.end())
-        return;
-    uint32 const playerCount = it->second;
-    if (!playerCount)
-        return;
-    double const adjustFactor = sWorld->getFloatConfig(type == SPAWN_TYPE_GAMEOBJECT ? CONFIG_RESPAWN_DYNAMICRATE_GAMEOBJECT : CONFIG_RESPAWN_DYNAMICRATE_CREATURE) / playerCount;
-    if (adjustFactor >= 1.0) // nothing to do here
-        return;
-    uint32 const timeMinimum = sWorld->getIntConfig(type == SPAWN_TYPE_GAMEOBJECT ? CONFIG_RESPAWN_DYNAMICMINIMUM_GAMEOBJECT : CONFIG_RESPAWN_DYNAMICMINIMUM_CREATURE);
-    if (respawnDelay <= timeMinimum)
-        return;
+    uint32 originalDelay = respawnDelay;
 
-    respawnDelay = std::max<uint32>(ceil(respawnDelay * adjustFactor), timeMinimum);
+    switch (type)
+    {
+        case SPAWN_TYPE_CREATURE: {
+            if (originalDelay < sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME))
+                return;
+
+            float checkRange = sWorld->getFloatConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_RANGE);
+            if (checkRange <= 0)
+                return;
+
+            const Creature* crea = obj->ToCreature();
+
+            Trinity::DynamicCreatureRespawnRatesChecker check(crea);
+            Trinity::PlayerSearcher<Trinity::DynamicCreatureRespawnRatesChecker> searcher(crea, check);
+            Cell::VisitWorldObjects(crea, searcher, checkRange);
+
+            // No dynamic respawns around an in progress escort
+            if (check.HasNearbyEscort())
+                return;
+
+            int32 count = check.GetCount();
+            count -= sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_PLAYER_THRESHOLD);
+            if (count <= 0)
+                return;
+
+            float maxReductionRate = sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_MAX_REDUCTION_RATE);
+            float reductionRate = count * sWorld->getFloatConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_PERCENT_PER_PLAYER) / 100.0f;
+            if (reductionRate > maxReductionRate)
+                reductionRate = maxReductionRate;
+
+            // Invalid configuration
+            if (reductionRate < 0)
+                return;
+
+            uint32 reduction = static_cast<uint32>(reductionRate * originalDelay);
+            if (reduction >= delay)
+                delay = 0;
+            else
+                delay -= reduction;
+
+            uint32 minimum = sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME);
+            uint32 indoorMinimum = sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME_INDOOR);
+            if (crea->GetCreatureTemplate()->rank >= CREATURE_ELITE_ELITE)
+            {
+                uint32 eliteMin = sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME_ELITE);
+                if (minimum < eliteMin)
+                    minimum = eliteMin;
+            }
+            else if (indoorMinimum > 0 && ! obj->IsOutdoors())
+            {
+                minimum = indoorMinimum;
+            }
+
+            // Cap the lower-end reduction at the chosen minimum
+            if (respawnDelay < minimum)
+                respawnDelay = minimum;
+
+            break;
+        }
+
+        case SPAWN_TYPE_GAMEOBJECT: {
+            break;
+        }
+    }
+
+    // Prevent bad configs extending the respawn time beyond default
+    if (respawnDelay > originalDelay)
+        respawnDelay = originalDelay;
+
+    // Yards around the entity to search if we're using that kind of search.
+
+
+
+
+    // auto it = _zonePlayerCountMap.find(obj->GetZoneId());
+    // if (it == _zonePlayerCountMap.end())
+    //     return;
+    // uint32 const playerCount = it->second;
+    // if (!playerCount)
+    //     return;
+    // double const adjustFactor = sWorld->getFloatConfig(type == SPAWN_TYPE_GAMEOBJECT ? CONFIG_RESPAWN_DYNAMICRATE_GAMEOBJECT : CONFIG_RESPAWN_DYNAMICRATE_CREATURE) / playerCount;
+    // if (adjustFactor >= 1.0) // nothing to do here
+    //     return;
+    // uint32 const timeMinimum = sWorld->getIntConfig(type == SPAWN_TYPE_GAMEOBJECT ? CONFIG_RESPAWN_DYNAMICMINIMUM_GAMEOBJECT : CONFIG_RESPAWN_DYNAMICMINIMUM_CREATURE);
+    // if (respawnDelay <= timeMinimum)
+    //     return;
+
+    // respawnDelay = std::max<uint32>(ceil(respawnDelay * adjustFactor), timeMinimum);
 }
 
 bool Map::ShouldBeSpawnedOnGridLoad(SpawnObjectType type, ObjectGuid::LowType spawnId) const

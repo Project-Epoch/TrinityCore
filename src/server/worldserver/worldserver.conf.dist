@@ -1962,9 +1962,13 @@ Respawn.Dynamic.Creature.PlayersMaxLevelDiff = 0;
 
 Respawn.Dynamic.Creature.PercentPerPlayer = 0
 
-Respawn.Dynamic.MaxReductionRate = 0
+Respawn.Dynamic.Creature.MinRespawnTime = 0
 
-Respawn.Dynamic.MinRespawnTime = 0
+Respawn.Dynamic.Creature.MinEliteRespawnTime = 0
+
+Respawn.Dynamic.Creature.MinIndoorRespawnTime = 0
+
+Respawn.Dynamic.MaxReductionRate = 0
 
 #
 ###################################################################################################

@@ -1368,8 +1368,10 @@ void World::LoadConfigSettings(bool reload)
     m_float_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_PERCENT_PER_PLAYER] = sConfigMgr->GetFloatDefault("Respawn.Dynamic.Creature.PercentPerPlayer", 0);
     m_int_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_PLAYER_THRESHOLD] = sConfigMgr->GetIntDefault("Respawn.Dynamic.Creature.PlayersThreshold", 0);
     m_int_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_PLAYER_MAX_LEVEL_DIFF] = sConfigMgr->GetIntDefault("Respawn.Dynamic.Creature.PlayersMaxLevelDiff", 0);
+    m_int_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME] = sConfigMgr->GetIntDefault("Respawn.Dynamic.Creature.MinRespawnTime", 0);
+    m_int_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME_ELITE] = sConfigMgr->GetIntDefault("Respawn.Dynamic.Creature.MinEliteRespawnTime", 0);
+    m_int_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME_INDOOR] = sConfigMgr->GetIntDefault("Respawn.Dynamic.Creature.MinIndoorRespawnTime", 0);
     m_float_configs[CONFIG_RESPAWN_DYNAMIC_MAX_REDUCTION_RATE] = sConfigMgr->GetFloatDefault("Respawn.Dynamic.MaxReductionRate", 0);
-    m_int_configs[CONFIG_RESPAWN_DYNAMIC_MIN_RESPAWN_TIME] = sConfigMgr->GetIntDefault("Respawn.Dynamic.MinRespawnTime", 0);
     m_int_configs[CONFIG_RESPAWN_GUIDWARNLEVEL] = sConfigMgr->GetIntDefault("Respawn.GuidWarnLevel", 12000000);
     if (m_int_configs[CONFIG_RESPAWN_GUIDWARNLEVEL] > 16777215)
     {
