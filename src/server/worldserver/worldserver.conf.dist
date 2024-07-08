@@ -1731,31 +1731,12 @@ CreatureFamilyFleeDelay = 7000
 WorldBossLevelDiff = 3
 
 #
-#    Corpse.Decay.NORMAL
-#    Corpse.Decay.RARE
-#    Corpse.Decay.ELITE
-#    Corpse.Decay.RAREELITE
-#    Corpse.Decay.WORLDBOSS
-#        Description: Time (in seconds) until creature corpse will decay if not looted or skinned.
-#        Default:     300  - (5 Minutes, Corpse.Decay.NORMAL)
-#                     900  - (5 Minutes, Corpse.Decay.RARE)
-#                     600  - (5 Minutes, Corpse.Decay.ELITE)
-#                     1200 - (5 Minutes, Corpse.Decay.RAREELITE)
-#                     3600 - (1 Hour, Corpse.Decay.WORLDBOSS)
-
-Corpse.Decay.NORMAL    = 300
-Corpse.Decay.RARE      = 900
-Corpse.Decay.ELITE     = 600
-Corpse.Decay.RAREELITE = 1200
-Corpse.Decay.WORLDBOSS = 3600
-
-#
 #    Rate.Corpse.Decay.Looted
-#        Description: Multiplier for Corpse.Decay.* to configure how long creature corpses stay
+#        Description: Multiplier for creature corpse decay to configure how long creature corpses stay
 #                     after they have been looted.
-#         Default:    0.5
+#         Default:    0.15
 
-Rate.Corpse.Decay.Looted = 0.5
+Rate.Corpse.Decay.Looted = 0.15
 
 #
 #    Rate.Creature.Normal.Damage
