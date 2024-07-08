@@ -551,7 +551,9 @@ void ObjectMgr::LoadCreatureTemplates()
         // 63
         "flags_extra,"
         // 64
-        "ScriptName"
+        "ScriptName,"
+        // 65
+        "corpse_delay"
         " FROM creature_template ct"
         " LEFT JOIN creature_template_movement ctm ON ct.entry = ctm.CreatureId");
 
@@ -672,6 +674,7 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     creatureTemplate.SpellSchoolImmuneMask = fields[62].GetUInt32();
     creatureTemplate.flags_extra           = fields[63].GetUInt32();
     creatureTemplate.ScriptID              = GetScriptId(fields[64].GetString());
+    creatureTemplate.corpse_delay          = fields[65].GetUInt32();
 }
 
 void ObjectMgr::LoadCreatureTemplateResistances()
