@@ -730,6 +730,8 @@ bool Creature::UpdateEntry(uint32 entry, CreatureData const* data /*= nullptr*/,
 
     SetDetectionDistance(cInfo->detection_range);
 
+    SetCorpseDelay(cInfo->corpse_delay);
+
     return true;
 }
 
@@ -1212,25 +1214,6 @@ bool Creature::Create(ObjectGuid::LowType guidlow, Map* map, uint32 phaseMask, u
 
     if (GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_DUNGEON_BOSS && map->IsDungeon())
         m_respawnDelay = 0; // special value, prevents respawn for dungeon bosses unless overridden
-
-    switch (GetCreatureTemplate()->rank)
-    {
-        case CREATURE_ELITE_RARE:
-            m_corpseDelay = sWorld->getIntConfig(CONFIG_CORPSE_DECAY_RARE);
-            break;
-        case CREATURE_ELITE_ELITE:
-            m_corpseDelay = sWorld->getIntConfig(CONFIG_CORPSE_DECAY_ELITE);
-            break;
-        case CREATURE_ELITE_RAREELITE:
-            m_corpseDelay = sWorld->getIntConfig(CONFIG_CORPSE_DECAY_RAREELITE);
-            break;
-        case CREATURE_ELITE_WORLDBOSS:
-            m_corpseDelay = sWorld->getIntConfig(CONFIG_CORPSE_DECAY_WORLDBOSS);
-            break;
-        default:
-            m_corpseDelay = sWorld->getIntConfig(CONFIG_CORPSE_DECAY_NORMAL);
-            break;
-    }
 
     //! Need to be called after LoadCreaturesAddon - MOVEMENTFLAG_HOVER is set there
     m_positionZ += GetHoverOffset();
@@ -2156,7 +2139,7 @@ void Creature::setDeathState(DeathState s)
 
     if (s == JUST_DIED)
     {
-        m_corpseRemoveTime = GameTime::GetGameTime() + m_corpseDelay;
+        m_corpseRemoveTime = GameTime::GetGameTime() + GetCorpseDelay();
 
         uint32 respawnDelay = m_respawnDelay;
         if (uint32 scalingMode = sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMICMODE))
@@ -2168,7 +2151,7 @@ void Creature::setDeathState(DeathState s)
             if (IsDungeonBoss() && !m_respawnDelay)
                 m_respawnTime = std::numeric_limits<time_t>::max(); // never respawn in this instance
             else
-                m_respawnTime = GameTime::GetGameTime() + respawnDelay + m_corpseDelay;
+                m_respawnTime = GameTime::GetGameTime() + respawnDelay + GetCorpseDelay();
         }
         else
         {
@@ -2946,7 +2929,7 @@ void Creature::AllLootRemovedFromCorpse()
     if (loot.loot_type == LOOT_SKINNING)
         m_corpseRemoveTime = now;
     else
-        m_corpseRemoveTime = now + uint32(m_corpseDelay * decayRate);
+        m_corpseRemoveTime = now + uint32(GetCorpseDelay() * decayRate);
 
     m_respawnTime = std::max<time_t>(m_corpseRemoveTime + m_respawnDelay, m_respawnTime);
 }

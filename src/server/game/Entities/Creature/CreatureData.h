@@ -316,6 +316,7 @@ struct TC_GAME_API CreatureTemplate
     float   speed_walk;
     float   speed_run;
     float   detection_range;
+    uint32  corpse_delay;
     float   scale;
     uint32  rank;
     uint32  dmgschool;
