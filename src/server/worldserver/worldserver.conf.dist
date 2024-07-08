@@ -1954,13 +1954,13 @@ Respawn.Dynamic.Mode = 0
 
 Respawn.Dynamic.EscortNPC = 0
 
-Respawn.Dynamic.Range = 0
+Respawn.Dynamic.Creature.Range = 0
 
-Respawn.Dynamic.PlayersThreshold = 0
+Respawn.Dynamic.Creature.PlayersThreshold = 0
 
-Respawn.Dynamic.PlayersMaxLevelDiff = 0;
+Respawn.Dynamic.Creature.PlayersMaxLevelDiff = 0;
 
-Respawn.Dynamic.PercentPerPlayer = 0
+Respawn.Dynamic.Creature.PercentPerPlayer = 0
 
 Respawn.Dynamic.MaxReductionRate = 0
 

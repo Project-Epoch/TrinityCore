@@ -1364,10 +1364,10 @@ void World::LoadConfigSettings(bool reload)
         m_int_configs[CONFIG_RESPAWN_DYNAMICMODE] = 0;
     }
     m_bool_configs[CONFIG_RESPAWN_DYNAMIC_ESCORTNPC] = sConfigMgr->GetBoolDefault("Respawn.Dynamic.EscortNPC", false);
-    m_float_configs[CONFIG_RESPAWN_DYNAMIC_RANGE] = sConfigMgr->GetFloatDefault("Respawn.Dynamic.Range", 0);
-    m_float_configs[CONFIG_RESPAWN_DYNAMIC_PERCENT_PER_PLAYER] = sConfigMgr->GetFloatDefault("Respawn.Dynamic.PercentPerPlayer", 0);
-    m_int_configs[CONFIG_RESPAWN_DYNAMIC_PLAYER_THRESHOLD] = sConfigMgr->GetIntDefault("Respawn.Dynamic.PlayersThreshold", 0);
-    m_int_configs[CONFIG_RESPAWN_DYNAMIC_PLAYER_MAX_LEVEL_DIFF] = sConfigMgr->GetIntDefault("Respawn.Dynamic.PlayersMaxLevelDiff", 0);
+    m_float_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_RANGE] = sConfigMgr->GetFloatDefault("Respawn.Dynamic.Creature.Range", 0);
+    m_float_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_PERCENT_PER_PLAYER] = sConfigMgr->GetFloatDefault("Respawn.Dynamic.Creature.PercentPerPlayer", 0);
+    m_int_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_PLAYER_THRESHOLD] = sConfigMgr->GetIntDefault("Respawn.Dynamic.Creature.PlayersThreshold", 0);
+    m_int_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_PLAYER_MAX_LEVEL_DIFF] = sConfigMgr->GetIntDefault("Respawn.Dynamic.Creature.PlayersMaxLevelDiff", 0);
     m_float_configs[CONFIG_RESPAWN_DYNAMIC_MAX_REDUCTION_RATE] = sConfigMgr->GetFloatDefault("Respawn.Dynamic.MaxReductionRate", 0);
     m_int_configs[CONFIG_RESPAWN_DYNAMIC_MIN_RESPAWN_TIME] = sConfigMgr->GetIntDefault("Respawn.Dynamic.MinRespawnTime", 0);
     m_int_configs[CONFIG_RESPAWN_GUIDWARNLEVEL] = sConfigMgr->GetIntDefault("Respawn.GuidWarnLevel", 12000000);
