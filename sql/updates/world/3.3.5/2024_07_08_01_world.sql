@@ -1,0 +1,5 @@
+UPDATE `creature_template` SET `corpse_delay` = 900 WHERE `rank` = 1; -- Elite (15 Minutes)
+UPDATE `creature_template` SET `corpse_delay` = 1200 WHERE `rank` = 2; -- Rare Elite (20 Minutes)
+UPDATE `creature_template` SET `corpse_delay` = 3600 WHERE `rank` = 3; -- World Boss (60 Minutes)
+UPDATE `creature_template` SET `corpse_delay` = 900 WHERE `rank` = 4; -- Rare (15 Minutes)
+UPDATE `creature_template` SET `corpse_delay` = 60 WHERE `rank` = 5; -- Trivial (1 Minutes)

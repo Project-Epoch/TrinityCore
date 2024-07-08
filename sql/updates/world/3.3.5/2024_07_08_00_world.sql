@@ -1,0 +1,1 @@
+ALTER TABLE `creature_template` ADD COLUMN `corpse_delay` INT UNSIGNED NOT NULL DEFAULT 300 AFTER `ScriptName`;
