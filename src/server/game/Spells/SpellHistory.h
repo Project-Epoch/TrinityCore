@@ -21,6 +21,7 @@
 #include "SharedDefines.h"
 #include "DatabaseEnvFwd.h"
 #include "GameTime.h"
+#include "Log.h"
 #include <deque>
 #include <vector>
 #include <unordered_map>
@@ -112,6 +113,16 @@ public:
 
         if (update && !resetCooldowns.empty())
             SendClearCooldowns(resetCooldowns);
+    }
+
+    template<typename Predicate>
+    void ModifyCooldowns(Predicate predicate, uint32 amount) {
+        for (auto itr = _spellCooldowns.begin(); itr != _spellCooldowns.end(); itr++)
+        {
+            if (predicate(itr)) {
+                ModifyCooldown(itr->first, amount);
+            }
+        }
     }
 
     void ResetAllCooldowns();

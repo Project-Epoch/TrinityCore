@@ -807,6 +807,8 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
         }
     }
 
+    bool rageRewarded = false;
+
     // Rage from Damage made (only from direct weapon damage)
     if (attacker && cleanDamage && damagetype == DIRECT_DAMAGE && attacker != victim && attacker->GetPowerType() == POWER_RAGE)
     {
@@ -821,6 +823,7 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
                 if (cleanDamage->hitOutCome == MELEE_HIT_CRIT)
                     weaponSpeedHitFactor *= 2;
 
+                FIRE(Unit, OnRageGainedViaAttack, TSUnit(attacker), TSUnit(victim), TSMutableNumber<uint32>(&rage_damage));
                 attacker->RewardRage(rage_damage, weaponSpeedHitFactor, true);
                 break;
             }
@@ -834,8 +837,10 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
     if (!damage)
     {
         // Rage from absorbed damage
-        if (cleanDamage && cleanDamage->absorbed_damage && victim->GetPowerType() == POWER_RAGE)
+        if (cleanDamage && cleanDamage->absorbed_damage && victim->GetPowerType() == POWER_RAGE) {
+            FIRE(Unit, OnRageGainedViaAttack, TSUnit(attacker), TSUnit(victim), TSMutableNumber<uint32>(&rage_damage));
             victim->RewardRage(cleanDamage->absorbed_damage, 0, false);
+        }
 
         return 0;
     }
@@ -7213,6 +7218,10 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
             break;
     }
 
+    if (IsPlayer()) {
+        FIRE(Player, OnCustomScriptedDamageMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSMutableNumber<float>(&DoneTotalMod), TSNumber<uint8>(1));
+    }
+
     // damage bonus against caster
     AuraEffectList const& mDamageDoneVersusCaster = GetAuraEffectsByType(SPELL_AURA_MOD_SCHOOL_MASK_DAMAGE_VS_CASTER);
     for (AuraEffectList::const_iterator i = mDamageDoneVersusCaster.begin(); i != mDamageDoneVersusCaster.end(); ++i)
@@ -7928,6 +7937,17 @@ uint32 Unit::SpellHealingBonusTaken(Unit* caster, SpellInfo const* spellProto, u
             AddPct(TakenTotalMod, minval_hot);
 
         float maxval_hot = float(GetMaxPositiveAuraModifier(SPELL_AURA_MOD_HOT_PCT));
+        if (maxval_hot)
+            AddPct(TakenTotalMod, maxval_hot);
+    }
+
+    if (spellProto->IsRankOf(sSpellMgr->GetSpellInfo(746))) {
+        float minval_hot = float(GetMaxNegativeAuraModifier(SPELL_AURA_MOD_HEALING_FROM_BANDAGE_PCT));
+        if (minval_hot)
+            AddPct(TakenTotalMod, minval_hot);
+
+
+        float maxval_hot = float(GetMaxPositiveAuraModifier(SPELL_AURA_MOD_HEALING_FROM_BANDAGE_PCT));
         if (maxval_hot)
             AddPct(TakenTotalMod, maxval_hot);
     }

@@ -7789,6 +7789,18 @@ void Spell::DoEffectOnLaunchTarget(TargetInfo& targetInfo, float multiplier, Spe
         m_damageMultipliers[spellEffectInfo.EffectIndex] *= multiplier;
     }
 
+    if (targetInfo.MissCondition == SPELL_MISS_REFLECT) {
+        auto Reflector = ObjectAccessor::GetUnit(*m_caster, targetInfo.TargetGUID);
+        float min_dam = float(Reflector->GetMaxNegativeAuraModifier(SPELL_AURA_MOD_REFLECTED_SPELL_DAMAGE_PCT));
+        if (min_dam)
+            AddPct(m_damage, min_dam);
+
+
+        float max_dam = float(Reflector->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_REFLECTED_SPELL_DAMAGE_PCT));
+        if (max_dam)
+            AddPct(m_damage, max_dam);
+    }
+
     targetInfo.Damage += m_damage;
     targetInfo.Healing += m_healing;
 }
