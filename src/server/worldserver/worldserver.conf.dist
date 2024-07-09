@@ -1957,9 +1957,9 @@ Respawn.Dynamic.EscortNPC = 0
 #
 #    Respawn.Dynamic.Creature.Range
 #        Description: The range in yards around a creature within which players are considered for dynamic respawn calculations.
-#        Default:     100
+#        Default:     80
 
-Respawn.Dynamic.Creature.Range = 100
+Respawn.Dynamic.Creature.Range = 80
 
 #
 #    Respawn.Dynamic.Creature.PlayersThreshold
