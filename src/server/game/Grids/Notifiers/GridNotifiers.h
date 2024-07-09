@@ -30,7 +30,6 @@
 #include "SpellInfo.h"
 #include "UnitAI.h"
 #include "UpdateData.h"
-#include "World.h"
 
 namespace Trinity
 {
