@@ -1957,15 +1957,14 @@ Respawn.Dynamic.EscortNPC = 0
 #
 #    Respawn.Dynamic.Creature.Range
 #        Description: The range in yards around a creature within which players are considered for dynamic respawn calculations.
-#                     This range determines how far the game will check for player presence to trigger dynamic respawn.
 #        Default:     80
 
 Respawn.Dynamic.Creature.Range = 80
 
 #
 #    Respawn.Dynamic.Creature.PlayersThreshold
-#        Description: The minimum number of players required within the specified range of a creature to trigger dynamic respawn.
-#                     If the number of players within this range is equal to or exceeds this threshold, dynamic respawn calculations are initiated.
+#        Description: The threshold number of players required in range before dynamic 
+#                     adjustments to the respawn time of a creature are applied.
 #        Default:     3
 
 Respawn.Dynamic.Creature.PlayersThreshold = 3
