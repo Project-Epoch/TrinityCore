@@ -1954,21 +1954,105 @@ Respawn.Dynamic.Mode = 0
 
 Respawn.Dynamic.EscortNPC = 0
 
-Respawn.Dynamic.Creature.Range = 0
+#
+#    Respawn.Dynamic.Creature.Range
+#        Description: The range in yards around a creature within which players are considered for dynamic respawn calculations.
+#                     This range determines how far the game will check for player presence to trigger dynamic respawn.
+#        Default:     80
 
-Respawn.Dynamic.Creature.PlayersThreshold = 0
+Respawn.Dynamic.Creature.Range = 80
 
-Respawn.Dynamic.Creature.PlayersMaxLevelDiff = 0;
+#
+#    Respawn.Dynamic.Creature.PlayersThreshold
+#        Description: The minimum number of players required within the specified range of a creature to trigger dynamic respawn.
+#                     If the number of players within this range is equal to or exceeds this threshold, dynamic respawn calculations are initiated.
+#        Default:     3
 
-Respawn.Dynamic.Creature.PercentPerPlayer = 0
+Respawn.Dynamic.Creature.PlayersThreshold = 3
 
-Respawn.Dynamic.Creature.MinRespawnTime = 0
+#
+#    Respawn.Dynamic.Creature.PlayersMaxLevelDiff
+#        Description: The maximum level difference allowed between players and the creature for dynamic respawn calculations to consider them.
+#        Default:     8
 
-Respawn.Dynamic.Creature.MinEliteRespawnTime = 0
+Respawn.Dynamic.Creature.PlayersMaxLevelDiff = 8;
 
-Respawn.Dynamic.Creature.MinIndoorRespawnTime = 0
+#
+#    Respawn.Dynamic.Creature.PercentPerPlayer
+#        Description: The percentage reduction in respawn time for the creature per player present within the range specified.
+#        Default:     5
 
-Respawn.Dynamic.MaxReductionRate = 0
+Respawn.Dynamic.Creature.PercentPerPlayer = 5
+
+#
+#    Respawn.Dynamic.Creature.MinRespawnTime
+#        Description: The minimum respawn time for normal creatures when dynamic respawn is triggered.
+#                     This time is applied if dynamic respawn conditions are met and no other specific conditions (elite or indoor) apply.
+#        Default:     1
+
+Respawn.Dynamic.Creature.MinRespawnTime = 1
+
+#
+#    Respawn.Dynamic.Creature.MinEliteRespawnTime
+#        Description: The minimum respawn time for elite creatures when dynamic respawn is triggered.
+#                     This time is applied if dynamic respawn conditions are met and the creature is flagged as elite.
+#        Default:     5
+
+Respawn.Dynamic.Creature.MinEliteRespawnTime = 5
+
+#
+#    Respawn.Dynamic.Creature.MinIndoorRespawnTime
+#        Description: The minimum respawn time for creatures that are indoors when dynamic respawn is triggered.
+#                     This time is applied if dynamic respawn conditions are met and the creature is located indoors.
+#        Default:     5
+
+Respawn.Dynamic.Creature.MinIndoorRespawnTime = 5
+
+#
+#    Respawn.Dynamic.Creature.MaxReductionRate
+#        Description: The maximum rate at which the respawn time for the creature can be reduced per player present.
+#                     This rate caps the reduction calculated based on the number of players within the specified range.
+#        Default:     1
+
+Respawn.Dynamic.Creature.MaxReductionRate = 1
+
+#
+#    Respawn.Respawn.Dynamic.GameObject.PlayersThreshold
+#        Description: The threshold number of players required in a zone before dynamic 
+#                     adjustments to the respawn time of game objects are applied. If the player 
+#                     count in a zone is less than this threshold, no dynamic respawn adjustment occurs.
+#        Default:     35 (players)
+
+Respawn.Dynamic.GameObject.PlayersThreshold = 35
+
+#
+#    Respawn.Dynamic.GameObject.PercentPerPlayer
+#        Description: The percentage reduction in respawn time per additional player in a zone 
+#                     above the player threshold. It determines how much the respawn time 
+#                     is adjusted dynamically based on player activity in the zone.
+#        Default:     1 (1%)
+
+Respawn.Dynamic.GameObject.PercentPerPlayer = 1
+
+#
+#    Respawn.Dynamic.GameObject.MinRespawnTime
+#        Description: Minimum allowable respawn time for dynamic game objects. 
+#                     If the calculated respawn time for a game object is less than this value, the respawn 
+#                     time will be capped to this minimum. This ensures that respawn times do not become too 
+#                     short, maintaining game balance and preventing rapid respawning of objects.
+#        Default:     5 (seconds)
+
+Respawn.Dynamic.GameObject.MinRespawnTime = 5
+
+#
+#    Respawn.Dynamic.GameObject.MaxReductionRate
+#        Description: Sets the maximum reduction rate as a percentage for the respawn time of 
+#                     dynamic game objects. This is the upper limit on how much the respawn time 
+#                     can be reduced based on the number of players in a zone. It prevents respawn times 
+#                     from being reduced excessively.
+#        Default:     0.99 (99%)
+
+Respawn.Dynamic.GameObject.MaxReductionRate = 0.99
 
 #
 ###################################################################################################

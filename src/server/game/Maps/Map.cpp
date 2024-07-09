@@ -3451,6 +3451,40 @@ void Map::ProcessRespawns()
     }
 }
 
+class DynamicCreatureRespawnRatesChecker
+{
+    public:
+        DynamicCreatureRespawnRatesChecker(const Creature* crea) : _count(0), _hasNearbyEscort(false)
+        {
+            _myLevel = crea->GetLevel();
+            _maxLevelDiff = sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_PLAYER_MAX_LEVEL_DIFF);
+        }
+
+        void operator()(Player* player)
+        {
+            // TODO
+            // if (_hasNearbyEscort || player->Escort())
+            // {
+            //     _hasNearbyEscort = true;
+            //     return;
+            // }
+
+            if (uint32(abs(int32(player->GetLevel()) - (int32)_myLevel)) > _maxLevelDiff)
+                return;
+
+            ++_count;
+        }
+
+        uint32 GetCount() { return _count; }
+        bool HasNearbyEscort() { return _hasNearbyEscort; }
+
+    private:
+        uint32 _count;
+        uint32 _myLevel;
+        uint32 _maxLevelDiff;
+        bool _hasNearbyEscort;
+};
+
 void Map::ApplyDynamicModeRespawnScaling(WorldObject const* obj, ObjectGuid::LowType spawnId, uint32& respawnDelay, uint32 mode) const
 {
     ASSERT(mode == 1);
@@ -3495,20 +3529,20 @@ void Map::ApplyDynamicModeRespawnScaling(WorldObject const* obj, ObjectGuid::Low
 
             const Creature* crea = obj->ToCreature();
 
-            Trinity::DynamicCreatureRespawnRatesChecker check(crea);
-            Trinity::PlayerSearcher<Trinity::DynamicCreatureRespawnRatesChecker> searcher(crea, check);
+            DynamicCreatureRespawnRatesChecker check(crea);
+            Trinity::PlayerWorker<DynamicCreatureRespawnRatesChecker> searcher(crea, check);
             Cell::VisitWorldObjects(crea, searcher, checkRange);
 
             // No dynamic respawns around an in progress escort
             if (check.HasNearbyEscort())
                 return;
 
-            int32 count = check.GetCount();
+            uint32 count = check.GetCount();
             count -= sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_PLAYER_THRESHOLD);
             if (count <= 0)
                 return;
 
-            float maxReductionRate = sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_MAX_REDUCTION_RATE);
+            float maxReductionRate = sWorld->getFloatConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_MAX_REDUCTION_RATE);
             float reductionRate = count * sWorld->getFloatConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_PERCENT_PER_PLAYER) / 100.0f;
             if (reductionRate > maxReductionRate)
                 reductionRate = maxReductionRate;
@@ -3518,10 +3552,10 @@ void Map::ApplyDynamicModeRespawnScaling(WorldObject const* obj, ObjectGuid::Low
                 return;
 
             uint32 reduction = static_cast<uint32>(reductionRate * originalDelay);
-            if (reduction >= delay)
-                delay = 0;
+            if (reduction >= respawnDelay)
+                respawnDelay = 0;
             else
-                delay -= reduction;
+                respawnDelay -= reduction;
 
             uint32 minimum = sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME);
             uint32 indoorMinimum = sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME_INDOOR);
@@ -3544,6 +3578,41 @@ void Map::ApplyDynamicModeRespawnScaling(WorldObject const* obj, ObjectGuid::Low
         }
 
         case SPAWN_TYPE_GAMEOBJECT: {
+            if (originalDelay < sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_GOBJECT_MIN_RESPAWN_TIME))
+                return;
+
+            const GameObject* go = obj->ToGameObject();
+
+            // Overall Zone Count
+            auto it = _zonePlayerCountMap.find(go->GetZoneId());
+            if (it == _zonePlayerCountMap.end())
+                return;
+            
+            uint32 count = it->second;
+            count -= sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_GOBJECT_PLAYER_THRESHOLD);
+            if (count <= 0)
+                return;
+
+            float maxReductionRate = sWorld->getFloatConfig(CONFIG_RESPAWN_DYNAMIC_GOBJECT_MAX_REDUCTION_RATE);
+            float reductionRate = count * sWorld->getFloatConfig(CONFIG_RESPAWN_DYNAMIC_GOBJECT_PERCENT_PER_PLAYER) / 100.0f;
+            if (reductionRate > maxReductionRate)
+                reductionRate = maxReductionRate;
+
+            // Invalid configuration
+            if (reductionRate < 0)
+                return;
+
+            uint32 reduction = static_cast<uint32>(reductionRate * originalDelay);
+            if (reduction >= respawnDelay)
+                respawnDelay = 0;
+            else
+                respawnDelay -= reduction;
+
+            // Cap the lower-end reduction at the chosen minimum
+            uint32 minimum = sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_GOBJECT_MIN_RESPAWN_TIME);
+            if (respawnDelay < minimum)
+                respawnDelay = minimum;
+
             break;
         }
     }
@@ -3551,26 +3620,6 @@ void Map::ApplyDynamicModeRespawnScaling(WorldObject const* obj, ObjectGuid::Low
     // Prevent bad configs extending the respawn time beyond default
     if (respawnDelay > originalDelay)
         respawnDelay = originalDelay;
-
-    // Yards around the entity to search if we're using that kind of search.
-
-
-
-
-    // auto it = _zonePlayerCountMap.find(obj->GetZoneId());
-    // if (it == _zonePlayerCountMap.end())
-    //     return;
-    // uint32 const playerCount = it->second;
-    // if (!playerCount)
-    //     return;
-    // double const adjustFactor = sWorld->getFloatConfig(type == SPAWN_TYPE_GAMEOBJECT ? CONFIG_RESPAWN_DYNAMICRATE_GAMEOBJECT : CONFIG_RESPAWN_DYNAMICRATE_CREATURE) / playerCount;
-    // if (adjustFactor >= 1.0) // nothing to do here
-    //     return;
-    // uint32 const timeMinimum = sWorld->getIntConfig(type == SPAWN_TYPE_GAMEOBJECT ? CONFIG_RESPAWN_DYNAMICMINIMUM_GAMEOBJECT : CONFIG_RESPAWN_DYNAMICMINIMUM_CREATURE);
-    // if (respawnDelay <= timeMinimum)
-    //     return;
-
-    // respawnDelay = std::max<uint32>(ceil(respawnDelay * adjustFactor), timeMinimum);
 }
 
 bool Map::ShouldBeSpawnedOnGridLoad(SpawnObjectType type, ObjectGuid::LowType spawnId) const
