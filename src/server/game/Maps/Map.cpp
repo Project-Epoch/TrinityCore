@@ -3529,6 +3529,9 @@ void Map::ApplyDynamicModeRespawnScaling(WorldObject const* obj, ObjectGuid::Low
 
             const Creature* crea = obj->ToCreature();
 
+            if (crea->IsCritter())
+                return;
+
             DynamicCreatureRespawnRatesChecker check(crea);
             Trinity::PlayerWorker<DynamicCreatureRespawnRatesChecker> searcher(crea, check);
             Cell::VisitWorldObjects(crea, searcher, checkRange);
@@ -3536,8 +3539,8 @@ void Map::ApplyDynamicModeRespawnScaling(WorldObject const* obj, ObjectGuid::Low
             // No dynamic respawns around an in progress escort
             if (check.HasNearbyEscort())
                 return;
-
-            uint32 count = check.GetCount();
+            
+            int32 count = check.GetCount();
             count -= sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_PLAYER_THRESHOLD);
             if (count <= 0)
                 return;
@@ -3584,11 +3587,11 @@ void Map::ApplyDynamicModeRespawnScaling(WorldObject const* obj, ObjectGuid::Low
             const GameObject* go = obj->ToGameObject();
 
             // Overall Zone Count
-            auto it = _zonePlayerCountMap.find(go->GetZoneId());
+            auto it = _zonePlayerCountMap.find(obj->GetZoneId());
             if (it == _zonePlayerCountMap.end())
                 return;
-            
-            uint32 count = it->second;
+
+            int32 count = it->second;
             count -= sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_GOBJECT_PLAYER_THRESHOLD);
             if (count <= 0)
                 return;

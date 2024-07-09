@@ -2371,6 +2371,37 @@ void World::SetInitialWorldSettings()
 
     uint32 startupDuration = GetMSTimeDiffToNow(startupBegin);
 
+    if (getIntConfig(CONFIG_RESPAWN_DYNAMICMODE))
+    {
+        TC_LOG_INFO("server.worldserver", "Dynamic Respawns: Enabled");
+        TC_LOG_INFO(
+            "server.worldserver",
+            "Creature - Escort NPC: {} Range: {} Player Threshold: {} Max Level Diff: {} Percent Per Player: {} Min Respawn: {} Min Elite Respawn: {} Min Indoor Respawn: {} Max Reduction Rate: {}",
+            sWorld->getBoolConfig(CONFIG_RESPAWN_DYNAMIC_ESCORTNPC) ? "Enabled" : "Disabled",
+            sWorld->getFloatConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_RANGE),
+            sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_PLAYER_THRESHOLD),
+            sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_PLAYER_MAX_LEVEL_DIFF),
+            sWorld->getFloatConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_PERCENT_PER_PLAYER),
+            sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME),
+            sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME_ELITE),
+            sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME_INDOOR),
+            sWorld->getFloatConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_MAX_REDUCTION_RATE)
+        );
+
+        TC_LOG_INFO(
+            "server.worldserver",
+            "Game Object - Player Threshold: {} Percent Per Player: {} Min Respawn: {} Max Reduction Rate: {}",
+            sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_GOBJECT_PLAYER_THRESHOLD),
+            sWorld->getFloatConfig(CONFIG_RESPAWN_DYNAMIC_GOBJECT_PERCENT_PER_PLAYER),
+            sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_GOBJECT_MIN_RESPAWN_TIME),
+            sWorld->getFloatConfig(CONFIG_RESPAWN_DYNAMIC_GOBJECT_MAX_REDUCTION_RATE)
+        );
+    }
+    else
+    {
+        TC_LOG_INFO("server.worldserver", "Dynamic Respawns: Disabled");
+    }
+
     TC_LOG_INFO("server.worldserver", "World initialized in {} minutes {} seconds", (startupDuration / 60000), ((startupDuration % 60000) / 1000));
 
     TC_METRIC_EVENT("events", "World initialized", "World initialized in " + std::to_string(startupDuration / 60000) + " minutes " + std::to_string((startupDuration % 60000) / 1000) + " seconds");

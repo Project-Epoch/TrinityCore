@@ -1974,7 +1974,7 @@ Respawn.Dynamic.Creature.PlayersThreshold = 3
 #        Description: The maximum level difference allowed between players and the creature for dynamic respawn calculations to consider them.
 #        Default:     8
 
-Respawn.Dynamic.Creature.PlayersMaxLevelDiff = 8;
+Respawn.Dynamic.Creature.PlayersMaxLevelDiff = 8
 
 #
 #    Respawn.Dynamic.Creature.PercentPerPlayer
