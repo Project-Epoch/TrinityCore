@@ -3565,7 +3565,7 @@ void Map::ApplyDynamicModeRespawnScaling(WorldObject const* obj, ObjectGuid::Low
                 if (minimum < eliteMin)
                     minimum = eliteMin;
             }
-            else if (indoorMinimum > 0 && ! obj->IsOutdoors())
+            else if (indoorMinimum > 0 && ! crea->IsOutdoors())
             {
                 minimum = indoorMinimum;
             }
