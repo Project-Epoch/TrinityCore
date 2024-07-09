@@ -3554,6 +3554,12 @@ void Map::ApplyDynamicModeRespawnScaling(WorldObject const* obj, ObjectGuid::Low
             if (reductionRate < 0)
                 return;
 
+            // Scale by level, less effective at cap.
+            uint32 maxLevel = sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL);
+            float levelFactor = 1 - (crea->GetLevel() / maxLevel);
+            reductionRate *= levelFactor;
+
+            // Calculate reduction
             uint32 reduction = static_cast<uint32>(reductionRate * originalDelay);
             if (reduction >= respawnDelay)
                 respawnDelay = 0;
