@@ -10151,6 +10151,14 @@ Item* Player::GetItemByPos(uint8 bag, uint8 slot) const
     return nullptr;
 }
 
+// hater: add check for weapon
+bool Player::IsUnarmed() const {
+    if (auto item = GetItemByPos(NULL_BAG, 15))
+        return false;
+
+    return true;
+}
+
 //Does additional check for disarmed weapons
 Item* Player::GetUseableItemByPos(uint8 bag, uint8 slot) const
 {

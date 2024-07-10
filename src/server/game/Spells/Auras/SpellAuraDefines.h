@@ -167,7 +167,7 @@ enum AuraType : uint32
     SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN                     = 87,
     SPELL_AURA_MOD_HEALTH_REGEN_PERCENT                     = 88,
     SPELL_AURA_PERIODIC_DAMAGE_PERCENT                      = 89,
-    SPELL_AURA_90                                           = 90,   // old SPELL_AURA_MOD_RESIST_CHANCE
+    SPELL_AURA_MOD_DAMAGE_DONE_DAMAGETYPE                   = 90,   // old SPELL_AURA_MOD_RESIST_CHANCE
     SPELL_AURA_MOD_DETECT_RANGE                             = 91,
     SPELL_AURA_PREVENTS_FLEEING                             = 92,
     SPELL_AURA_MOD_UNATTACKABLE                             = 93,
@@ -241,7 +241,7 @@ enum AuraType : uint32
     SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT                   = 161,
     SPELL_AURA_POWER_BURN                                   = 162,
     SPELL_AURA_MOD_CRIT_DAMAGE_BONUS                        = 163,
-    SPELL_AURA_164                                          = 164,
+    SPELL_AURA_MOD_DAMAGE_TAKEN_DAMAGETYPE                  = 164,
     SPELL_AURA_MELEE_ATTACK_POWER_ATTACKER_BONUS            = 165,
     SPELL_AURA_MOD_ATTACK_POWER_PCT                         = 166,
     SPELL_AURA_MOD_RANGED_ATTACK_POWER_PCT                  = 167,
@@ -250,7 +250,7 @@ enum AuraType : uint32
     SPELL_AURA_DETECT_AMORE                                 = 170,
     SPELL_AURA_MOD_SPEED_NOT_STACK                          = 171,
     SPELL_AURA_MOD_MOUNTED_SPEED_NOT_STACK                  = 172,
-    SPELL_AURA_173                                          = 173,  // old SPELL_AURA_ALLOW_CHAMPION_SPELLS
+    SPELL_AURA_MOD_DAMAGE_TAKEN_FROM_SPELL                  = 173,  // mod damge taken from a spell masks
     SPELL_AURA_MOD_SPELL_DAMAGE_OF_STAT_PERCENT             = 174,  // by defeult intelect, dependent from SPELL_AURA_MOD_SPELL_HEALING_OF_STAT_PERCENT
     SPELL_AURA_MOD_SPELL_HEALING_OF_STAT_PERCENT            = 175,
     SPELL_AURA_SPIRIT_OF_REDEMPTION                         = 176,
@@ -388,7 +388,7 @@ enum AuraType : uint32
     SPELL_AURA_MOD_CRIT_CHANCE_FOR_CASTER                   = 308,
     SPELL_AURA_309                                          = 309,
     SPELL_AURA_MOD_CREATURE_AOE_DAMAGE_AVOIDANCE            = 310,
-    SPELL_AURA_311                                          = 311,
+    SPELL_AURA_TRIGGER_SPELL_WITH_PCT_OF_TRIGGER            = 311,
     SPELL_AURA_312                                          = 312,
     SPELL_AURA_313                                          = 313,
     SPELL_AURA_PREVENT_RESURRECTION                         = 314,

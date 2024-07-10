@@ -1113,6 +1113,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         Item* GetItemByGuid(ObjectGuid guid) const;
         Item* GetItemByEntry(uint32 entry) const;
         Item* GetItemByPos(uint16 pos) const;
+        bool IsUnarmed() const;
         Item* GetItemByPos(uint8 bag, uint8 slot) const;
         Item* GetUseableItemByPos(uint8 bag, uint8 slot) const;
         Bag*  GetBagByPos(uint8 slot) const;

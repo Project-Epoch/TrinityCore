@@ -4867,6 +4867,9 @@ void Spell::TakePower()
     unitCaster->ModifyPower(powerType, -m_powerCost);
     unitCaster->SetLastPowerCost(m_powerCost);
 
+    if (unitCaster->GetTypeId() == TYPEID_PLAYER)
+        FIRE(Player,OnPowerSpent, TSPlayer(unitCaster->ToPlayer()), powerType, m_powerCost);
+
     // Set the five second timer
     if (powerType == POWER_MANA && m_powerCost > 0)
         unitCaster->SetLastManaUse(GameTime::GetGameTimeMS());

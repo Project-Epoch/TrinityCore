@@ -378,10 +378,10 @@ void Spell::EffectSchoolDMG()
                     break;
 
                 // Shield Slam
-                if ((m_spellInfo->SpellFamilyFlags[1] & 0x200) && m_spellInfo->GetCategory() == 1209)
+                if (m_spellInfo->SpellFamilyFlags[0] & 0x40000000)
                 {
                     uint8 level = unitCaster->GetLevel();
-                    uint32 block_value = unitCaster->GetShieldBlockValue(uint32(float(level) * 24.5f), uint32(float(level) * 34.5f));
+                    uint32 block_value = unitCaster->GetShieldBlockValue();
                     damage += int32(unitCaster->ApplyEffectModifiers(m_spellInfo, effectInfo->EffectIndex, float(block_value)));
                 }
                 // Victory Rush

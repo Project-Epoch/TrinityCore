@@ -154,7 +154,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         // 87 SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN implemented in Unit::MeleeDamageBonus and Unit::SpellDamageBonus
     &AuraEffect::HandleNoImmediateEffect,                         // 88 SPELL_AURA_MOD_HEALTH_REGEN_PERCENT implemented in Player::RegenerateHealth
     &AuraEffect::HandleNoImmediateEffect,                         // 89 SPELL_AURA_PERIODIC_DAMAGE_PERCENT
-    &AuraEffect::HandleUnused,                                    // 90 unused (3.0.8a) old SPELL_AURA_MOD_RESIST_CHANCE
+    &AuraEffect::HandleNoImmediateEffect,                         // 90 SPELL_AURA_MOD_DAMAGE_DONE_DAMAGETYPE
     &AuraEffect::HandleNoImmediateEffect,                         // 91 SPELL_AURA_MOD_DETECT_RANGE implemented in Creature::GetAttackDistance
     &AuraEffect::HandlePreventFleeing,                            // 92 SPELL_AURA_PREVENTS_FLEEING
     &AuraEffect::HandleModUnattackable,                           // 93 SPELL_AURA_MOD_UNATTACKABLE
@@ -221,14 +221,14 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleModStealthLevel,                           //154 SPELL_AURA_MOD_STEALTH_LEVEL
     &AuraEffect::HandleNoImmediateEffect,                         //155 SPELL_AURA_MOD_WATER_BREATHING
     &AuraEffect::HandleNoImmediateEffect,                         //156 SPELL_AURA_MOD_REPUTATION_GAIN
-    &AuraEffect::HandleNULL,                                      //157 SPELL_AURA_PET_DAMAGE_MULTI
+    &AuraEffect::HandleNoImmediateEffect,                         //157 SPELL_AURA_MOD_PET_DAMAGE_MULTI
     &AuraEffect::HandleShieldBlockValue,                          //158 SPELL_AURA_MOD_SHIELD_BLOCKVALUE
     &AuraEffect::HandleNoImmediateEffect,                         //159 SPELL_AURA_NO_PVP_CREDIT      only for Honorless Target spell
     &AuraEffect::HandleNoImmediateEffect,                         //160 SPELL_AURA_MOD_AOE_AVOIDANCE                 implemented in Unit::MagicSpellHitResult
     &AuraEffect::HandleNoImmediateEffect,                         //161 SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT
     &AuraEffect::HandleNoImmediateEffect,                         //162 SPELL_AURA_POWER_BURN implemented in AuraEffect::PeriodicTick
     &AuraEffect::HandleNoImmediateEffect,                         //163 SPELL_AURA_MOD_CRIT_DAMAGE_BONUS
-    &AuraEffect::HandleUnused,                                    //164 unused (3.2.0), only one test spell
+    &AuraEffect::HandleNoImmediateEffect,                         //164 SPELL_AURA_MOD_DAMAGE_TAKEN_DAMAGETYPE
     &AuraEffect::HandleNoImmediateEffect,                         //165 SPELL_AURA_MELEE_ATTACK_POWER_ATTACKER_BONUS implemented in Unit::MeleeDamageBonus
     &AuraEffect::HandleAuraModAttackPowerPercent,                 //166 SPELL_AURA_MOD_ATTACK_POWER_PCT
     &AuraEffect::HandleAuraModRangedAttackPowerPercent,           //167 SPELL_AURA_MOD_RANGED_ATTACK_POWER_PCT
@@ -237,7 +237,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleDetectAmore,                               //170 SPELL_AURA_DETECT_AMORE       used to detect various spells that change visual of units for aura target
     &AuraEffect::HandleAuraModIncreaseSpeed,                      //171 SPELL_AURA_MOD_SPEED_NOT_STACK
     &AuraEffect::HandleAuraModIncreaseMountedSpeed,               //172 SPELL_AURA_MOD_MOUNTED_SPEED_NOT_STACK
-    &AuraEffect::HandleUnused,                                    //173 unused (3.2.0) no spells, old SPELL_AURA_ALLOW_CHAMPION_SPELLS  only for Proclaim Champion spell
+    &AuraEffect::HandleNoImmediateEffect,                         //173 SPELL_AURA_MOD_DAMAGE_TAKEN_FROM_SPELL
     &AuraEffect::HandleModSpellDamagePercentFromStat,             //174 SPELL_AURA_MOD_SPELL_DAMAGE_OF_STAT_PERCENT  implemented in Unit::SpellBaseDamageBonus
     &AuraEffect::HandleModSpellHealingPercentFromStat,            //175 SPELL_AURA_MOD_SPELL_HEALING_OF_STAT_PERCENT implemented in Unit::SpellBaseHealingBonus
     &AuraEffect::HandleSpiritOfRedemption,                        //176 SPELL_AURA_SPIRIT_OF_REDEMPTION   only for Spirit of Redemption spell, die at aura end
@@ -375,7 +375,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //308 SPELL_AURA_MOD_CRIT_CHANCE_FOR_CASTER implemented in Unit::GetUnitCriticalChance and Unit::GetUnitSpellCriticalChance
     &AuraEffect::HandleUnused,                                    //309 0 spells in 3.3.5
     &AuraEffect::HandleNoImmediateEffect,                         //310 SPELL_AURA_MOD_CREATURE_AOE_DAMAGE_AVOIDANCE implemented in Spell::CalculateDamageDone
-    &AuraEffect::HandleNULL,                                      //311 0 spells in 3.3.5
+    &AuraEffect::HandleNoImmediateEffect,                         //311 SPELL_AURA_TRIGGER_SPELL_WITH_PCT_OF_TRIGGER
     &AuraEffect::HandleNULL,                                      //312 0 spells in 3.3.5
     &AuraEffect::HandleUnused,                                    //313 0 spells in 3.3.5
     &AuraEffect::HandlePreventResurrection,                       //314 SPELL_AURA_PREVENT_RESURRECTION todo
@@ -693,7 +693,6 @@ void AuraEffect::CalculateSpellMod()
                 m_spellmod->mask = GetSpellEffectInfo().SpellClassMask;
             }
             m_spellmod->value = GetAmount();
-            TC_LOG_INFO("server.worldserver", "spell mod for {}: {} {} {}", m_spellmod->spellId, m_spellmod->op, m_spellmod->type, m_spellmod->value);
             break;
         case SPELL_AURA_ADD_MASTERY_PCT_TO_SPELL_EFFECT:
             if (!m_spellmod)
@@ -1227,6 +1226,9 @@ void AuraEffect::HandleProc(AuraApplication* aurApp, ProcEventInfo& eventInfo)
             break;
         case SPELL_AURA_RAID_PROC_FROM_CHARGE_WITH_VALUE:
             HandleRaidProcFromChargeWithValueAuraProc(aurApp, eventInfo);
+            break;
+        case SPELL_AURA_TRIGGER_SPELL_WITH_PCT_OF_TRIGGER:
+            HandleProcTriggerSpellWithPctOfTriggerer(aurApp, eventInfo);
             break;
         default:
             break;
@@ -6024,6 +6026,26 @@ void AuraEffect::HandleRaidProcFromChargeWithValueAuraProc(AuraApplication* aurA
 
     TC_LOG_DEBUG("spells.aura.effect", "AuraEffect::HandleRaidProcFromChargeWithValueAuraProc: Triggering spell {} from aura {} proc", triggerSpellId, GetId());
     target->CastSpell(target, triggerSpellId, args);
+}
+
+void AuraEffect::HandleProcTriggerSpellWithPctOfTriggerer(AuraApplication* aurApp, ProcEventInfo& eventInfo)
+{
+        Unit* triggerCaster = aurApp->GetTarget();
+        Unit* triggerTarget = eventInfo.GetProcTarget();
+
+        if (auto proc = eventInfo.GetProcSpell())
+            if (proc->IsTriggered())
+                return;
+
+        if (int32 dealt = eventInfo.GetDamageInfo()->GetDamage()) {
+            auto target = eventInfo.GetDamageInfo()->GetVictim();
+            auto pct = CalculatePct(dealt, GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue());
+            auto trigger = GetSpellInfo()->GetEffect(GetEffIndex()).TriggerSpell;
+            CastSpellExtraArgs args;
+            args.AddSpellMod(SPELLVALUE_BASE_POINT0, pct);
+            args.SetOriginalCaster(triggerCaster->GetGUID());
+            triggerCaster->CastSpell(target, trigger, args);
+        }
 }
 
 // @dh-begin

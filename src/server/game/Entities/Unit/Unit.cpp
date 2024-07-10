@@ -2434,14 +2434,6 @@ uint32 Unit::CalculateDamage(WeaponAttackType attType, bool normalized, bool add
     minDamage = std::max(0.f, minDamage);
     maxDamage = std::max(0.f, maxDamage);
 
-    // Aleist3r: moved this from StatSystem.cpp, probably a better idea to do it in this function
-    AuraEffectList const& mAPbyStat = GetAuraEffectsByType(SPELL_AURA_MOD_AUTOATTACK_DAMAGE_PCT);
-    for (AuraEffectList::const_iterator i = mAPbyStat.begin(); i != mAPbyStat.end(); ++i)
-    {
-        minDamage += CalculatePct(minDamage, (*i)->GetAmount());
-        maxDamage += CalculatePct(maxDamage, (*i)->GetAmount());
-    }
-
     // Aleist3r: spell aura school damage vs caster needs to be added here as well, otherwise it works only for spells
     AuraEffectList const& mDamageDoneVersusCaster = GetAuraEffectsByType(SPELL_AURA_MOD_SCHOOL_MASK_DAMAGE_VS_CASTER);
     for (AuraEffectList::const_iterator i = mDamageDoneVersusCaster.begin(); i != mDamageDoneVersusCaster.end(); ++i)
@@ -6881,7 +6873,6 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
             modOwner->ApplySpellMod(spellProto->Id, SPELLMOD_BONUS_MULTIPLIER, coeff);
             coeff /= 100.0f;
         }
-
         DoneTotal += int32(DoneAdvertisedBenefit * coeff * factorMod);
     }
 
@@ -6945,6 +6936,10 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
 
     DoneTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_DONE_VERSUS, creatureTypeMask);
 
+    uint32 damageTypeMask = 1 << damagetype;
+    DoneTotalMod *= victim->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_TAKEN_DAMAGETYPE, damageTypeMask);
+    DoneTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_DONE_DAMAGETYPE, damageTypeMask);
+
     // bonus against aurastate
     DoneTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_DONE_VERSUS_AURASTATE, [victim](AuraEffect const* aurEff) -> bool
     {
@@ -6953,8 +6948,19 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
         return false;
     });
 
+
     // done scripted mod (take it from owner)
     Unit const* owner = GetOwner() ? GetOwner() : this;
+    
+    AuraEffectList const& mDamageFromSpell = owner->GetAuraEffectsByType(SPELL_AURA_MOD_DAMAGE_TAKEN_FROM_SPELL);
+    for (AuraEffectList::const_iterator i = mDamageFromSpell.begin(); i != mDamageFromSpell.end(); ++i)
+    {
+        if (!(*i)->IsAffectedOnSpell(spellProto))
+            continue;
+
+        AddPct(DoneTotalMod, (*i)->GetAmount());
+    }
+
     AuraEffectList const& mOverrideClassScript = owner->GetAuraEffectsByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
     for (AuraEffectList::const_iterator i = mOverrideClassScript.begin(); i != mOverrideClassScript.end(); ++i)
     {
@@ -7218,9 +7224,8 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
             break;
     }
 
-    if (IsPlayer()) {
+    if (IsPlayer())
         FIRE(Player, OnCustomScriptedDamageMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSMutableNumber<float>(&DoneTotalMod), TSNumber<uint8>(1));
-    }
 
     // damage bonus against caster
     AuraEffectList const& mDamageDoneVersusCaster = GetAuraEffectsByType(SPELL_AURA_MOD_SCHOOL_MASK_DAMAGE_VS_CASTER);
@@ -7599,6 +7604,9 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
             return false;
         });
     }
+
+    if (caster->IsPlayer())
+        FIRE(Player, OnCustomScriptedCritMod, TSPlayer(const_cast<Player*>(caster->ToPlayer())), TSUnit(const_cast<Unit*>(this)), TSSpellInfo(spellInfo), TSMutableNumber<float>(&crit_chance));
 
     return std::max(crit_chance, 0.0f);
 }
@@ -8312,10 +8320,11 @@ uint32 Unit::MeleeDamageBonusDone(Unit* victim, uint32 pdamage, WeaponAttackType
     SpellSchoolMask schoolMask = spellProto ? spellProto->GetSchoolMask() : damageSchoolMask;
 
     // mods for SPELL_SCHOOL_MASK_NORMAL are already factored in base melee damage calculation
-    if (!(schoolMask & SPELL_SCHOOL_MASK_NORMAL))
+
+    // Some spells don't benefit from pct done mods
+    if (spellProto && !spellProto->HasAttribute(SPELL_ATTR6_LIMIT_PCT_DAMAGE_MODS))
     {
-        // Some spells don't benefit from pct done mods
-        if (!spellProto || !spellProto->HasAttribute(SPELL_ATTR6_LIMIT_PCT_DAMAGE_MODS))
+        if (!(schoolMask & SPELL_SCHOOL_MASK_NORMAL))
         {
             float maxModDamagePercentSchool = 0.0f;
             if (GetTypeId() == TYPEID_PLAYER)
@@ -8329,9 +8338,20 @@ uint32 Unit::MeleeDamageBonusDone(Unit* victim, uint32 pdamage, WeaponAttackType
 
             DoneTotalMod *= maxModDamagePercentSchool;
         }
+    } else {
+            // Aleist3r: moved this from StatSystem.cpp, probably a better idea to do it in this function
+        AuraEffectList const& mModAutoAttack = GetAuraEffectsByType(SPELL_AURA_MOD_AUTOATTACK_DAMAGE_PCT);
+        for (AuraEffectList::const_iterator i = mModAutoAttack.begin(); i != mModAutoAttack.end(); ++i)
+        {
+            AddPct(DoneTotalMod, (*i)->GetAmount());
+        }
     }
 
     DoneTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_DONE_VERSUS, creatureTypeMask);
+
+    // ..done
+    DoneTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_DONE_DAMAGETYPE, 1 << DIRECT_DAMAGE);
+    DoneTotalMod *= victim->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_TAKEN_DAMAGETYPE, 1 << DIRECT_DAMAGE);
 
     // bonus against aurastate
     DoneTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_DONE_VERSUS_AURASTATE, [victim](AuraEffect const* aurEff) -> bool
