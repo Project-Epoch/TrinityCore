@@ -1928,7 +1928,10 @@ void Unit::HandleEmoteCommand(Emote emoteId)
             continue;
 
         // absorb must be smaller than the damage itself
-        currentAbsorb = RoundToInterval(currentAbsorb, 0, int32(damageInfo.GetDamage()));
+        if (spell->GetSpellInfo()->Id == 1310030 && damageInfo.GetAttacker()->HasAura(1310031)) // Arcanosphere with Sphere Builder)
+            currentAbsorb = 0;
+        else
+            currentAbsorb = RoundToInterval(currentAbsorb, 0, int32(damageInfo.GetDamage()));
 
         damageInfo.AbsorbDamage(currentAbsorb);
 
@@ -11321,6 +11324,43 @@ Unit* Unit::SelectNearbyTarget(Unit* exclude, float dist) const
 
     // select random
     return Trinity::Containers::SelectRandomContainerElement(targets);
+}
+
+std::list<Unit*> Unit::SelectNearbyTargets(Unit* exclude, float dist, uint32 amount) const
+{
+    std::list<Unit*> targets;
+    std::list<Unit*> tempTargets;
+    Trinity::AnyUnfriendlyUnitInObjectRangeCheck u_check(this, this, dist);
+    Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(this, tempTargets, u_check);
+    Cell::VisitAllObjects(this, searcher, dist);
+
+    // remove current target
+    if (GetVictim())
+        tempTargets.remove(GetVictim());
+
+    if (exclude)
+        tempTargets.remove(exclude);
+
+    // remove not LoS targets
+    for (std::list<Unit*>::iterator tIter = tempTargets.begin(); tIter != tempTargets.end();)
+    {
+        if (!IsWithinLOSInMap(*tIter) || (*tIter)->IsTotem() || (*tIter)->IsSpiritService() || (*tIter)->IsCritter())
+            tempTargets.erase(tIter++);
+        else
+            ++tIter;
+    }
+
+    // add unique target to list
+    for (uint32 i = 0; i < amount; ++i)
+    {
+        Unit* tempUnit = Trinity::Containers::SelectRandomContainerElement(tempTargets);
+        tempTargets.remove(tempUnit);
+
+        if (std::find(targets.begin(), targets.end(), tempUnit) == targets.end())
+            targets.push_back(tempUnit);
+    }
+
+    return targets;
 }
 
 void ApplyPercentModFloatVar(float& var, float val, bool apply)

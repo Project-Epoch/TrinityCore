@@ -885,6 +885,7 @@ class TC_GAME_API Unit : public WorldObject
         void CombatStopWithPets(bool includingCast = false);
         void StopAttackFaction(uint32 faction_id);
         Unit* SelectNearbyTarget(Unit* exclude = nullptr, float dist = NOMINAL_MELEE_RANGE) const;
+        std::list<Unit*> SelectNearbyTargets(Unit* exclude = nullptr, float dist = NOMINAL_MELEE_RANGE, uint32 amount = 1) const;
         void SendMeleeAttackStop(Unit* victim = nullptr);
         void SendMeleeAttackStart(Unit* victim);
 
