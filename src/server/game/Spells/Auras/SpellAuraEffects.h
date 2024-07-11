@@ -339,6 +339,8 @@ class TC_GAME_API AuraEffect
         void HandleCreateAreaTrigger(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandlePeriodicCooldownRecoveryTick(AuraApplication* aurApp, Unit* caster) const;
 
+        void HandleCombatMount(AuraApplication const* aurApp, uint8 mode, bool) const;
+
         uint32 GetTriggerSpell() const;
 
         // @dh-end

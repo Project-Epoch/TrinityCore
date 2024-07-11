@@ -680,10 +680,10 @@ void Spell::EffectSchoolDMG()
                     break;
                 }
                 // Shield of Righteousness
-                if (m_spellInfo->SpellFamilyFlags[EFFECT_1] & 0x100000)
+                if (m_spellInfo->SpellFamilyFlags[0] & 64)
                 {
                     uint8 level = unitCaster->GetLevel();
-                    uint32 block_value = unitCaster->GetShieldBlockValue(uint32(float(level) * 29.5f), uint32(float(level) * 39.5f));
+                    uint32 block_value = unitCaster->GetShieldBlockValue();
                     damage += CalculatePct(block_value, m_spellInfo->GetEffect(EFFECT_1).CalcValue());
                     break;
                 }
@@ -1851,6 +1851,7 @@ void Spell::EffectEnergizePct()
         return;
 
     uint32 maxPower = unitTarget->GetMaxPower(power);
+    TC_LOG_INFO("server.worldserver", "Max Power {} : {}", power, maxPower);
     if (!maxPower)
         return;
 

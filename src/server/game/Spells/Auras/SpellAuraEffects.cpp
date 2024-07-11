@@ -376,7 +376,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleUnused,                                    //309 0 spells in 3.3.5
     &AuraEffect::HandleNoImmediateEffect,                         //310 SPELL_AURA_MOD_CREATURE_AOE_DAMAGE_AVOIDANCE implemented in Spell::CalculateDamageDone
     &AuraEffect::HandleNoImmediateEffect,                         //311 SPELL_AURA_TRIGGER_SPELL_WITH_PCT_OF_TRIGGER
-    &AuraEffect::HandleNULL,                                      //312 0 spells in 3.3.5
+    &AuraEffect::HandleCombatMount,                               //312 SPELL_AURA_COMBAT_MOUNT_ILLUSION
     &AuraEffect::HandleUnused,                                    //313 0 spells in 3.3.5
     &AuraEffect::HandlePreventResurrection,                       //314 SPELL_AURA_PREVENT_RESURRECTION todo
     &AuraEffect::HandleNoImmediateEffect,                         //315 SPELL_AURA_UNDERWATER_WALKING todo
@@ -6344,6 +6344,20 @@ void AuraEffect::HandlePeriodicCooldownRecoveryTick(AuraApplication* aurApp, Uni
     //    else if (cdSpell && ignoreSpellFamily)
     //        player->ModifySpellCooldown(cdSpell->Id, amount);
     //}
+}
+
+void AuraEffect::HandleCombatMount(AuraApplication const* aurApp, uint8 mode, bool apply) const {
+    Unit* target = aurApp->GetTarget();
+
+    if (!target || target->GetTypeId() != TYPEID_PLAYER)
+        return;
+
+    auto SpellInfo = GetBase()->GetSpellInfo();
+    auto mount = SpellInfo->GetEffect(GetEffIndex()).CalcValue();
+    if (apply)
+        target->SetMountDisplayId(mount);
+    else
+        target->SetMountDisplayId(0);
 }
 // @dh-end
 

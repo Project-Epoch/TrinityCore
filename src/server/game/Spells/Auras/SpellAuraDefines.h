@@ -389,7 +389,7 @@ enum AuraType : uint32
     SPELL_AURA_309                                          = 309,
     SPELL_AURA_MOD_CREATURE_AOE_DAMAGE_AVOIDANCE            = 310,
     SPELL_AURA_TRIGGER_SPELL_WITH_PCT_OF_TRIGGER            = 311,
-    SPELL_AURA_312                                          = 312,
+    SPELL_AURA_COMBAT_MOUNT_ILLUSION                        = 312,
     SPELL_AURA_313                                          = 313,
     SPELL_AURA_PREVENT_RESURRECTION                         = 314,
     SPELL_AURA_UNDERWATER_WALKING                           = 315,
