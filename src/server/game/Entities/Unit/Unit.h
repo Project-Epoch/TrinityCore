@@ -1037,7 +1037,10 @@ class TC_GAME_API Unit : public WorldObject
         AnimTier GetAnimTier() const { return AnimTier(GetByteValue(UNIT_FIELD_BYTES_1, UNIT_BYTES_1_OFFSET_ANIM_TIER)); }
         void SetAnimTier(AnimTier animTier);
 
-        bool IsMounted() const { return HasUnitFlag(UNIT_FLAG_MOUNT); }
+        bool IsMounted() const { 
+            auto combatMounted = !GetAuraEffectsByType(SPELL_AURA_COMBAT_MOUNT_ILLUSION).empty();
+            return HasUnitFlag(UNIT_FLAG_MOUNT) && !combatMounted;
+        }
         uint32 GetMountDisplayId() const { return GetUInt32Value(UNIT_FIELD_MOUNTDISPLAYID); }
         void SetMountDisplayId(uint32 mountDisplayId) { SetUInt32Value(UNIT_FIELD_MOUNTDISPLAYID, mountDisplayId); }
         void Mount(uint32 mount, uint32 vehicleId = 0, uint32 creatureEntry = 0);
