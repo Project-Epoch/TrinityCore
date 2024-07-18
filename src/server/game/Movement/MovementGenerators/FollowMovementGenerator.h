@@ -47,7 +47,6 @@ class FollowMovementGenerator : public MovementGenerator, public AbstractFollowe
         void UpdatePetSpeed(Unit* owner);
 
     private:
-        void MovementInform(Unit*);
         std::unique_ptr<PathGenerator> _path;
         TimeTracker _recheckPredictedDistanceTimer;
         bool _recheckPredictedDistance;

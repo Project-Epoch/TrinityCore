@@ -51,16 +51,6 @@ FollowMovementGenerator::FollowMovementGenerator(Unit* target, float range, Chas
 }
 FollowMovementGenerator::~FollowMovementGenerator() = default;
 
-void FollowMovementGenerator::MovementInform(Unit* owner)
-{
-    if (owner->GetTypeId() != TYPEID_UNIT)
-        return;
-
-    // Pass back the GUIDLow of the target. If it is pet's owner then PetAI will handle
-    if (CreatureAI* AI = owner->ToCreature()->AI())
-        AI->MovementInform(FOLLOW_MOTION_TYPE, GetTarget()->GetGUID().GetCounter());
-}
-
 static Optional<float> GetVelocity(Unit* owner, Unit* target, G3D::Vector3 const& dest, bool playerPet)
 {
     Optional<float> speed = {};
@@ -227,7 +217,7 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
         {
             owner->ClearUnitState(UNIT_STATE_FOLLOW_MOVE);
             _path = nullptr;
-            MovementInform(owner);
+            DoMovementInform(owner, target);
 
             if (_recheckPredictedDistance)
             {
