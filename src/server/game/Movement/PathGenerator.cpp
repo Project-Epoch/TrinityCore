@@ -215,7 +215,7 @@ void PathGenerator::BuildPolyPath(G3D::Vector3 const& startPos, G3D::Vector3 con
     {
         TC_LOG_DEBUG("maps.mmaps", "++ BuildPolyPath :: farFromPoly distToStartPoly={:.3f} distToEndPoly={:.3f}", distToStartPoly, distToEndPoly);
 
-        bool buildShotrcut = false;
+        bool buildShortcut = false;
 
         G3D::Vector3 const& p = (distToStartPoly > 7.0f) ? startPos : endPos;
         if (_source->GetMap()->IsUnderWater(_source->GetPhaseMask(), p.x, p.y, p.z))
@@ -223,7 +223,7 @@ void PathGenerator::BuildPolyPath(G3D::Vector3 const& startPos, G3D::Vector3 con
             TC_LOG_DEBUG("maps.mmaps", "++ BuildPolyPath :: underWater case");
             if (Unit const* _sourceUnit = _source->ToUnit())
                 if (_sourceUnit->CanSwim())
-                    buildShotrcut = true;
+                    buildShortcut = true;
         }
         else
         {
@@ -231,14 +231,14 @@ void PathGenerator::BuildPolyPath(G3D::Vector3 const& startPos, G3D::Vector3 con
             if (Unit const* _sourceUnit = _source->ToUnit())
             {
                 if (_sourceUnit->CanFly())
-                    buildShotrcut = true;
+                    buildShortcut = true;
                 // Allow to build a shortcut if the unit is falling and it's trying to move downwards towards a target (i.e. charging)
                 else if (_sourceUnit->IsFalling() && endPos.z < startPos.z)
-                    buildShotrcut = true;
+                    buildShortcut = true;
             }
         }
 
-        if (buildShotrcut)
+        if (buildShortcut)
         {
             BuildShortcut();
             _type = PathType(PATHFIND_NORMAL | PATHFIND_NOT_USING_PATH);
