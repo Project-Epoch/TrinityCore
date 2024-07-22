@@ -176,6 +176,8 @@ public:
                 if (tile)
                 {
                     handler->PSendSysMessage("Dt     [%02i,%02i]", tile->header->x, tile->header->y);
+                    handler->PSendSysMessage("Type     %03u", tile->polys->getType());
+                    handler->PSendSysMessage("Area     %03u", tile->polys->getArea());
                     return true;
                 }
             }
