@@ -427,6 +427,8 @@ Player::Player(WorldSession* session): Unit(true)
     m_reputationMgr = new ReputationMgr(this);
 
     m_groupUpdateTimer.Reset(5000);
+
+    m_energyRegenRate = 1.f;
 }
 
 Player::~Player()
@@ -2054,7 +2056,7 @@ void Player::RegenerateAll(uint32 diff)
         //     Regenerate(POWER_RAGE, diff);
     }
 
-    // Regenerate(POWER_ENERGY, diff);
+    Regenerate(POWER_ENERGY, diff);
 
     Regenerate(POWER_MANA, diff);
 
@@ -2127,20 +2129,10 @@ void Player::Regenerate(Powers power, uint32 diff)
             }
         }   break;
         case POWER_ENERGY:                                  // Regenerate energy (rogue)
-            addvalue += 20 * sWorld->getRate(RATE_POWER_ENERGY);
-            break;
-        case POWER_RUNIC_POWER:
         {
-            if (!IsInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
-            {
-                float RunicPowerDecreaseRate = sWorld->getRate(RATE_POWER_RUNICPOWER_LOSS);
-                addvalue += -30 * RunicPowerDecreaseRate;         // 3 RunicPower by tick
-            }
+            float EnergyRate = sWorld->getRate(RATE_POWER_ENERGY);
+            addvalue += 20 * EnergyRate * m_energyRegenRate;
         }   break;
-        case POWER_RUNE:
-        case POWER_FOCUS:
-        case POWER_HAPPINESS:
-            break;
         case POWER_HEALTH:
             return;
         default:
@@ -2898,12 +2890,6 @@ void Player::InitStatsForLevel(bool reapplyMods)
     // update level to hunter/summon pet
     if (Pet* pet = GetPet())
         pet->SynchronizeLevelWithOwner();
-
-    if (GetClass() == CLASS_ROGUE || GetClass() == CLASS_DRUID)
-    {
-        SetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER + POWER_ENERGY, -10.f);
-        SetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER + POWER_ENERGY, -10.f);
-    }
 }
 
 void Player::SendInitialSpells()

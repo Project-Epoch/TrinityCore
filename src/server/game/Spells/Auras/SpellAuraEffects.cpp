@@ -1790,6 +1790,9 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
                         {
                             CastSpellExtraArgs args(this);
                             args.AddSpellMod(SPELLVALUE_BASE_POINT0, std::min<int32>(oldPower, FurorChance));
+                            if (target->IsPlayer())
+                                target->ToPlayer()->UpdateEnergyRegen();
+                            
                             target->SetPower(POWER_ENERGY, 0);
                             target->CastSpell(target, 17099, args);
                             break;
@@ -3664,6 +3667,8 @@ void AuraEffect::HandleModPowerRegen(AuraApplication const* aurApp, uint8 mode, 
         target->ToPlayer()->UpdateManaRegen();
     else if (GetMiscValue() == POWER_RUNE)
         target->ToPlayer()->UpdateRuneRegen(RuneType(GetMiscValueB()));
+    else if (GetMiscValue() == POWER_ENERGY)
+        target->ToPlayer()->UpdateEnergyRegen();
     // other powers are not immediate effects - implemented in Player::Regenerate, Creature::Regenerate
 }
 

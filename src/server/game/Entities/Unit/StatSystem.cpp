@@ -1245,6 +1245,15 @@ void Player::UpdateManaRegen()
     SetStatFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER, power_regen_mp5 + power_regen);
 }
 
+void Player::UpdateEnergyRegen()
+{
+    // need to award mana based on previous rate - Patch 2.2
+    if (GetHealth() > 0) // on death we must never do this
+        RegenerateAll(std::min(uint32(REGEN_TIME_FULL), m_regenTimer));
+
+    m_energyRegenRate = GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, POWER_ENERGY);
+}
+
 void Player::UpdateRuneRegen(RuneType rune)
 {
     if (rune >= NUM_RUNE_TYPES)
