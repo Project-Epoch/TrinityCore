@@ -544,7 +544,7 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
         SetPvpFlag(UNIT_BYTE2_FLAG_PVP);
         SetUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED);
     }
-    SetUnitFlag2(UNIT_FLAG2_REGENERATE_POWER);
+
     SetModCastingSpeed(1.0f);               // fix cast time showed in spell tooltip on client
     SetHoverHeight(1.0f);            // default for players in 3.0.3
 
@@ -2881,8 +2881,6 @@ void Player::InitStatsForLevel(bool reapplyMods)
         UNIT_FLAG_CONFUSED       | UNIT_FLAG_FLEEING      | UNIT_FLAG_UNINTERACTIBLE   |
         UNIT_FLAG_SKINNABLE      | UNIT_FLAG_MOUNT        | UNIT_FLAG_ON_TAXI          );
     SetUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED);   // must be set
-
-    SetUnitFlag2(UNIT_FLAG2_REGENERATE_POWER);// must be set
 
     // cleanup player flags (will be re-applied if need at aura load), to avoid have ghost flag without ghost aura, for example.
     RemoveFlag(PLAYER_FLAGS, PLAYER_FLAGS_AFK | PLAYER_FLAGS_DND | PLAYER_FLAGS_GM | PLAYER_FLAGS_GHOST | PLAYER_ALLOW_ONLY_ABILITY);
