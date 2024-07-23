@@ -766,6 +766,10 @@ struct PositionUpdateInfo
 #define ATTACK_DISPLAY_DELAY 200
 #define MAX_PLAYER_STEALTH_DETECT_RANGE 30.0f               // max distance for detection targets by player
 
+// Regeneration defines
+#define REGEN_TIME_FULL         2000                            // For this time difference is computed regen value
+#define REGEN_TIME_FULL_UNIT    5000                            // For npcs
+
 class TC_GAME_API Unit : public WorldObject
 {
     friend class WorldSession;

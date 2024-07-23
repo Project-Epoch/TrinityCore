@@ -221,7 +221,6 @@ Player::Player(WorldSession* session): Unit(true)
     // @tswow-end
 
     m_regenTimer = 0;
-    m_regenTimerCount = 0;
     m_foodEmoteTimerCount = 0;
     m_weaponChangeTimer = 0;
 
@@ -1261,7 +1260,8 @@ void Player::Update(uint32 p_time)
     if (IsAlive())
     {
         m_regenTimer += p_time;
-        RegenerateAll();
+        if (m_regenTimer >= REGEN_TIME_FULL)
+            RegenerateAll(m_regenTimer / 100 * 100);
     }
 
     if (m_deathState == JUST_DIED)
@@ -2041,47 +2041,24 @@ bool Player::IsImmunedToSpellEffect(SpellInfo const* spellInfo, SpellEffectInfo 
     return Unit::IsImmunedToSpellEffect(spellInfo, spellEffectInfo, caster, requireImmunityPurgesEffectAttribute);
 }
 
-void Player::RegenerateAll()
+void Player::RegenerateAll(uint32 diff)
 {
-    //if (m_regenTimer <= 500)
-    //    return;
-
-    m_regenTimerCount += m_regenTimer;
     m_foodEmoteTimerCount += m_regenTimer;
 
-    Regenerate(POWER_MANA);
-
-    // Runes act as cooldowns, and they don't need to send any data
-    //@tswow-begin
-    if (HasRunes())
-    {
-    //@tswow-end
-        for (uint8 i = 0; i < MAX_RUNES; ++i)
-            if (uint32 cd = GetRuneCooldown(i))
-                SetRuneCooldown(i, (cd > m_regenTimer) ? cd - m_regenTimer : 0);
-
-    }
-
-    if (m_regenTimerCount >= 2000)
-    {
-        // Not in combat or they have regeneration
-        if (!IsInCombat() || IsPolymorphed() || m_baseHealthRegen ||
-            HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT) ||
+    // Not in combat or they have regeneration
+    if (!IsInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT) ||
             HasAuraType(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT))
-        {
-            RegenerateHealth();
-        }
-
-        Regenerate(POWER_ENERGY);
-        Regenerate(POWER_RAGE);
-        //@tswow-begin
-        if (HasRunes())
-            Regenerate(POWER_RUNIC_POWER);
-
-        m_regenTimerCount -= 2000;
+    {
+        RegenerateHealth(diff);
+        // if (!IsInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
+        //     Regenerate(POWER_RAGE, diff);
     }
 
-    m_regenTimer = 0;
+    // Regenerate(POWER_ENERGY, diff);
+
+    // Regenerate(POWER_MANA, diff);
+
+    m_regenTimer -= diff;
 
     // Handles the emotes for drinking and eating.
     // According to sniffs there is a background timer going on that repeats independed from the time window where the aura applies.
@@ -2115,7 +2092,7 @@ void Player::RegenerateAll()
     }
 }
 
-void Player::Regenerate(Powers power)
+void Player::Regenerate(Powers power, uint32 diff)
 {
     uint32 maxValue = GetMaxPower(power);
     if (!maxValue)
@@ -2181,8 +2158,9 @@ void Player::Regenerate(Powers power)
         addvalue *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, power);
 
         // Butchery requires combat for this effect
-        if (power != POWER_RUNIC_POWER || IsInCombat())
-            addvalue += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, power) * ((power != POWER_ENERGY) ? m_regenTimerCount : m_regenTimer) / (5 * IN_MILLISECONDS);
+        // TODO
+        // if (power != POWER_RUNIC_POWER || IsInCombat())
+        //     addvalue += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, power) * ((power != POWER_ENERGY) ? m_regenTimerCount : m_regenTimer) / (5 * IN_MILLISECONDS);
     }
 
     if (addvalue < 0.0f)
@@ -2226,13 +2204,15 @@ void Player::Regenerate(Powers power)
         else
             m_powerFraction[power] = addvalue - integerValue;
     }
-    if (m_regenTimerCount >= 2000)
-        SetPower(power, curValue);
-    else
-        UpdateUInt32Value(UNIT_FIELD_POWER1 + AsUnderlyingType(power), curValue);
+
+    // TODO
+    // if (m_regenTimerCount >= 2000)
+    //     SetPower(power, curValue);
+    // else
+    //     UpdateUInt32Value(UNIT_FIELD_POWER1 + AsUnderlyingType(power), curValue);
 }
 
-void Player::RegenerateHealth()
+void Player::RegenerateHealth(uint32 diff)
 {
     uint32 curValue = GetHealth();
     uint32 maxValue = GetMaxHealth();
@@ -2242,41 +2222,30 @@ void Player::RegenerateHealth()
 
     float HealthIncreaseRate = sWorld->getRate(RATE_HEALTH);
 
-    /** @epoch-start */
-    // if (GetLevel() < 15)
-    //     HealthIncreaseRate = sWorld->getRate(RATE_HEALTH) * (2.066f - (GetLevel() * 0.066f));
-    /** @epoch-end */
-
     float addValue = 0.0f;
 
-    // polymorphed case
-    if (IsPolymorphed())
-        addValue = float(GetMaxHealth()) / 3.0f;
     // normal regen case (maybe partly in combat case)
-    else if (!IsInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT))
+    if (!IsInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT))
     {
         addValue = OCTRegenHPPerSpirit() * HealthIncreaseRate;
-        if (!IsInCombat())
+        if (! IsInCombat())
         {
             addValue *= GetTotalAuraMultiplier(SPELL_AURA_MOD_HEALTH_REGEN_PERCENT);
-
-            addValue += GetTotalAuraModifier(SPELL_AURA_MOD_REGEN) * 0.4f;
         }
         else if (HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT))
             ApplyPct(addValue, GetTotalAuraModifier(SPELL_AURA_MOD_REGEN_DURING_COMBAT));
 
-        if (!IsStandState())
-            addValue *= 1.33f;
+        if (! IsStandState())
+            addValue *= 1.5f;
     }
 
     // always regeneration bonus (including combat)
     addValue += GetTotalAuraModifier(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT);
-    addValue += m_baseHealthRegen / 2.5f;
 
     if (addValue < 0.0f)
         addValue = 0.0f;
 
-    ModifyHealth(int32(addValue));
+    ModifyHealth(int32(addValue * float(diff) / 1000));
 }
 
 void Player::ResetAllPowers()
@@ -5599,7 +5568,7 @@ float Player::OCTRegenHPPerSpirit() const
     if (baseSpirit > 50)
         baseSpirit = 50;
     float moreSpirit = spirit - baseSpirit;
-    float regen = (baseSpirit * baseRatio->Data + moreSpirit * moreRatio->Data) * 2;
+    float regen = baseSpirit * baseRatio->Data + moreSpirit * moreRatio->Data;
     return regen;
 }
 

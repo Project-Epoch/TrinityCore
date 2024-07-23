@@ -1392,10 +1392,9 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SetBindPoint(ObjectGuid guid) const;
         void SendTalentWipeConfirm(ObjectGuid guid) const;
         void ResetPetTalents();
-        void RegenerateAll();
-        void Regenerate(Powers power);
-        void RegenerateHealth();
-        void setRegenTimerCount(uint32 time) {m_regenTimerCount = time;}
+        void RegenerateAll(uint32 diff);
+        void Regenerate(Powers power, uint32 diff);
+        void RegenerateHealth(uint32 diff);
         void setWeaponChangeTimer(uint32 time) {m_weaponChangeTimer = time;}
 
         uint32 GetMoney() const { return GetUInt32Value(PLAYER_FIELD_COINAGE); }
@@ -2255,7 +2254,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
     protected:
         // Gamemaster whisper whitelist
         GuidList WhisperList;
-        uint32 m_regenTimerCount;
         uint32 m_foodEmoteTimerCount;
         float m_powerFraction[MAX_POWERS];
         uint32 m_contestedPvPTimer;
