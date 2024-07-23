@@ -2056,7 +2056,7 @@ void Player::RegenerateAll(uint32 diff)
 
     // Regenerate(POWER_ENERGY, diff);
 
-    // Regenerate(POWER_MANA, diff);
+    Regenerate(POWER_MANA, diff);
 
     m_regenTimer -= diff;
 
@@ -2113,15 +2113,10 @@ void Player::Regenerate(Powers power, uint32 diff)
             bool recentCast = IsUnderLastManaUseEffect();
             float ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA);
 
-            /** @epoch-start */
-            // if (GetLevel() < 15)
-            //     ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA) * (2.066f - (GetLevel() * 0.066f));
-            /** @epoch-end */
-
             if (recentCast) // Trinity Updates Mana in intervals of 2s, which is correct
-                addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER) *  ManaIncreaseRate * 0.001f * m_regenTimer;
+                addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER) * ManaIncreaseRate * uint32(float(diff) / 1000);
             else
-                addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER) * ManaIncreaseRate * 0.001f * m_regenTimer;
+                addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER) * ManaIncreaseRate * uint32(float(diff) / 1000);
         }   break;
         case POWER_RAGE:                                    // Regenerate rage
         {
@@ -2152,16 +2147,16 @@ void Player::Regenerate(Powers power, uint32 diff)
             break;
     }
 
-    // Mana regen calculated in Player::UpdateManaRegen()
-    if (power != POWER_MANA)
-    {
-        addvalue *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, power);
+    // // Mana regen calculated in Player::UpdateManaRegen()
+    // if (power != POWER_MANA)
+    // {
+    //     addvalue *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, power);
 
-        // Butchery requires combat for this effect
-        // TODO
-        // if (power != POWER_RUNIC_POWER || IsInCombat())
-        //     addvalue += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, power) * ((power != POWER_ENERGY) ? m_regenTimerCount : m_regenTimer) / (5 * IN_MILLISECONDS);
-    }
+    //     // Butchery requires combat for this effect
+    //     // TODO
+    //     // if (power != POWER_RUNIC_POWER || IsInCombat())
+    //     //     addvalue += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, power) * ((power != POWER_ENERGY) ? m_regenTimerCount : m_regenTimer) / (5 * IN_MILLISECONDS);
+    // }
 
     if (addvalue < 0.0f)
     {
@@ -2205,11 +2200,7 @@ void Player::Regenerate(Powers power, uint32 diff)
             m_powerFraction[power] = addvalue - integerValue;
     }
 
-    // TODO
-    // if (m_regenTimerCount >= 2000)
-    //     SetPower(power, curValue);
-    // else
-    //     UpdateUInt32Value(UNIT_FIELD_POWER1 + AsUnderlyingType(power), curValue);
+    SetPower(power, curValue);
 }
 
 void Player::RegenerateHealth(uint32 diff)
