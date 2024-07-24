@@ -2052,8 +2052,8 @@ void Player::RegenerateAll(uint32 diff)
             HasAuraType(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT))
     {
         RegenerateHealth(diff);
-        // if (!IsInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
-        //     Regenerate(POWER_RAGE, diff);
+        if (!IsInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
+            Regenerate(POWER_RAGE, diff);
     }
 
     Regenerate(POWER_ENERGY, diff);
@@ -2122,33 +2122,24 @@ void Player::Regenerate(Powers power, uint32 diff)
         }   break;
         case POWER_RAGE:                                    // Regenerate rage
         {
-            if (!IsInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
-            {
-                float RageDecreaseRate = sWorld->getRate(RATE_POWER_RAGE_LOSS);
-                addvalue += -20 * RageDecreaseRate;               // 2 rage by tick (= 2 seconds => 1 rage/sec)
-            }
+            float RageDecreaseRate = sWorld->getRate(RATE_POWER_RAGE_LOSS);
+            addvalue += uint32(float(diff) / 200) * (-2.5 * RageDecreaseRate); // decay 2.5 rage per 2 seconds
+            addvalue *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, power);
         }   break;
         case POWER_ENERGY:                                  // Regenerate energy (rogue)
         {
             float EnergyRate = sWorld->getRate(RATE_POWER_ENERGY);
-            addvalue += 20 * EnergyRate * m_energyRegenRate;
+            addvalue = 20 * EnergyRate * m_energyRegenRate;
         }   break;
+        case POWER_RUNE:
+        case POWER_RUNIC_POWER:
+        case POWER_FOCUS:
+        case POWER_HAPPINESS:
         case POWER_HEALTH:
             return;
         default:
             break;
     }
-
-    // // Mana regen calculated in Player::UpdateManaRegen()
-    // if (power != POWER_MANA)
-    // {
-    //     addvalue *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, power);
-
-    //     // Butchery requires combat for this effect
-    //     // TODO
-    //     // if (power != POWER_RUNIC_POWER || IsInCombat())
-    //     //     addvalue += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, power) * ((power != POWER_ENERGY) ? m_regenTimerCount : m_regenTimer) / (5 * IN_MILLISECONDS);
-    // }
 
     if (addvalue < 0.0f)
     {
