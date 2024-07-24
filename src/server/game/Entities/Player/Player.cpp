@@ -1262,6 +1262,7 @@ void Player::Update(uint32 p_time)
     if (IsAlive())
     {
         m_regenTimer += p_time;
+        HandleFoodEmotes(p_time);
         if (m_regenTimer >= REGEN_TIME_FULL)
             RegenerateAll(m_regenTimer / 100 * 100);
     }
@@ -2043,24 +2044,9 @@ bool Player::IsImmunedToSpellEffect(SpellInfo const* spellInfo, SpellEffectInfo 
     return Unit::IsImmunedToSpellEffect(spellInfo, spellEffectInfo, caster, requireImmunityPurgesEffectAttribute);
 }
 
-void Player::RegenerateAll(uint32 diff)
+void Player::HandleFoodEmotes(uint32 diff)
 {
     m_foodEmoteTimerCount += m_regenTimer;
-
-    // Not in combat or they have regeneration
-    if (!IsInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT) ||
-            HasAuraType(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT))
-    {
-        RegenerateHealth(diff);
-        if (!IsInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
-            Regenerate(POWER_RAGE, diff);
-    }
-
-    Regenerate(POWER_ENERGY, diff);
-
-    Regenerate(POWER_MANA, diff);
-
-    m_regenTimer -= diff;
 
     // Handles the emotes for drinking and eating.
     // According to sniffs there is a background timer going on that repeats independed from the time window where the aura applies.
@@ -2092,6 +2078,24 @@ void Player::RegenerateAll(uint32 diff)
         }
         m_foodEmoteTimerCount -= 5000;
     }
+}
+
+void Player::RegenerateAll(uint32 diff)
+{
+    // Not in combat or they have regeneration
+    if (!IsInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT) ||
+            HasAuraType(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT))
+    {
+        RegenerateHealth(diff);
+        if (!IsInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
+            Regenerate(POWER_RAGE, diff);
+    }
+
+    Regenerate(POWER_ENERGY, diff);
+
+    Regenerate(POWER_MANA, diff);
+
+    m_regenTimer -= diff;
 }
 
 void Player::Regenerate(Powers power, uint32 diff)

@@ -1395,6 +1395,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void RegenerateAll(uint32 diff);
         void Regenerate(Powers power, uint32 diff);
         void RegenerateHealth(uint32 diff);
+        void HandleFoodEmotes(uint32 diff);
         void setWeaponChangeTimer(uint32 time) {m_weaponChangeTimer = time;}
 
         uint32 GetMoney() const { return GetUInt32Value(PLAYER_FIELD_COINAGE); }
