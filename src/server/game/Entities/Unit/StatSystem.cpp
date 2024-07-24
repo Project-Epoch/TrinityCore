@@ -1208,13 +1208,8 @@ void Player::ApplyHealthRegenBonus(int32 amount, bool apply)
 
 void Player::UpdateManaRegen()
 {
-    // need to award mana based on previous rate - Patch 2.2
-    if (GetHealth() > 0) // on death we must never do this
-        RegenerateAll(std::min(uint32(REGEN_TIME_FULL), m_regenTimer));
+    float power_regen = OCTRegenMPPerSpirit();
 
-    float Intellect = GetStat(STAT_INTELLECT);
-    // Mana regen from spirit and intellect
-    float power_regen = std::sqrt(Intellect) * OCTRegenMPPerSpirit();
     // Apply PCT bonus from SPELL_AURA_MOD_POWER_REGEN_PERCENT aura on spirit base regen
     power_regen *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, POWER_MANA);
 
@@ -1247,10 +1242,6 @@ void Player::UpdateManaRegen()
 
 void Player::UpdateEnergyRegen()
 {
-    // need to award mana based on previous rate - Patch 2.2
-    if (GetHealth() > 0) // on death we must never do this
-        RegenerateAll(std::min(uint32(REGEN_TIME_FULL), m_regenTimer));
-
     m_energyRegenRate = GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, POWER_ENERGY);
 }
 

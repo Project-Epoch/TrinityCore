@@ -2206,6 +2206,7 @@ void Player::RegenerateHealth(uint32 diff)
     if (!IsInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT))
     {
         addValue = OCTRegenHPPerSpirit() * HealthIncreaseRate;
+
         if (! IsInCombat())
         {
             addValue *= GetTotalAuraMultiplier(SPELL_AURA_MOD_HEALTH_REGEN_PERCENT);
@@ -5521,44 +5522,48 @@ float Player::GetExpertiseDodgeOrParryReduction(WeaponAttackType attType) const
 
 float Player::OCTRegenHPPerSpirit() const
 {
-    uint8 level = GetLevel();
-    uint32 pclass = GetClass();
+    float regen = 0.0f;
 
-    if (level > GT_MAX_LEVEL)
-        level = GT_MAX_LEVEL;
+    float Spirit = GetStat(STAT_SPIRIT);
+    uint8 Class = GetClass();
 
-    GtOCTRegenHPEntry     const* baseRatio = sGtOCTRegenHPStore.LookupEntry((pclass-1)*GT_MAX_LEVEL + level-1);
-    GtRegenHPPerSptEntry  const* moreRatio = sGtRegenHPPerSptStore.LookupEntry((pclass-1)*GT_MAX_LEVEL + level-1);
-    if (baseRatio == nullptr || moreRatio == nullptr)
-        return 0.0f;
+    switch (Class)
+    {
+        case CLASS_DRUID:   regen = (Spirit * 0.11 + 1);    break;
+        case CLASS_HUNTER:  regen = (Spirit * 0.43 - 5.5);  break;
+        case CLASS_MAGE:    regen = (Spirit * 0.11 + 1);    break;
+        case CLASS_PALADIN: regen = (Spirit * 0.25);        break;
+        case CLASS_PRIEST:  regen = (Spirit * 0.15 + 1.4);  break;
+        case CLASS_ROGUE:   regen = (Spirit * 0.84 - 13);   break;
+        case CLASS_SHAMAN:  regen = (Spirit * 0.28 - 3.6);  break;
+        case CLASS_WARLOCK: regen = (Spirit * 0.12 + 1.5);  break;
+        case CLASS_WARRIOR: regen = (Spirit * 1.26 - 22.6); break;
+    }
 
-    // Formula from PaperDollFrame script
-    float spirit = GetStat(STAT_SPIRIT);
-    float baseSpirit = spirit;
-    if (baseSpirit > 50)
-        baseSpirit = 50;
-    float moreSpirit = spirit - baseSpirit;
-    float regen = baseSpirit * baseRatio->Data + moreSpirit * moreRatio->Data;
     return regen;
 }
 
 float Player::OCTRegenMPPerSpirit() const
 {
-    uint8 level = GetLevel();
-    uint32 pclass = GetClass();
+    float addvalue = 0.0;
 
-    if (level > GT_MAX_LEVEL)
-        level = GT_MAX_LEVEL;
+    float Spirit = GetStat(STAT_SPIRIT);
+    uint8 Class = GetClass();
 
-//    GtOCTRegenMPEntry     const* baseRatio = sGtOCTRegenMPStore.LookupEntry((pclass-1)*GT_MAX_LEVEL + level-1);
-    GtRegenMPPerSptEntry  const* moreRatio = sGtRegenMPPerSptStore.LookupEntry((pclass-1)*GT_MAX_LEVEL + level-1);
-    if (moreRatio == nullptr)
-        return 0.0f;
+    switch (Class)
+    {
+        case CLASS_DRUID:   addvalue = (Spirit / 5 + 15);   break;
+        case CLASS_HUNTER:  addvalue = (Spirit / 5 + 15);   break;
+        case CLASS_MAGE:    addvalue = (Spirit / 4 + 12.5); break;
+        case CLASS_PALADIN: addvalue = (Spirit / 5 + 15);   break;
+        case CLASS_PRIEST:  addvalue = (Spirit / 4 + 12.5); break;
+        case CLASS_SHAMAN:  addvalue = (Spirit / 5 + 17);   break;
+        case CLASS_WARLOCK: addvalue = (Spirit / 5 + 15);   break;
+    }
 
-    // Formula get from PaperDollFrame script
-    float spirit    = GetStat(STAT_SPIRIT);
-    float regen     = spirit * moreRatio->Data;
-    return regen;
+    addvalue /= 2.0f;   // the above addvalue are given per tick which occurs every 2 seconds, hence this divide by 2
+
+    return addvalue;
 }
 
 void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
