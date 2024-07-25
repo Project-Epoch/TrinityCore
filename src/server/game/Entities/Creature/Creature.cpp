@@ -1012,20 +1012,6 @@ void Creature::Update(uint32 diff)
     }
 }
 
-bool Creature::IsFreeToMove()
-{
-    uint32 moveFlags = m_movementInfo.GetMovementFlags();
-    // Do not reposition ourself when we are not allowed to move
-    if ((IsMovementPreventedByCasting() || isMoving() || !CanFreeMove()) &&
-        (GetMotionMaster()->GetCurrentMovementGeneratorType() != CHASE_MOTION_TYPE ||
-        moveFlags & MOVEMENTFLAG_SPLINE_ENABLED))
-    {
-        return false;
-    }
-
-    return true;
-}
-
 void Creature::Regenerate(Powers power)
 {
     uint32 curValue = GetPower(power);
@@ -1116,6 +1102,20 @@ void Creature::RegenerateHealth()
     addvalue += GetTotalAuraModifier(SPELL_AURA_MOD_REGEN) * CREATURE_REGEN_INTERVAL  / (5 * IN_MILLISECONDS);
 
     ModifyHealth(addvalue);
+}
+
+bool Creature::IsFreeToMove()
+{
+    uint32 moveFlags = m_movementInfo.GetMovementFlags();
+    // Do not reposition ourself when we are not allowed to move
+    if ((IsMovementPreventedByCasting() || isMoving() || !CanFreeMove()) &&
+        (GetMotionMaster()->GetCurrentMovementGeneratorType() != CHASE_MOTION_TYPE ||
+        moveFlags & MOVEMENTFLAG_SPLINE_ENABLED))
+    {
+        return false;
+    }
+
+    return true;
 }
 
 void Creature::DoFleeToGetAssistance()
