@@ -1660,8 +1660,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void GetDodgeFromAgility(float &diminishing, float &nondiminishing) const;
         float GetMissPercentageFromDefense() const;
         float GetSpellCritFromIntellect() const;
-        float OCTRegenHPPerSpirit() const;
-        float OCTRegenMPPerSpirit() const;
         float GetRatingMultiplier(CombatRating cr) const;
         float GetRatingBonusValue(CombatRating cr) const;
         uint32 GetBaseSpellPowerBonus() const { return m_baseSpellPower; }

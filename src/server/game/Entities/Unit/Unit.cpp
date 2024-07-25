@@ -8677,6 +8677,52 @@ int32 Unit::ModifyPower(Powers power, int32 dVal, bool withPowerUpdate /*= true*
     return gain;
 }
 
+float Unit::OCTRegenHPPerSpirit() const
+{
+    float regen = 0.0f;
+
+    float Spirit = GetStat(STAT_SPIRIT);
+    uint8 Class = GetClass();
+
+    switch (Class)
+    {
+        case CLASS_DRUID:   regen = (Spirit * 0.11 + 1);    break;
+        case CLASS_HUNTER:  regen = (Spirit * 0.43 - 5.5);  break;
+        case CLASS_MAGE:    regen = (Spirit * 0.11 + 1);    break;
+        case CLASS_PALADIN: regen = (Spirit * 0.25);        break;
+        case CLASS_PRIEST:  regen = (Spirit * 0.15 + 1.4);  break;
+        case CLASS_ROGUE:   regen = (Spirit * 0.84 - 13);   break;
+        case CLASS_SHAMAN:  regen = (Spirit * 0.28 - 3.6);  break;
+        case CLASS_WARLOCK: regen = (Spirit * 0.12 + 1.5);  break;
+        case CLASS_WARRIOR: regen = (Spirit * 1.26 - 22.6); break;
+    }
+
+    return regen;
+}
+
+float Unit::OCTRegenMPPerSpirit() const
+{
+    float addvalue = 0.0;
+
+    float Spirit = GetStat(STAT_SPIRIT);
+    uint8 Class = GetClass();
+
+    switch (Class)
+    {
+        case CLASS_DRUID:   addvalue = (Spirit / 5 + 15);   break;
+        case CLASS_HUNTER:  addvalue = (Spirit / 5 + 15);   break;
+        case CLASS_MAGE:    addvalue = (Spirit / 4 + 12.5); break;
+        case CLASS_PALADIN: addvalue = (Spirit / 5 + 15);   break;
+        case CLASS_PRIEST:  addvalue = (Spirit / 4 + 12.5); break;
+        case CLASS_SHAMAN:  addvalue = (Spirit / 5 + 17);   break;
+        case CLASS_WARLOCK: addvalue = (Spirit / 5 + 15);   break;
+    }
+
+    addvalue /= 2.0f;   // the above addvalue are given per tick which occurs every 2 seconds, hence this divide by 2
+
+    return addvalue;
+}
+
 uint32 Unit::GetAttackTime(WeaponAttackType att) const
 {
     float f_BaseAttackTime = GetFloatValue(UNIT_FIELD_BASEATTACKTIME + AsUnderlyingType(att)) / m_modAttackSpeedPct[att];
