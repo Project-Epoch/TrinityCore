@@ -1392,7 +1392,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SetBindPoint(ObjectGuid guid) const;
         void SendTalentWipeConfirm(ObjectGuid guid) const;
         void ResetPetTalents();
-        void RegenerateAll(uint32 diff = REGEN_TIME_FULL);
+        void RegenerateAll(uint32 diff = REGEN_TIME_FULL_PLAYER);
         void Regenerate(Powers power, uint32 diff);
         void RegenerateHealth(uint32 diff);
         void HandleFoodEmotes(uint32 diff);

@@ -1263,7 +1263,7 @@ void Player::Update(uint32 p_time)
     {
         m_regenTimer += p_time;
         HandleFoodEmotes(p_time);
-        if (m_regenTimer >= REGEN_TIME_FULL)
+        if (m_regenTimer >= REGEN_TIME_FULL_PLAYER)
             RegenerateAll(m_regenTimer / 100 * 100);
     }
 

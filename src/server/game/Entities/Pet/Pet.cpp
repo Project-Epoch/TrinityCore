@@ -683,20 +683,24 @@ void Pet::RegenerateAll(uint32 diff)
     {
         if (!IsInCombat())
             RegenerateHealth();
+
+        if (getPetType() != HUNTER_PET)
+            RegeneratePower(REGEN_TIME_FULL_UNIT / 1000);
+
         m_regenTimer -= REGEN_TIME_FULL_UNIT;
     }
+
+    if (getPetType() != HUNTER_PET)
+        return;
 
     // regenerate focus for hunter pets
     if (m_focusTimer <= diff)
     {
-        RegeneratePower(4.f);
+        RegeneratePower(REGEN_TIME_FOCUS / 1000);
         m_focusTimer = REGEN_TIME_FOCUS;
     }
     else
         m_focusTimer -= diff;
-
-    if (getPetType() != HUNTER_PET)
-        return;
 
     if (m_happinessTimer <= diff)
     {
@@ -734,8 +738,6 @@ void Pet::RegenerateHealth()
         default:
             return;
     }
-
-    TC_LOG_INFO("server.loading", "Pet Regen HP - {} ({}) - OCTRegenHP: {} - Val: {}", GetName(), GetEntry(), OCTRegenHPPerSpirit(), addValue);
 
     ModifyHealth(addValue);
 }
