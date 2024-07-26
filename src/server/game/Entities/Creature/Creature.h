@@ -428,6 +428,7 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         uint32 m_combatPulseDelay;                          // (secs) how often the creature puts the entire zone in combat (only works in dungeons)
 
         ReactStates m_reactState;                           // for AI, not charmInfo
+        bool m_forcePowerRegen;
         virtual void RegenerateAll(uint32 diff);
         void RegeneratePower(float timerMultiplier);
         virtual void RegenerateHealth();

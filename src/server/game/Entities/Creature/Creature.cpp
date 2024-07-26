@@ -263,7 +263,7 @@ Creature::Creature(bool isWorldObject): Unit(isWorldObject), MapObject(), m_grou
     m_defaultMovementType(IDLE_MOTION_TYPE), m_spawnId(0), m_equipmentId(0), m_originalEquipmentId(0), m_AlreadyCallAssistance(false), m_AlreadySearchedAssistance(false), m_cannotReachTarget(false), m_cannotReachTimer(0),
     m_meleeDamageSchoolMask(SPELL_SCHOOL_MASK_NORMAL), m_originalEntry(0), m_homePosition(), m_transportHomePosition(), m_creatureInfo(nullptr), m_creatureData(nullptr), m_detectionDistance(20.0f), _waypointPathId(0),
     m_formation(nullptr), m_triggerJustAppeared(true), m_respawnCompatibilityMode(false), _lastDamagedTime(0),
-    _currentWaypointNodeInfo(0, 0), _regenerateHealth(true), _regenerateHealthLock(false), _isMissingCanSwimFlagOutOfCombat(false), m_assistanceTimer(0)
+    _currentWaypointNodeInfo(0, 0), _regenerateHealth(true), _regenerateHealthLock(false), _isMissingCanSwimFlagOutOfCombat(false), m_assistanceTimer(0), m_forcePowerRegen(false)
 {
     m_valuesCount = UNIT_END;
 
@@ -1026,7 +1026,7 @@ void Creature::RegenerateHealth()
 
 void Creature::RegeneratePower(float timerMultiplier)
 {
-    if (!HasUnitFlag2(UNIT_FLAG2_REGENERATE_POWER))
+    if (!HasUnitFlag2(UNIT_FLAG2_REGENERATE_POWER) && ! m_forcePowerRegen)
         return;
 
     Powers powerType = GetPowerType();
