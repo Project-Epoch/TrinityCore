@@ -42,7 +42,8 @@
 
 Pet::Pet(Player* owner, PetType type) :
     Guardian(nullptr, owner, true), m_usedTalentCount(0), m_removed(false),
-    m_happinessTimer(7500), m_petType(type), m_duration(0), m_auraRaidUpdateMask(0), m_loading(false)
+    m_happinessTimer(7500), m_petType(type), m_duration(0), m_auraRaidUpdateMask(0), m_loading(false),
+    m_focusTimer(REGEN_TIME_FOCUS)
 {
     ASSERT(GetOwner());
 
@@ -57,7 +58,6 @@ Pet::Pet(Player* owner, PetType type) :
     }
 
     m_name = "Pet";
-    m_focusRegenTimer = PET_FOCUS_REGEN_INTERVAL;
 }
 
 Pet::~Pet() = default;
@@ -667,56 +667,77 @@ void Pet::Update(uint32 diff)
                 }
             }
 
-            //regenerate focus for hunter pets or energy for deathknight's ghoul
-            if (m_focusRegenTimer)
-            {
-                if (m_focusRegenTimer > diff)
-                    m_focusRegenTimer -= diff;
-                else
-                {
-                    switch (GetPowerType())
-                    {
-                        case POWER_FOCUS:
-                            Regenerate(POWER_FOCUS);
-                            m_focusRegenTimer += PET_FOCUS_REGEN_INTERVAL - diff;
-                            if (!m_focusRegenTimer) ++m_focusRegenTimer;
-
-                            // Reset if large diff (lag) causes focus to get 'stuck'
-                            if (m_focusRegenTimer > PET_FOCUS_REGEN_INTERVAL)
-                                m_focusRegenTimer = PET_FOCUS_REGEN_INTERVAL;
-
-                            break;
-
-                        // in creature::update
-                        //case POWER_ENERGY:
-                        //    Regenerate(POWER_ENERGY);
-                        //    m_regenTimer += CREATURE_REGEN_INTERVAL - diff;
-                        //    if (!m_regenTimer) ++m_regenTimer;
-                        //    break;
-                        default:
-                            m_focusRegenTimer = 0;
-                            break;
-                    }
-                }
-            }
-
-            if (getPetType() != HUNTER_PET)
-                break;
-
-            if (m_happinessTimer <= diff)
-            {
-                LoseHappiness();
-                m_happinessTimer = 7500;
-            }
-            else
-                m_happinessTimer -= diff;
-
             break;
         }
         default:
             break;
     }
+
     Creature::Update(diff);
+}
+
+void Pet::RegenerateAll(uint32 diff)
+{
+    m_regenTimer += diff;
+    if (m_regenTimer >= REGEN_TIME_FULL_UNIT)
+    {
+        if (!IsInCombat())
+            RegenerateHealth();
+        m_regenTimer -= REGEN_TIME_FULL_UNIT;
+    }
+
+    // regenerate focus for hunter pets
+    if (m_focusTimer <= diff)
+    {
+        RegeneratePower(4.f);
+        m_focusTimer = REGEN_TIME_FOCUS;
+    }
+    else
+        m_focusTimer -= diff;
+
+    if (getPetType() != HUNTER_PET)
+        return;
+
+    if (m_happinessTimer <= diff)
+    {
+        LoseHappiness();
+        m_happinessTimer = 7500;
+    }
+    else
+        m_happinessTimer -= diff;
+}
+
+void Pet::RegenerateHealth()
+{
+    if (!CanRegenerateHealth())
+        return;
+
+    uint32 curValue = GetHealth();
+    uint32 maxValue = GetMaxHealth();
+
+    if (curValue >= maxValue)
+        return;
+
+    float HealthIncreaseRate = sWorld->getRate(RATE_HEALTH);
+
+    uint32 addValue = 0;
+
+    switch (getPetType())
+    {
+        case SUMMON_PET:
+        case HUNTER_PET:
+        {
+            addValue = static_cast<uint32>(std::round(OCTRegenHPPerSpirit() * HealthIncreaseRate * 5.0f));
+            break;
+        }
+
+        default:
+            return;
+    }
+
+    TC_LOG_INFO("server.loading", "Pet Regen HP - {} ({}) - OCTRegenHP: {} - Val: {}", GetName(), GetEntry(), OCTRegenHPPerSpirit(), addValue);
+
+    ModifyHealth(addValue);
 }
 
 void Pet::LoseHappiness()
@@ -1914,6 +1935,7 @@ bool Pet::Create(ObjectGuid::LowType guidlow, Map* map, uint32 phaseMask, uint32
         return false;
 
     // Force regen flag for player pets, just like we do for players themselves
+    SetUnitFlag2(UNIT_FLAG2_REGENERATE_POWER);
     SetSheath(SHEATH_STATE_MELEE);
 
     GetThreatManager().Initialize();

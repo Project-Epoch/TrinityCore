@@ -79,6 +79,8 @@ class TC_GAME_API Pet : public Guardian
                 return m_autospells[pos];
         }
 
+        virtual void RegenerateHealth() override;
+        void RegenerateAll(uint32 diff) override;    // overwrite Creature::RegenerateAll
         void LoseHappiness();
         HappinessState GetHappinessState();
         void GivePetXP(uint32 xp);
@@ -157,11 +159,11 @@ class TC_GAME_API Pet : public Guardian
 
     protected:
         uint32  m_happinessTimer;
+        uint32  m_focusTimer;
         PetType m_petType;
         int32   m_duration;                                 // time until unsummon (used mostly for summoned guardians and not used for controlled pets)
         uint64  m_auraRaidUpdateMask;
         bool    m_loading;
-        uint32  m_focusRegenTimer;
 
         std::unique_ptr<DeclinedName> m_declinedname;
 

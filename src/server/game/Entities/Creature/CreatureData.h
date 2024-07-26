@@ -284,8 +284,6 @@ struct TC_GAME_API CreatureMovementData
     std::string ToString() const;
 };
 
-static const uint32 CREATURE_REGEN_INTERVAL = 2 * IN_MILLISECONDS;
-static const uint32 PET_FOCUS_REGEN_INTERVAL = 4 * IN_MILLISECONDS;
 static const uint32 CREATURE_NOPATH_EVADE_TIME = 8 * IN_MILLISECONDS;
 static const uint32 CREATURE_NOPATH_REGEN_TIME = 4 * IN_MILLISECONDS;
 

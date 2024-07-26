@@ -767,8 +767,9 @@ struct PositionUpdateInfo
 #define MAX_PLAYER_STEALTH_DETECT_RANGE 30.0f               // max distance for detection targets by player
 
 // Regeneration defines
-#define REGEN_TIME_FULL         2000                            // For this time difference is computed regen value
+#define REGEN_TIME_FULL         2000                            // For players
 #define REGEN_TIME_FULL_UNIT    5000                            // For npcs
+#define REGEN_TIME_FOCUS        4000                            // For hunter pets
 
 class TC_GAME_API Unit : public WorldObject
 {
