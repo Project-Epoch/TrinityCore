@@ -158,7 +158,7 @@ bool ChaseMovementGenerator::Update(Unit* owner, uint32 diff)
         (owner->CanFly())
         ; // closes "bool forceDest", that way it is more appropriate, so we can comment out crap whenever we need to
 
-    bool const mutualChase = IsMutualChase(owner, target);
+    bool mutualChase = IsMutualChase(owner, target);
     bool const mutualTarget = target->GetVictim() == owner;
     float const hitboxSum = owner->GetCombatReach() + target->GetCombatReach();
     float const minRange = _range ? _range->MinRange + hitboxSum : CONTACT_DISTANCE;
