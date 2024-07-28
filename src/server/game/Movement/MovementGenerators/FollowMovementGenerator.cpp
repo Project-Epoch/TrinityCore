@@ -65,14 +65,21 @@ static Optional<float> GetVelocity(Unit* owner, Unit* target, G3D::Vector3 const
 
         UnitMoveType moveType = Movement::SelectSpeedType(moveFlags);
         speed = target->GetSpeed(moveType);
-        if (playerPet)
+
+        if (owner->IsCreature() && target->IsCreature())
+            speed = target->GetSpeedInMotion();
+
+        float distance = owner->GetDistance2d(dest.x, dest.y) - target->GetObjectSize() - (*speed / 2.f);
+        if (distance > 0.f)
         {
-            float distance = owner->GetDistance2d(dest.x, dest.y) - target->GetObjectSize() - (*speed / 2.f);
-            if (distance > 0.f)
-            {
-                float multiplier = 1.f + (distance / 10.f);
-                *speed *= multiplier;
-            }
+            float multiplier = 1.0f;
+
+            if (playerPet)
+                multiplier += (distance / 50.f);
+            else
+                *speed = owner->IsCreature() ? owner->ToCreature()->GetCreatureTemplate()->speed_run : owner->GetSpeed(MOVE_RUN);
+            
+            *speed *= multiplier;
         }
     }
 

@@ -8840,44 +8840,8 @@ void Unit::UpdateSpeed(UnitMoveType mtype)
 
     /** @epoch-start */
     int32 healthSlow = 0;
-    /** @epoch-end */
     if (Creature* creature = ToCreature())
     {
-        if (creature->HasUnitTypeMask(UNIT_MASK_MINION))
-        {
-            if (GetMotionMaster()->GetCurrentMovementGeneratorType() == FOLLOW_MOTION_TYPE)
-            {
-                Unit* followed = ASSERT_NOTNULL(dynamic_cast<AbstractFollower*>(GetMotionMaster()->GetCurrentMovementGenerator()))->GetTarget();
-                if (followed && followed->GetGUID() == GetOwnerGUID())
-                {
-                    float ownerSpeed = followed->GetSpeedRate(mtype);
-                    bool catchup = false;
-                    
-                    if (followed->GetTypeId() == TYPEID_PLAYER)
-                    {
-                        if (! followed->IsInCombat())
-                            catchup = true;
-
-                        if (followed->ToPlayer()->IsMounted())
-                            catchup = true;
-                    }
-                    else
-                    {
-                        if (! followed->IsInCombat() && ! creature->IsInCombat())
-                            catchup = true;
-                    }
-
-                    if (catchup)
-                    {
-                        if (speed < ownerSpeed || creature->IsWithinDist3d(followed, 10.0f))
-                            speed = ownerSpeed;
-                        
-                        speed *= std::min(std::max(1.0f, 0.75f + (GetDistance(followed) - PET_FOLLOW_DIST) * 0.05f), 1.3f);
-                    }
-                }
-            }
-        }
-
         /** @epoch-start */
         uint32 immuneMask = creature->GetCreatureTemplate()->MechanicImmuneMask;
         if (!IsPet() && !(IsControlledByPlayer() && IsVehicle()) && !(immuneMask & (1 << (MECHANIC_SNARE - 1))) && !(creature->IsDungeonBoss())) {
@@ -8886,11 +8850,8 @@ void Unit::UpdateSpeed(UnitMoveType mtype)
         /** @epoch-end */
     }
 
-    /** @epoch-start */
     if (healthSlow)
-    {
         AddPct(speed, healthSlow);
-    }
     /** @epoch-end */
 
     // Apply strongest slow aura mod to speed
@@ -8910,6 +8871,11 @@ void Unit::UpdateSpeed(UnitMoveType mtype)
     }
 
     SetSpeedRate(mtype, speed);
+}
+
+float Unit::GetSpeedInMotion() const
+{
+    return (movespline->Finalized() ? GetSpeed(Movement::SelectSpeedType(GetUnitMovementFlags())) : movespline->Velocity());
 }
 
 float Unit::GetSpeed(UnitMoveType mtype) const
