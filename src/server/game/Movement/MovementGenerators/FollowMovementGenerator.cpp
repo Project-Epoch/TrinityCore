@@ -75,7 +75,7 @@ static Optional<float> GetVelocity(Unit* owner, Unit* target, G3D::Vector3 const
             float multiplier = 1.0f;
 
             if (playerPet)
-                multiplier += (distance / 50.f);
+                multiplier += (distance / 30.f);
             else
                 *speed = owner->IsCreature() ? owner->ToCreature()->GetCreatureTemplate()->speed_run : owner->GetSpeed(MOVE_RUN);
             
