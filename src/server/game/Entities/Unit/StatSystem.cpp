@@ -924,16 +924,13 @@ void Player::UpdateCritPercentage(WeaponAttackType attType)
             break;
     }
 
-    // flat = bonus from crit auras, pct = bonus from agility, combat rating = mods from items
-    float value = GetBaseModValue(modGroup, FLAT_MOD) + GetBaseModValue(modGroup, PCT_MOD) + GetRatingBonusValue(cr);
+    float value = GetBaseModValue(modGroup, FLAT_MOD) + GetBaseModValue(modGroup, PCT_MOD); // + GetRatingBonusValue(cr);
 
     // Modify crit from weapon skill and maximized defense skill of same level victim difference
-    value += (int32(GetWeaponSkillValue(attType)) - int32(GetMaxSkillValueForLevel())) * 0.04f;
-
-    if (sWorld->getBoolConfig(CONFIG_STATS_LIMITS_ENABLE))
-         value = value > sWorld->getFloatConfig(CONFIG_STATS_LIMITS_CRIT) ? sWorld->getFloatConfig(CONFIG_STATS_LIMITS_CRIT) : value;
+    // value += (int32(GetWeaponSkillValue(attType)) - int32(GetMaxSkillValueForLevel())) * 0.04f;
 
     value = std::max(0.0f, value);
+
     // @tswow-begin
     FIRE(
         Player,OnUpdateCrit
@@ -942,7 +939,8 @@ void Player::UpdateCritPercentage(WeaponAttackType attType)
         , uint32(attType)
     );
     // @tswow-end
-    SetStatFloatValue(index, value);
+
+    SetStatFloatValue(index, std::max(0.0f, std::min(value, 100.0f)));
 }
 
 void Player::UpdateAllCritPercentages()
@@ -1063,8 +1061,6 @@ void Player::UpdateDodgePercentage()
     value += GetDodgeFromAgility(GetStat(STAT_AGILITY));
     // Dodge from SPELL_AURA_MOD_DODGE_PERCENT aura
     value += GetTotalAuraModifier(SPELL_AURA_MOD_DODGE_PERCENT);
-    // Dodge from rating
-    value += GetRatingBonusValue(CR_DODGE);
     // Set UI display value: modify value from defense skill against same level target
     value += (int32(GetDefenseSkillValue()) - int32(GetMaxSkillValueForLevel())) * 0.04f;
 
