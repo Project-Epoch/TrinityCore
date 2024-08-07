@@ -5424,24 +5424,25 @@ float dodge_base[MAX_CLASSES] =
 // Crit/agility to dodge/agility coefficient multipliers; 3.2.0 increased required agility by 15%
 float crit_to_dodge[MAX_CLASSES] =
 {
-     1.1f, // [1]  Warrior
-     1.0f, // [2]  Paladin
-     1.6f, // [3]  Hunter
-     2.0f, // [4]  Rogue
-     1.0f, // [5]  Priest
-     1.0f, // [6]  DK
-     1.0f, // [7]  Shaman
-     1.0f, // [8]  Mage
-     1.0f, // [9]  Warlock
-     0.0f, // [10] <Unused>
-     1.7f, // [11] Druid
+    1.1f, // [1]  Warrior
+    1.0f, // [2]  Paladin
+    1.6f, // [3]  Hunter
+    2.0f, // [4]  Rogue
+    1.0f, // [5]  Priest
+    1.0f, // [6]  DK
+    1.0f, // [7]  Shaman
+    1.0f, // [8]  Mage
+    1.0f, // [9]  Warlock
+    0.0f, // [10] <Unused>
+    1.7f, // [11] Druid
 
-     // default values for custom classes
-     .87f,.87f,.87f,.87f,.87f,.87f,.87f,
-     .87f,.87f,.87f,.87f,.87f,.87f,.87f,
-     .87f,.87f,.87f,.87f,.87f,.87f,.87f,
+    // default values for custom classes
+    .87f,.87f,.87f,.87f,.87f,.87f,.87f,
+    .87f,.87f,.87f,.87f,.87f,.87f,.87f,
+    .87f,.87f,.87f,.87f,.87f,.87f,.87f,
 };
-void Player::GetDodgeFromAgility(float &diminishing, float &nondiminishing) const
+
+float Player::GetDodgeFromAgility(float amount) const
 {
 // @tswow-end
 
@@ -5454,15 +5455,9 @@ void Player::GetDodgeFromAgility(float &diminishing, float &nondiminishing) cons
     // Dodge per agility is proportional to crit per agility, which is available from DBC files
     GtChanceToMeleeCritEntry  const* dodgeRatio = sGtChanceToMeleeCritStore.LookupEntry((pclass-1)*GT_MAX_LEVEL + level-1);
     if (dodgeRatio == nullptr || pclass > MAX_CLASSES)
-        return;
-
-    /// @todo research if talents/effects that increase total agility by x% should increase non-diminishing part
-    float base_agility = GetCreateStat(STAT_AGILITY) * GetPctModifierValue(UnitMods(UNIT_MOD_STAT_START + AsUnderlyingType(STAT_AGILITY)), BASE_PCT);
-    float bonus_agility = GetStat(STAT_AGILITY) - base_agility;
-
-    // calculate diminishing (green in char screen) and non-diminishing (white) contribution
-    diminishing = 100.0f * bonus_agility * dodgeRatio->Data * crit_to_dodge[pclass-1];
-    nondiminishing = 100.0f * (dodge_base[pclass-1] + base_agility * dodgeRatio->Data * crit_to_dodge[pclass-1]);
+        return 0.0f;
+    
+    return (100.0f * amount * dodgeRatio->Data * crit_to_dodge[pclass - 1]);
 }
 
 float Player::GetSpellCritFromIntellect() const

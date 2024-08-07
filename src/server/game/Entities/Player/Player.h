@@ -1658,7 +1658,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void UpdateDefenseBonusesMod();
         void RecalculateRating(CombatRating cr) { ApplyRatingMod(cr, 0, true);}
         float GetMeleeCritFromAgility() const;
-        void GetDodgeFromAgility(float &diminishing, float &nondiminishing) const;
+        float GetDodgeFromAgility(float amount) const;
         float GetMissPercentageFromDefense() const;
         float GetSpellCritFromIntellect() const;
         float GetRatingMultiplier(CombatRating cr) const;
