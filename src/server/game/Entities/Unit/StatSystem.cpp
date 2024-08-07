@@ -876,18 +876,14 @@ void Player::UpdateBlockPercentage()
     {
         // Base value
         value = 5.0f;
-        // Modify value from defense skill
-        value += (int32(GetDefenseSkillValue()) - int32(GetMaxSkillValueForLevel())) * 0.04f;
         // Increase from SPELL_AURA_MOD_BLOCK_PERCENT aura
         value += GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT);
         // Increase from rating
         value += GetRatingBonusValue(CR_BLOCK);
-
-        if (sWorld->getBoolConfig(CONFIG_STATS_LIMITS_ENABLE))
-             value = value > sWorld->getFloatConfig(CONFIG_STATS_LIMITS_BLOCK) ? sWorld->getFloatConfig(CONFIG_STATS_LIMITS_BLOCK) : value;
-
-        value = value < 0.0f ? 0.0f : value;
+        // Set UI display value: modify value from defense skill against same level target
+        value += (int32(GetDefenseSkillValue()) - int32(GetMaxSkillValueForLevel())) * 0.04f;
     }
+
     // @tswow-begin
     FIRE(
           Player,OnUpdateBlockPercentage
@@ -895,7 +891,8 @@ void Player::UpdateBlockPercentage()
         , TSMutableNumber<float>(&value)
     );
     // @tswow-end
-    SetStatFloatValue(PLAYER_BLOCK_PERCENTAGE, value);
+
+    SetStatFloatValue(PLAYER_BLOCK_PERCENTAGE, std::max(0.0f, std::min(value, 100.0f)));
 }
 
 void Player::UpdateCritPercentage(WeaponAttackType attType)
