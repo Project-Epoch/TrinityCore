@@ -1097,7 +1097,7 @@ void Player::UpdateSpellCritChance(uint32 school)
     );
     // @tswow-end
     // Store crit value
-    SetFloatValue(PLAYER_SPELL_CRIT_PERCENTAGE1 + school, crit);
+    SetFloatValue(PLAYER_SPELL_CRIT_PERCENTAGE1 + school, std::max(0.0f, std::min(crit, 100.0f)));
 }
 
 void Player::UpdateArmorPenetration(int32 amount)
