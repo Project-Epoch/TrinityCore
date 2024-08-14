@@ -62,7 +62,7 @@ TC_API_EXPORT EnumText EnumUtils<CreatureFlagsExtra>::ToString(CreatureFlagsExtr
         case CREATURE_FLAG_EXTRA_DUNGEON_BOSS: return { "CREATURE_FLAG_EXTRA_DUNGEON_BOSS", "CREATURE_FLAG_EXTRA_DUNGEON_BOSS", "creature is a dungeon boss (SET DYNAMICALLY, DO NOT ADD IN DB)" };
         case CREATURE_FLAG_EXTRA_IGNORE_PATHFINDING: return { "CREATURE_FLAG_EXTRA_IGNORE_PATHFINDING", "CREATURE_FLAG_EXTRA_IGNORE_PATHFINDING", "creature ignore pathfinding" };
         case CREATURE_FLAG_EXTRA_IMMUNITY_KNOCKBACK: return { "CREATURE_FLAG_EXTRA_IMMUNITY_KNOCKBACK", "CREATURE_FLAG_EXTRA_IMMUNITY_KNOCKBACK", "creature is immune to knockback effects" };
-        case CREATURE_FLAG_EXTRA_UNUSED_31: return { "CREATURE_FLAG_EXTRA_UNUSED_31", "CREATURE_FLAG_EXTRA_UNUSED_31", "" };
+        case CREATURE_FLAG_EXTRA_TICK_AI: return { "CREATURE_FLAG_EXTRA_TICK_AI", "CREATURE_FLAG_EXTRA_TICK_AI", "" };
         default: throw std::out_of_range("value");
     }
 }
@@ -106,7 +106,7 @@ TC_API_EXPORT CreatureFlagsExtra EnumUtils<CreatureFlagsExtra>::FromIndex(size_t
         case 28: return CREATURE_FLAG_EXTRA_DUNGEON_BOSS;
         case 29: return CREATURE_FLAG_EXTRA_IGNORE_PATHFINDING;
         case 30: return CREATURE_FLAG_EXTRA_IMMUNITY_KNOCKBACK;
-        case 31: return CREATURE_FLAG_EXTRA_UNUSED_31;
+        case 31: return CREATURE_FLAG_EXTRA_TICK_AI;
         default: throw std::out_of_range("index");
     }
 }
@@ -147,7 +147,7 @@ TC_API_EXPORT size_t EnumUtils<CreatureFlagsExtra>::ToIndex(CreatureFlagsExtra v
         case CREATURE_FLAG_EXTRA_DUNGEON_BOSS: return 28;
         case CREATURE_FLAG_EXTRA_IGNORE_PATHFINDING: return 29;
         case CREATURE_FLAG_EXTRA_IMMUNITY_KNOCKBACK: return 30;
-        case CREATURE_FLAG_EXTRA_UNUSED_31: return 31;
+        case CREATURE_FLAG_EXTRA_TICK_AI: return 31;
         default: throw std::out_of_range("value");
     }
 }

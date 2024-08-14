@@ -9801,11 +9801,15 @@ void Unit::AIUpdateTick(uint32 diff)
     // @tswow-begin
     if(Creature* c = ToCreature())
     {
-        m_aiLocked = true;
-        FIRE_ID(c->GetCreatureTemplate()->events.id,Creature,OnUpdateAI,TSCreature(c),diff);
-        m_aiLocked = false;
+        if ((c->GetCreatureTemplate()->flags_extra & 0x80000000) != 0) // CREATURE_FLAG_EXTRA_TICK_AI
+        {
+            m_aiLocked = true;
+            FIRE_ID(c->GetCreatureTemplate()->events.id,Creature,OnUpdateAI,TSCreature(c),diff);
+            m_aiLocked = false;
+        }
     }
     // @tswow-end
+
     if (UnitAI* ai = GetAI())
     {
         m_aiLocked = true;
