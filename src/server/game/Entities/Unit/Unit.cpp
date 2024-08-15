@@ -9801,10 +9801,10 @@ void Unit::AIUpdateTick(uint32 diff)
     // @tswow-begin
     if(Creature* c = ToCreature())
     {
-        if ((c->GetCreatureTemplate()->flags_extra & 0x80000000) != 0) // CREATURE_FLAG_EXTRA_TICK_AI
+        if ((c->GetCreatureTemplate()->flags_extra & 0x80000000) != 0 && c->IsInCombat() && !c->IsCharmed() && !c->isPossessedByPlayer() && !c->isPossessed()) // CREATURE_FLAG_EXTRA_TICK_AI
         {
             m_aiLocked = true;
-            FIRE_ID(c->GetCreatureTemplate()->events.id,Creature,OnUpdateAI,TSCreature(c),diff);
+            FIRE_ID(c->GetCreatureTemplate()->events.id,Creature,OnCombatTick,TSCreature(c),diff);
             m_aiLocked = false;
         }
     }
