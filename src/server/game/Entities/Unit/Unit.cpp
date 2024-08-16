@@ -11611,13 +11611,14 @@ void Unit::SetControlled(bool apply, UnitState state)
         if (HasUnitState(state))
             return;
 
-        if (state & UNIT_STATE_CONTROLLED)
-            CastStop();
+        // if (state & UNIT_STATE_CONTROLLED)
+        //     CastStop();
 
         AddUnitState(state);
         switch (state)
         {
             case UNIT_STATE_STUNNED:
+                CastStop();
                 SetStunned(true);
                 break;
             case UNIT_STATE_ROOT:
@@ -11627,6 +11628,7 @@ void Unit::SetControlled(bool apply, UnitState state)
             case UNIT_STATE_CONFUSED:
                 if (!HasUnitState(UNIT_STATE_STUNNED))
                 {
+                    CastStop();
                     ClearUnitState(UNIT_STATE_MELEE_ATTACKING);
                     SendMeleeAttackStop();
                     // SendAutoRepeatCancel ?
@@ -11634,8 +11636,9 @@ void Unit::SetControlled(bool apply, UnitState state)
                 }
                 break;
             case UNIT_STATE_FLEEING:
-                if (!HasUnitState(UNIT_STATE_STUNNED | UNIT_STATE_CONFUSED))
+                if (!HasUnitState(UNIT_STATE_STUNNED | UNIT_STATE_CONFUSED) && !HasAuraType(SPELL_AURA_PREVENTS_FLEEING))
                 {
+                    CastStop();
                     ClearUnitState(UNIT_STATE_MELEE_ATTACKING);
                     SendMeleeAttackStop();
                     // SendAutoRepeatCancel ?
@@ -11672,7 +11675,7 @@ void Unit::SetControlled(bool apply, UnitState state)
                 SetConfused(false);
                 break;
             case UNIT_STATE_FLEEING:
-                if (HasAuraType(SPELL_AURA_MOD_FEAR))
+                if (HasAuraType(SPELL_AURA_MOD_FEAR) && !HasAuraType(SPELL_AURA_PREVENTS_FLEEING))
                     return;
 
                 ClearUnitState(state);
@@ -11698,7 +11701,7 @@ void Unit::ApplyControlStatesIfNeeded()
     if (HasUnitState(UNIT_STATE_CONFUSED) || HasAuraType(SPELL_AURA_MOD_CONFUSE))
         SetConfused(true);
 
-    if (HasUnitState(UNIT_STATE_FLEEING) || HasAuraType(SPELL_AURA_MOD_FEAR))
+    if (!HasAuraType(SPELL_AURA_PREVENTS_FLEEING) && (HasUnitState(UNIT_STATE_FLEEING) || HasAuraType(SPELL_AURA_MOD_FEAR)))
         SetFeared(true);
 }
 
@@ -11824,6 +11827,9 @@ void Unit::SetFeared(bool apply)
 {
     if (apply)
     {
+        if (HasAuraType(SPELL_AURA_PREVENTS_FLEEING))
+            return;
+
         // block control to real player in control (eg charmer)
         if (GetCharmerOrSelfPlayer())
             GetCharmerOrSelfPlayer()->SetClientControl(this, false);
