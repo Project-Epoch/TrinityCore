@@ -24,6 +24,9 @@
 #include "SpellMgr.h"
 #include "SpellInfo.h"
 #include "TotemPackets.h"
+/** @epoch-start */
+#include "TSCreature.h"
+/** @epoch-end */
 
 Totem::Totem(SummonPropertiesEntry const* properties, Unit* owner) : Minion(properties, owner, false)
 {
@@ -151,6 +154,17 @@ void Totem::UnSummon(uint32 msTime)
     // any totem unsummon look like as totem kill, req. for proper animation
     if (IsAlive())
         setDeathState(DEAD);
+
+    /** @epoch-start */
+    FIRE_ID(GetCreatureTemplate()->events.id, Creature, OnDespawn, TSCreature(this->ToCreature()), TSWorldObject(GetOwner()));
+    if (WorldObject* owner = GetOwner())
+    {
+        if (Creature* c = owner->ToCreature())
+        {
+            FIRE_ID(c->GetCreatureTemplate()->events.id, Creature, OnSummonDespawn, TSCreature(c), TSCreature(this->ToCreature()));
+        }
+    }
+    /** @epoch-start */
 
     AddObjectToRemoveList();
 }
