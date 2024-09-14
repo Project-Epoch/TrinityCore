@@ -31,6 +31,9 @@ class TC_GAME_API TotemAI : public NullCreatureAI
         explicit TotemAI(Creature* creature);
 
         void AttackStart(Unit* victim) override;
+        /** @epoch-start */
+        void DamageTaken(Unit* attacker, uint32& /*damage*/, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo = nullptr*/) override { AttackStart(attacker); }
+        /** @epoch-end */
 
         void UpdateAI(uint32 diff) override;
         static int32 Permissible(Creature const* creature);
