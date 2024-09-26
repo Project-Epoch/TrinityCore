@@ -23,6 +23,7 @@
 #include "MapInstanced.h"
 #include "GridStates.h"
 #include "MapUpdater.h"
+#include "UniqueTrackablePtr.h"
 #include <boost/dynamic_bitset.hpp>
 
 class Transport;
@@ -139,7 +140,7 @@ class TC_GAME_API MapManager
         bool IsScriptScheduled() const { return _scheduledScripts > 0; }
 
     private:
-        typedef std::unordered_map<uint32, Map*> MapMapType;
+        typedef std::unordered_map<uint32, Trinity::unique_trackable_ptr<Map>> MapMapType;
         typedef boost::dynamic_bitset<size_t> InstanceIds;
 
         MapManager();
@@ -148,7 +149,7 @@ class TC_GAME_API MapManager
         Map* FindBaseMap(uint32 mapId) const
         {
             MapMapType::const_iterator iter = i_maps.find(mapId);
-            return (iter == i_maps.end() ? nullptr : iter->second);
+            return (iter == i_maps.end() ? nullptr : iter->second.get());
         }
 
         MapManager(MapManager const&) = delete;
@@ -174,12 +175,12 @@ void MapManager::DoForAllMaps(Worker&& worker)
 
     for (auto& mapPair : i_maps)
     {
-        Map* map = mapPair.second;
+        Map* map = mapPair.second.get();
         if (MapInstanced* mapInstanced = map->ToMapInstanced())
         {
             MapInstanced::InstancedMaps& instances = mapInstanced->GetInstancedMaps();
             for (auto& instancePair : instances)
-                worker(instancePair.second);
+                worker(instancePair.second.get());
         }
         else
             worker(map);
@@ -194,12 +195,12 @@ inline void MapManager::DoForAllMapsWithMapId(uint32 mapId, Worker&& worker)
     auto itr = i_maps.find(mapId);
     if (itr != i_maps.end())
     {
-        Map* map = itr->second;
+        Map* map = itr->second.get();
         if (MapInstanced* mapInstanced = map->ToMapInstanced())
         {
             MapInstanced::InstancedMaps& instances = mapInstanced->GetInstancedMaps();
             for (auto& p : instances)
-                worker(p.second);
+                worker(p.second.get());
         }
         else
             worker(map);

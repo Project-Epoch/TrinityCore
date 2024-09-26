@@ -8,7 +8,6 @@ This fork requires TS-WoW. See setup docs here: https://github.com/Project-Epoch
 
 -------------------------------------
 
-
 ## Introduction
 
 TrinityCore is a *MMORPG* Framework based mostly in C++.

@@ -30,6 +30,9 @@ if(SERVERS)
   add_subdirectory(mysql)
   add_subdirectory(readline)
   add_subdirectory(gsoap)
+endif()
+
+if(SERVERS AND BUILD_EFSW)
   add_subdirectory(efsw)
 endif()
 
@@ -40,9 +43,10 @@ endif()
 
 if(BUILD_TESTING)
   include(FetchContent)
-  FetchContent_Declare(Catch2
+  FetchContent_Declare(
+    Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG        v2.13.9
-    GIT_SHALLOW    1)
+    GIT_TAG v2.13.9
+  )
   FetchContent_MakeAvailable(Catch2)
 endif()
