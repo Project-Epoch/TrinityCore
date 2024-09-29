@@ -1087,7 +1087,7 @@ void Spell::EffectTeleportUnits()
         targetDest.SetOrientation(m_targets.GetUnitTarget()->GetOrientation());
 
     if (targetDest.GetMapId() == unitTarget->GetMapId())
-        unitTarget->NearTeleportTo(targetDest, unitTarget == m_caster);
+        unitTarget->NearTeleportTo(targetDest, unitTarget == m_caster, true);
     else if (unitTarget->GetTypeId() == TYPEID_PLAYER)
         unitTarget->ToPlayer()->TeleportTo(targetDest, unitTarget == m_caster ? TELE_TO_SPELL : 0);
     else
