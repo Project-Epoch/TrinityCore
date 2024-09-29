@@ -2149,9 +2149,11 @@ void SpellInfo::_LoadSpellSpecific()
             }
             case SPELLFAMILY_WARLOCK:
             {
+                /** @epoch-start */
                 // only warlock curses have this
-                if (Dispel == DISPEL_CURSE)
-                    return SPELL_SPECIFIC_CURSE;
+                //if (Dispel == DISPEL_CURSE)
+                //    return SPELL_SPECIFIC_CURSE;
+                /** @epoch-end */
 
                 // Warlock (Demon Armor | Demon Skin | Fel Armor)
                 if (SpellFamilyFlags[1] & 0x20000020 || SpellFamilyFlags[2] & 0x00000010)
