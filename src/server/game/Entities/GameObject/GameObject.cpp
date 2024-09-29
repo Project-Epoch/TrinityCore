@@ -2075,6 +2075,17 @@ void GameObject::Use(Unit* user)
                 if (owner)
                     owner->FinishSpell(CURRENT_CHANNELED_SPELL);
 
+                /** @epoch-start */
+                if (info->summoningRitual.animSpell)
+                {
+                    for (auto it = m_unique_users.begin(); it != m_unique_users.end(); ++it)
+                    {
+                        if (Player* target = ObjectAccessor::GetPlayer(*this, *it))
+                            target->FinishSpell(CURRENT_CHANNELED_SPELL);
+                    }
+                }
+                /** @epoch-end */
+
                 // can be deleted now, if
                 if (!info->summoningRitual.ritualPersistent)
                     SetLootState(GO_JUST_DEACTIVATED);
