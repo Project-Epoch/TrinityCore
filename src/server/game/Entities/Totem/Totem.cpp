@@ -37,20 +37,14 @@ Totem::Totem(SummonPropertiesEntry const* properties, Unit* owner) : Minion(prop
 
 void Totem::Update(uint32 time)
 {
-    if (!GetOwner()->IsAlive() || !IsAlive())
+    Unit* owner = GetOwner();
+    if (!owner || !owner->IsAlive() || !IsAlive() || m_duration <= time)
     {
         UnSummon();                                         // remove self
         return;
     }
 
-    if (m_duration <= time)
-    {
-        UnSummon();                                         // remove self
-        return;
-    }
-    else
-        m_duration -= time;
-
+    m_duration -= time;
     Creature::Update(time);
 }
 

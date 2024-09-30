@@ -508,6 +508,9 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
         bool IsValidAttackTarget(WorldObject const* target, SpellInfo const* bySpell = nullptr) const;
         bool IsValidAssistTarget(WorldObject const* target, SpellInfo const* bySpell = nullptr) const;
 
+        /*!
+         * \param victim : primary/intented target of the spell, not the redirected target
+         */
         Unit* GetMagicHitRedirectTarget(Unit* victim, SpellInfo const* spellInfo);
 
         template <typename Container>

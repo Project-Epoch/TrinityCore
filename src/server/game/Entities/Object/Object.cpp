@@ -42,6 +42,7 @@
 #include "StringConvert.h"
 #include "TemporarySummon.h"
 #include "Totem.h"
+#include "TotemAI.h"
 #include "Transport.h"
 #include "Unit.h"
 #include "UpdateFieldFlags.h"
@@ -3193,16 +3194,26 @@ Unit* WorldObject::GetMagicHitRedirectTarget(Unit* victim, SpellInfo const* spel
         {
             if (spellInfo->CheckExplicitTarget(this, magnet) == SPELL_CAST_OK && IsValidAttackTarget(magnet, spellInfo))
             {
-                /// @todo handle this charge drop by proc in cast phase on explicit target
-                if (spellInfo->Speed > 0.0f)
+                if(magnet->IsTotem())
                 {
-                    // Set up missile speed based delay
-                    uint32 delay = uint32(std::floor(std::max<float>(victim->GetDistance(this), 5.0f) / spellInfo->Speed * 1000.0f));
-                    // Schedule charge drop
-                    aurEff->GetBase()->DropChargeDelayed(delay, AURA_REMOVE_BY_EXPIRE);
+                    // We should choose minimum between flight time and queue time as in reflect, however we dont know flight time at this point, use arbitrary small number
+                    uint32 delay = 100;
+
+                    /// @todo handle this charge drop by proc in cast phase on explicit target
+                    if (spellInfo->Speed > 0.0f)
+                    {
+                        // Set up missile speed based delay
+                        delay = uint32(std::floor(std::max<float>(victim->GetDistance(this), 5.0f) / spellInfo->Speed * 1000.0f));
+                        // Schedule charge drop
+                       aurEff->GetBase()->DropChargeDelayed(delay, AURA_REMOVE_BY_EXPIRE);
+                    }
+                    else
+                    {
+                       aurEff->GetBase()->DropCharge(AURA_REMOVE_BY_EXPIRE);
+                    }
+
+                    magnet->m_Events.AddEvent(new KillMagnetEvent(*magnet), magnet->m_Events.CalculateTime(Milliseconds(delay)));
                 }
-                else
-                    aurEff->GetBase()->DropCharge(AURA_REMOVE_BY_EXPIRE);
 
                 return magnet;
             }

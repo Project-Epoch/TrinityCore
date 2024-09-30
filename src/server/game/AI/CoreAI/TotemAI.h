@@ -41,4 +41,22 @@ class TC_GAME_API TotemAI : public NullCreatureAI
     private:
         ObjectGuid _victimGUID;
 };
+
+/*!
+ * \class KillMagnetEvent
+ * \brief Use in conjonction with EventProcessor to self kill Totem (ex: Grounding Totem getting hit by Polymorph/Fear spells)
+ */
+class KillMagnetEvent : public BasicEvent
+{
+    public:
+        KillMagnetEvent(Unit& self) : _self(self) {}
+        bool Execute(uint64 /*e_time*/, uint32 /*p_time*/) override
+        {
+            _self.setDeathState(DEAD);
+            return true;
+        }
+
+    protected:
+        Unit& _self;
+};
 #endif
