@@ -89,6 +89,21 @@ std::string ByteBuffer::ReadCString(bool requireValidUtf8 /*= true*/)
     return value;
 }
 
+uint32 ByteBuffer::ReadPackedTime()
+{
+    auto packedDate = read<uint32>();
+    tm lt = tm();
+
+    lt.tm_min = packedDate & 0x3F;
+    lt.tm_hour = (packedDate >> 6) & 0x1F;
+    //lt.tm_wday = (packedDate >> 11) & 7;
+    lt.tm_mday = ((packedDate >> 14) & 0x3F) + 1;
+    lt.tm_mon = (packedDate >> 20) & 0xF;
+    lt.tm_year = ((packedDate >> 24) & 0x1F) + 100;
+
+    return uint32(mktime(&lt));
+}
+
 void ByteBuffer::append(uint8 const* src, size_t cnt)
 {
     ASSERT(src, "Attempted to put a NULL-pointer in ByteBuffer (pos: " SZFMTD " size: " SZFMTD ")", _wpos, size());

@@ -852,6 +852,20 @@ enum PlayerCommandStates
     CHEAT_WATERWALK = 0x10
 };
 
+
+const uint32 SPELL_QUEUE_TIME_WINDOW = 400;
+
+struct PendingSpellCastRequest
+{
+    uint32      spell_id;
+    uint32      time_requested;
+    bool        active;
+    WorldPacket request_packet;
+    bool        cancel_in_progress = false;
+    uint32      cast_count;
+    bool        is_item = false;
+};
+
 class Player;
 
 /// Holder for Battleground data
@@ -1944,6 +1958,38 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SendLootRelease(ObjectGuid guid) const;
         void SendNotifyLootItemRemoved(uint8 lootSlot) const;
         void SendNotifyLootMoneyRemoved() const;
+
+        /*********************************************************/
+        /***               SPELL QUEUE SYSTEM                  ***/
+        /*********************************************************/
+
+        // Queues up a spell cast request that has been received via packet and processes it whenever possible.
+        PendingSpellCastRequest* GetCastRequest(SpellInfo const* spellInfo) const;
+        PendingSpellCastRequest* GetCastRequest(uint32 gcd_category) const;
+        void ClearCastRequest(SpellInfo const* info);
+        void ClearCastRequest(uint32 category);
+
+        typedef std::map<uint32 /*category*/, PendingSpellCastRequest> PendingCastList;
+        typedef std::map<uint32 /*category*/, uint32 /*time which block was set*/> SameTickQueueBlockList;
+        PendingCastList m_pendingCasts;
+        SameTickQueueBlockList m_SameTickBlockList;
+
+        void RemoveSameTickQueueBlock(uint32 category);
+        void AddSameTickQueueBlock(uint32 category);
+        bool HasSameTickQueueBlock(uint32 category, bool ignore_time) const;
+
+        void ExecuteSortedCastRequests();
+
+        bool IsSpellQueueEnabled() const;
+        void RequestSpellCast(PendingSpellCastRequest castRequest, SpellInfo const* spellInfo);
+        void SetPendingCastRequest(PendingSpellCastRequest new_request);
+        void CancelPendingCastRequest(uint32 category);
+        void CancelPendingCastRequests();
+        bool CanRequestSpellCast(SpellInfo const* spell) const;
+        void ProcessPendingSpellCastRequest(uint32 gcd_category);
+        bool CanExecutePendingSpellCastRequest(SpellInfo const* spellInfo, bool without_queue = false);
+        bool HandleProcTriggerSpell(Unit* victim, uint32 damage, uint32 absorbed, uint32 resisted, uint32 blocked, uint32 armorMitigated, AuraEffect* triggeredByAura, SpellInfo const* procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown, const uint8 effectMask = MAX_EFFECT_MASK);
+        void ExecutePendingSpellCastRequest();
 
         /*********************************************************/
         /***               BATTLEGROUND SYSTEM                 ***/

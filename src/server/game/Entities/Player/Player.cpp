@@ -1077,6 +1077,7 @@ void Player::Update(uint32 p_time)
     //used to implement delayed far teleports
     SetCanDelayTeleport(true);
     Unit::Update(p_time);
+    ExecuteSortedCastRequests();
     SetCanDelayTeleport(false);
 
     time_t now = GameTime::GetGameTime();
@@ -3890,7 +3891,7 @@ uint32 Player::ResetTalentsCost() const
 
 void Player::IncreaseResetTalentsCostAndCounters(uint32 lastResetTalentsCost)
 {
-    
+
     if (lastResetTalentsCost > 0) // We don't want to reset the accumulated talent reset cost if we decide to temporarily enable CONFIG_NO_RESET_TALENT_COST
         m_resetTalentsCost = lastResetTalentsCost;
 
@@ -5372,7 +5373,7 @@ uint32 Player::GetShieldBlockValue() const
     // float value = std::max(0.f, (m_auraBaseFlatMod[SHIELD_BLOCK_VALUE] + GetStat(STAT_STRENGTH) * 0.5f - 10) * m_auraBasePctMod[SHIELD_BLOCK_VALUE]);
     float value = std::max(0.f, (m_auraBaseFlatMod[SHIELD_BLOCK_VALUE] + GetStat(STAT_STRENGTH) / 20 - 1) * m_auraBasePctMod[SHIELD_BLOCK_VALUE]);
     /** @epoch-end */
-    
+
     return uint32(value);
 }
 
@@ -5449,7 +5450,7 @@ float Player::GetDodgeFromAgility(float amount) const
     GtChanceToMeleeCritEntry  const* dodgeRatio = sGtChanceToMeleeCritStore.LookupEntry((pclass-1)*GT_MAX_LEVEL + level-1);
     if (dodgeRatio == nullptr || pclass > MAX_CLASSES)
         return 0.0f;
-    
+
     return (100.0f * amount * dodgeRatio->Data * crit_to_dodge[pclass - 1]);
 }
 
@@ -5809,7 +5810,7 @@ bool Player::UpdateFishingSkill()
         // @epoch-start
         //m_fishingSteps = 0; // moved down to UpdateSkillPro so the steps only reset if the skillup was a success
         uint32 gathering_skill_gain = sWorld->getIntConfig(CONFIG_SKILL_GAIN_GATHERING);
-        
+
         return UpdateSkillPro(SKILL_FISHING, 75*10, gathering_skill_gain);
         // @epoch-end
     }
@@ -27418,6 +27419,263 @@ GameClient* Player::GetGameClient() const
 {
     return GetSession()->GetGameClient();
 }
+
+bool Player::CanExecutePendingSpellCastRequest(SpellInfo const* spellInfo, bool without_queue/* = false*/)
+{
+  PendingSpellCastRequest* request = GetCastRequest(spellInfo->StartRecoveryCategory);
+
+    // already queued spell
+    if (!without_queue)
+    {
+        if (request)
+        {
+            if (!request->active)
+                return false;
+            if (!request->spell_id)
+                return false;
+        }
+    }
+
+    // gcd
+    if (GetSpellHistory()->GetRemainingGlobalCooldown(spellInfo) > uint32(0))
+    {
+        if (request && !without_queue)
+            if (GetSpellHistory()->GetRemainingGlobalCooldown(spellInfo) > SPELL_QUEUE_TIME_WINDOW)
+                CancelPendingCastRequest(spellInfo->StartRecoveryCategory);
+
+        // LOG_ERROR("sql.sql", "global cooldown for {} is {}", spellInfo->Id, GetSpellHistory()->GetGlobalCooldown(spellInfo));
+        return false;
+    }
+
+    // spell cooldown
+    if (GetSpellHistory()->GetRemainingCooldown(spellInfo) > (without_queue ? 0 : SPELL_QUEUE_TIME_WINDOW))
+        return false;
+
+    // spell in progress
+    for (CurrentSpellTypes spellSlot : {CURRENT_MELEE_SPELL, CURRENT_GENERIC_SPELL})
+        if (Spell *spell = GetCurrentSpell(spellSlot))
+        {
+            bool autoshot = false;
+
+            if (request && request->spell_id)
+                if (const SpellInfo* info = sSpellMgr->GetSpellInfo(request->spell_id))
+                    if (info->IsAutoRepeatRangedSpell())
+                        autoshot = true;
+
+            if (IsNonMeleeSpellCast(false, true, true, autoshot))
+            {
+                // LOG_ERROR("sql.sql", "CanExecutePendingSpellCastRequest false 3");
+                return false;
+            }
+        }
+    // LOG_ERROR("sql.sql", "CanExecutePendingSpellCastRequest {}) returns true", !without_queue);
+    return true;
+}
+
+bool Player::IsSpellQueueEnabled() const
+{
+    // TODO: config
+    return true;
+}
+
+void Player::RequestSpellCast(PendingSpellCastRequest castRequest, SpellInfo const* spellInfo)
+{
+    // We are overriding an already existing spell cast request so inform the client that the old cast is being replaced
+    if (auto request = GetCastRequest(spellInfo))
+        if (request->active)
+            ClearCastRequest(spellInfo);
+
+    m_pendingCasts[spellInfo->StartRecoveryCategory] = castRequest;
+}
+
+void Player::SetPendingCastRequest(PendingSpellCastRequest new_request)
+{
+    const SpellInfo* info = sSpellMgr->GetSpellInfo(new_request.spell_id);
+    if (IsSpellQueueEnabled())
+        CancelPendingCastRequest(info->StartRecoveryCategory);
+    else
+    {
+        m_pendingCasts[info->StartRecoveryCategory].active             = true;
+        m_pendingCasts[info->StartRecoveryCategory].request_packet     = new_request.request_packet;
+        m_pendingCasts[info->StartRecoveryCategory].spell_id           = new_request.spell_id;
+        m_pendingCasts[info->StartRecoveryCategory].time_requested     = new_request.time_requested;
+        m_pendingCasts[info->StartRecoveryCategory].cast_count         = new_request.cast_count;
+        m_pendingCasts[info->StartRecoveryCategory].cancel_in_progress = false;
+    }
+    return;
+}
+
+void Player::CancelPendingCastRequest(uint32 category)
+{
+    PendingSpellCastRequest *request = GetCastRequest(category);
+    if (!request)
+    {
+        // LOG_ERROR("sql.sql", "CancelPendingCastRequest category {}", category);
+        return;
+    }
+    else
+    {
+        WorldPacket packet = m_pendingCasts[category].request_packet;
+        if (WorldSession* session = GetSession())
+        {
+            m_pendingCasts[category].cancel_in_progress = true;
+            if (request->is_item)
+                session->HandleUseItemOpcode(packet);
+            else
+                session->HandleCastSpellOpcode(packet);
+        }
+        ClearCastRequest(category);
+    }
+}
+
+void Player::CancelPendingCastRequests()
+{
+    if (m_pendingCasts.size())
+    {
+        for (auto i = m_pendingCasts.begin(); i != m_pendingCasts.end(); ++i)
+        {
+
+            // if (uint32 category = i->first)
+            uint32 category = i->first; // keys cannot be null, item category is 0
+            CancelPendingCastRequest(category);
+        }
+    }
+}
+
+PendingSpellCastRequest* Player::GetCastRequest(SpellInfo const* spellInfo) const
+{
+    if (spellInfo)
+        return GetCastRequest(spellInfo->StartRecoveryCategory);
+    return nullptr;
+};
+
+PendingSpellCastRequest* Player::GetCastRequest(uint32 gcd_category) const
+{
+    auto itr = m_pendingCasts.find(gcd_category);
+    if (itr != m_pendingCasts.end())
+    {
+      const PendingSpellCastRequest* request = (&itr->second);
+      return (PendingSpellCastRequest *const)request;
+    }
+    return nullptr;
+};
+
+void Player::ClearCastRequest(SpellInfo const* info)
+{
+    if (info)
+        ClearCastRequest(info->StartRecoveryCategory);
+}
+
+void Player::ClearCastRequest(uint32 category)
+{
+        auto itr = m_pendingCasts.find(category);
+        if (itr != m_pendingCasts.end())
+            m_pendingCasts.erase(itr->first);
+}
+
+bool Player::CanRequestSpellCast(SpellInfo const* spellInfo) const
+{
+    if (!IsSpellQueueEnabled())
+        return false;
+
+    if (PendingSpellCastRequest* castRequest = GetCastRequest(spellInfo))
+        if (castRequest->active)
+            return false;
+
+    if (GetSpellHistory()->GetRemainingGlobalCooldown(spellInfo) > SPELL_QUEUE_TIME_WINDOW)
+        return false;
+
+    if (GetSpellHistory()->GetRemainingCooldown(spellInfo) > SPELL_QUEUE_TIME_WINDOW)
+        return false;
+
+    for (CurrentSpellTypes spellSlot : { CURRENT_MELEE_SPELL, CURRENT_GENERIC_SPELL })
+        if (auto spell = GetCurrentSpell(spellSlot))
+            if (spell->GetCastTimeRemaining(true) > SPELL_QUEUE_TIME_WINDOW)
+                return false;
+
+    return true;
+}
+
+void Player::ProcessPendingSpellCastRequest(uint32 category)
+{
+    PendingSpellCastRequest* request = GetCastRequest(category);
+    if (!request || !request->active)
+        return;
+    if (!CanExecutePendingSpellCastRequest(sSpellMgr->GetSpellInfo(request->spell_id)))
+        return;
+
+    WorldPacket packet = request->request_packet;
+    if (packet.empty())
+    {
+        CancelPendingCastRequest(category);
+        return;
+    }
+
+    if (WorldSession* session = GetSession())
+    {
+        // AddSameTickQueueBlock(category);
+        if (request->is_item)
+            session->HandleUseItemOpcode(packet);
+        else
+            session->HandleCastSpellOpcode(packet);
+
+        ClearCastRequest(category);
+    }
+}
+
+void Player::RemoveSameTickQueueBlock(uint32 category)
+{
+    if (m_SameTickBlockList.size())
+    {
+        if (m_SameTickBlockList.find(category) != m_SameTickBlockList.end())
+        {
+            m_SameTickBlockList.erase(category);
+            // LOG_ERROR("sql.sql", "removing same tick block from category {} at {}", category, getMSTime());
+        }
+    }
+}
+
+void Player::AddSameTickQueueBlock(uint32 category)
+{
+    // LOG_ERROR("sql.sql", "adding same tick block to category {} at {}", category, getMSTime());
+    m_SameTickBlockList[category] = getMSTime();
+}
+
+bool Player::HasSameTickQueueBlock(uint32 category, bool ignore_time) const
+{
+    if (m_SameTickBlockList.size())
+    {
+        if (m_SameTickBlockList.find(category) != m_SameTickBlockList.end())
+        {
+            auto block = m_SameTickBlockList.find(category);
+            uint32 time = block->second;
+            if (ignore_time || (GetMSTimeDiffToNow(time) < 140))
+                return true;
+        }
+    }
+    return false;
+}
+
+void Player::ExecuteSortedCastRequests()
+{
+    std::map<uint32, uint32> organized_list;
+
+    if (m_pendingCasts.size())
+        for (auto i = m_pendingCasts.begin(); i != m_pendingCasts.end(); ++i)
+                organized_list.insert({ i->second.time_requested, i->first });
+
+    if (organized_list.size())
+        for (auto i = organized_list.begin(); i != organized_list.end(); ++i)
+        {
+            // log
+            PendingSpellCastRequest* request = GetCastRequest(i->second);
+            // if (request)
+                // LOG_ERROR("sql.sql", "time: {}, spell: {}", i->first, request->spell_id);
+
+            ProcessPendingSpellCastRequest(i->second);
+        }
+}
+
 
 // @tswow-begin
 void Player::ApplyAutolearnSpells(uint32 fromLevel)
