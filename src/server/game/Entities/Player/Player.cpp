@@ -27443,7 +27443,7 @@ bool Player::CanExecutePendingSpellCastRequest(SpellInfo const* spellInfo, bool 
             if (GetSpellHistory()->GetRemainingGlobalCooldown(spellInfo) > SPELL_QUEUE_TIME_WINDOW)
                 CancelPendingCastRequest(spellInfo->StartRecoveryCategory);
 
-        // LOG_ERROR("sql.sql", "global cooldown for {} is {}", spellInfo->Id, GetSpellHistory()->GetGlobalCooldown(spellInfo));
+        // TC_LOG_DEBUG("misc", "global cooldown for {} is {}", spellInfo->Id, GetSpellHistory()->GetGlobalCooldown(spellInfo));
         return false;
     }
 
@@ -27464,24 +27464,23 @@ bool Player::CanExecutePendingSpellCastRequest(SpellInfo const* spellInfo, bool 
 
             if (IsNonMeleeSpellCast(false, true, true, autoshot))
             {
-                // LOG_ERROR("sql.sql", "CanExecutePendingSpellCastRequest false 3");
+                // TC_LOG_DEBUG("misc", "CanExecutePendingSpellCastRequest false 3");
                 return false;
             }
         }
-    // LOG_ERROR("sql.sql", "CanExecutePendingSpellCastRequest {}) returns true", !without_queue);
+    TC_LOG_DEBUG("misc", "CanExecutePendingSpellCastRequest {}) returns true", !without_queue);
     return true;
 }
 
 bool Player::IsSpellQueueEnabled() const
 {
-    // TODO: config
     return true;
 }
 
 void Player::RequestSpellCast(PendingSpellCastRequest castRequest, SpellInfo const* spellInfo)
 {
     // We are overriding an already existing spell cast request so inform the client that the old cast is being replaced
-    if (auto request = GetCastRequest(spellInfo))
+    if (PendingSpellCastRequest* request = GetCastRequest(spellInfo))
         if (request->active)
             ClearCastRequest(spellInfo);
 
@@ -27507,10 +27506,10 @@ void Player::SetPendingCastRequest(PendingSpellCastRequest new_request)
 
 void Player::CancelPendingCastRequest(uint32 category)
 {
-    PendingSpellCastRequest *request = GetCastRequest(category);
+    PendingSpellCastRequest* request = GetCastRequest(category);
     if (!request)
     {
-        // LOG_ERROR("sql.sql", "CancelPendingCastRequest category {}", category);
+        TC_LOG_DEBUG("misc", "CancelPendingCastRequest category {}", category);
         return;
     }
     else
@@ -27534,7 +27533,6 @@ void Player::CancelPendingCastRequests()
     {
         for (auto i = m_pendingCasts.begin(); i != m_pendingCasts.end(); ++i)
         {
-
             // if (uint32 category = i->first)
             uint32 category = i->first; // keys cannot be null, item category is 0
             CancelPendingCastRequest(category);
@@ -27568,9 +27566,9 @@ void Player::ClearCastRequest(SpellInfo const* info)
 
 void Player::ClearCastRequest(uint32 category)
 {
-        auto itr = m_pendingCasts.find(category);
-        if (itr != m_pendingCasts.end())
-            m_pendingCasts.erase(itr->first);
+    auto itr = m_pendingCasts.find(category);
+    if (itr != m_pendingCasts.end())
+        m_pendingCasts.erase(itr->first);
 }
 
 bool Player::CanRequestSpellCast(SpellInfo const* spellInfo) const
@@ -27589,7 +27587,7 @@ bool Player::CanRequestSpellCast(SpellInfo const* spellInfo) const
         return false;
 
     for (CurrentSpellTypes spellSlot : { CURRENT_MELEE_SPELL, CURRENT_GENERIC_SPELL })
-        if (auto spell = GetCurrentSpell(spellSlot))
+        if (Spell* spell = GetCurrentSpell(spellSlot))
             if (spell->GetCastTimeRemaining(true) > SPELL_QUEUE_TIME_WINDOW)
                 return false;
 
@@ -27630,14 +27628,14 @@ void Player::RemoveSameTickQueueBlock(uint32 category)
         if (m_SameTickBlockList.find(category) != m_SameTickBlockList.end())
         {
             m_SameTickBlockList.erase(category);
-            // LOG_ERROR("sql.sql", "removing same tick block from category {} at {}", category, getMSTime());
+            TC_LOG_DEBUG("misc", "removing same tick block from category {} at {}", category, getMSTime());
         }
     }
 }
 
 void Player::AddSameTickQueueBlock(uint32 category)
 {
-    // LOG_ERROR("sql.sql", "adding same tick block to category {} at {}", category, getMSTime());
+    TC_LOG_DEBUG("misc", "adding same tick block to category {} at {}", category, getMSTime());
     m_SameTickBlockList[category] = getMSTime();
 }
 
@@ -27661,21 +27659,26 @@ void Player::ExecuteSortedCastRequests()
     std::multimap<uint32, uint32> organized_list;
 
     if (m_pendingCasts.size())
+    {
         for (auto i = m_pendingCasts.begin(); i != m_pendingCasts.end(); ++i)
+        {
                 organized_list.insert({ i->second.time_requested, i->first });
+        }
+    }
 
     if (organized_list.size())
+    {
         for (auto i = organized_list.begin(); i != organized_list.end(); ++i)
         {
-            // log
-            PendingSpellCastRequest* request = GetCastRequest(i->second);
+            // PendingSpellCastRequest* request = GetCastRequest(i->second);
             // if (request)
-                // LOG_ERROR("sql.sql", "time: {}, spell: {}", i->first, request->spell_id);
-
+            // {
+                // TC_LOG_DEBUG("misc", "time: {}, spell: {}", i->first, request->spell_id);
+            // }
             ProcessPendingSpellCastRequest(i->second);
         }
+    }
 }
-
 
 // @tswow-begin
 void Player::ApplyAutolearnSpells(uint32 fromLevel)
