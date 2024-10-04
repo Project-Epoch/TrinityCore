@@ -27658,7 +27658,7 @@ bool Player::HasSameTickQueueBlock(uint32 category, bool ignore_time) const
 
 void Player::ExecuteSortedCastRequests()
 {
-    std::map<uint32, uint32> organized_list;
+    std::multimap<uint32, uint32> organized_list;
 
     if (m_pendingCasts.size())
         for (auto i = m_pendingCasts.begin(); i != m_pendingCasts.end(); ++i)
