@@ -1243,6 +1243,12 @@ enum TrinityStrings
     LANG_SHUTDOWN_CANCELLED                       = 11018,
     LANG_YOU_CHANGE_POWER                         = 11019, // master branch ONLY
     LANG_YOUR_POWER_CHANGED                       = 11020, // master branch ONLY
-    LANG_INVALID_POWER_NAME                       = 11021  // master branch ONLY
+    LANG_INVALID_POWER_NAME                       = 11021,  // master branch ONLY
+
+    // @epoch-begin
+    LANG_CANNOT_LIST_INSTANCEID                   = 12004,
+    LANG_LIST_INSTANCEID_PLAYER                   = 12005,
+    LANG_LIST_INSTANCEID_PLAYER_OFFLINE           = 12006,
+    // @epoch-end
 };
 #endif

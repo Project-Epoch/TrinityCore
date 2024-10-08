@@ -1,0 +1,1 @@
+insert into `rbac_permissions` (`id`, `name`) values('1010','Command: list instanceid');

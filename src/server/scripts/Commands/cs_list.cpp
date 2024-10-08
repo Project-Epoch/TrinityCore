@@ -38,6 +38,7 @@ EndScriptData */
 #include "Random.h"
 #include "RBAC.h"
 #include "SpellAuraEffects.h"
+#include "AccountMgr.h"
 #include "WorldSession.h"
 
 using namespace Trinity::ChatCommands;
@@ -65,6 +66,7 @@ public:
             { "mail",           HandleListMailCommand,          rbac::RBAC_PERM_COMMAND_LIST_MAIL,          Console::Yes },
             { "spawnpoints",    HandleListSpawnPointsCommand,   rbac::RBAC_PERM_COMMAND_LIST_SPAWNPOINTS,   Console::No  },
             { "respawns",       HandleListRespawnsCommand,      rbac::RBAC_PERM_COMMAND_LIST_RESPAWNS,      Console::No  },
+            { "instanceid",     HandleListInstanceIdCommand,    rbac::RBAC_PERM_COMMAND_LIST_INSTANCE_ID,   Console::No  },
         };
         static ChatCommandTable commandTable =
         {
@@ -715,6 +717,56 @@ public:
                 handler->PSendSysMessage("%u | %u | [%02u,%02u] | %s (%u) | %s%s", ri->spawnId, ri->entry, gridX, gridY, GetZoneName(respawnZoneId, locale), respawnZoneId, respawnTime.c_str(), map->IsSpawnGroupActive(data->spawnGroupData->groupId) ? "" : " (inactive)");
             }
         }
+        return true;
+    }
+
+    static std::string GetLastKnownIp(uint32 accountId)
+    {
+        LoginDatabasePreparedStatement* stmt = LoginDatabase.GetPreparedStatement(LOGIN_SEL_LAST_IP);
+        stmt->setUInt32(0, accountId);
+        PreparedQueryResult ipResult = LoginDatabase.Query(stmt);
+
+        return ipResult ? (*ipResult)[0].GetString() : "Unknown IP";
+    }
+
+    static bool HandleListInstanceIdCommand(ChatHandler* handler, uint32 instanceId)
+    {
+        InstanceSave* save = sInstanceSaveMgr->GetInstanceSave(instanceId);
+        if (!save || !save->GetMapEntry())
+        {
+            handler->SendSysMessage(LANG_CANNOT_LIST_INSTANCEID);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        QueryResult result = CharacterDatabase.PQuery("SELECT guid, permanent FROM character_instance WHERE instance = {}", instanceId);
+        if (!result)
+        {
+            handler->SendSysMessage(LANG_CANNOT_LIST_INSTANCEID);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        handler->PSendSysMessage("Listing all players with saved InstanceID = %u (Map: |cff5e28b5%s|r):", instanceId, save->GetMapEntry()->MapName[handler->GetSessionDbcLocale()]);
+        handler->SendSysMessage("> Permanent - Player Name - Location (MapID, X, Y, Z) - Status - IP Address");
+
+        do
+        {
+            Field* field = result->Fetch();
+            const ObjectGuid guid = ObjectGuid(field[0].GetUInt64());
+            const uint32 permanent = field[1].GetUInt32();
+
+            if (const CharacterCacheEntry* cache = sCharacterCache->GetCharacterCacheByGuid(guid))
+            {
+                if (const Player* _player = ObjectAccessor::FindPlayer(guid))
+                    handler->PSendSysMessage(LANG_LIST_INSTANCEID_PLAYER, permanent, _player->GetName(),
+                        _player->GetMapId(), _player->GetPositionX(), _player->GetPositionY(), _player->GetPositionZ(),
+                        _player->GetSession()->GetRemoteAddress());
+                else
+                    handler->PSendSysMessage(LANG_LIST_INSTANCEID_PLAYER_OFFLINE, permanent, cache->Name, GetLastKnownIp(cache->AccountId));
+            }
+        } while (result->NextRow());
+        
         return true;
     }
 };
