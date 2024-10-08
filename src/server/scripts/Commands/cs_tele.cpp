@@ -33,6 +33,8 @@ EndScriptData */
 #include "Player.h"
 #include "RBAC.h"
 #include "WorldSession.h"
+#include "Map.h"
+#include "MapReference.h"
 
 using namespace Trinity::ChatCommands;
 
@@ -56,11 +58,12 @@ public:
         };
         static ChatCommandTable teleCommandTable =
         {
-            { "add",    HandleTeleAddCommand,   rbac::RBAC_PERM_COMMAND_TELE_ADD,   Console::No },
-            { "del",    HandleTeleDelCommand,   rbac::RBAC_PERM_COMMAND_TELE_DEL,   Console::Yes },
-            { "name",   teleNameCommandTable },
-            { "group",  HandleTeleGroupCommand, rbac::RBAC_PERM_COMMAND_TELE_GROUP, Console::No },
-            { "",       HandleTeleCommand,      rbac::RBAC_PERM_COMMAND_TELE,       Console::No },
+            { "add",        HandleTeleAddCommand,   rbac::RBAC_PERM_COMMAND_TELE_ADD,   Console::No },
+            { "del",        HandleTeleDelCommand,   rbac::RBAC_PERM_COMMAND_TELE_DEL,   Console::Yes },
+            { "name",       teleNameCommandTable },
+            { "group",      HandleTeleGroupCommand, rbac::RBAC_PERM_COMMAND_TELE_GROUP, Console::No },
+            { "",           HandleTeleCommand,      rbac::RBAC_PERM_COMMAND_TELE,       Console::No },
+            { "instanceid", HandleTeleInstanceIdCommand,    rbac::RBAC_PERM_COMMAND_TELE_INSTANCE_ID,   Console::No },
         };
         static ChatCommandTable commandTable =
         {
@@ -378,6 +381,71 @@ public:
 
         Field* fields = result->Fetch();
         return DoNameTeleport(handler, player, fields[4].GetUInt16(), { fields[0].GetFloat(), fields[1].GetFloat(), fields[2].GetFloat(), fields[3].GetFloat() }, fields[5].GetString());
+    }
+
+    static bool HandleTeleInstanceIdCommand(ChatHandler* handler, uint32 instanceId)
+    {
+        InstanceSave* save = sInstanceSaveMgr->GetInstanceSave(instanceId);
+        if (!save)
+        {
+            handler->SendSysMessage(LANG_COMMAND_TELE_INSTANCEID_NOTFOUND);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        Player* player = handler->GetSession()->GetPlayer();
+        if (player->IsInCombat() && !handler->GetSession()->HasPermission(rbac::RBAC_PERM_COMMAND_TELE_NAME))
+        {
+            handler->SendSysMessage(LANG_YOU_IN_COMBAT);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        Map* map = sMapMgr->FindMap(save->GetMapId(), instanceId);
+        if (!map)
+        {
+            handler->SendSysMessage(LANG_COMMAND_TELE_INSTANCEID_NOTFOUND);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        if (!map || (map->IsBattlegroundOrArena() && (player->GetMapId() != map->GetId() || !player->IsGameMaster())))
+        {
+            handler->SendSysMessage(LANG_CANNOT_TELE_TO_BG);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        if (!map->Instanceable())
+        {
+            handler->SendSysMessage(LANG_CANNOT_TELE_TO_NON_INSTANCE);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        Player* teleportTo = nullptr;
+        for (const MapReference& _ref : map->GetPlayers())
+            if (Player* _player = _ref.GetSource())
+            {
+                teleportTo = _player;
+                break;
+            }
+
+        if (!teleportTo)
+        {
+            handler->SendSysMessage(LANG_COMMAND_TELE_INSTANCEID_NOTFOUND);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        // stop flight if need
+        if (player->IsInFlight())
+            player->FinishTaxiFlight();
+        else
+            player->SaveRecallPosition(); // save only in non-flight case
+
+        player->TeleportToInstanceId(teleportTo->GetMapId(), teleportTo->GetPositionX(), teleportTo->GetPositionY(), teleportTo->GetPositionZ(), teleportTo->GetOrientation(), instanceId);
+        return true;
     }
 };
 

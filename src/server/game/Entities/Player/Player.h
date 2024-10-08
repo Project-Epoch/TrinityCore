@@ -929,6 +929,8 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         bool TeleportTo(uint32 mapid, float x, float y, float z, float orientation, uint32 options = 0);
         bool TeleportTo(WorldLocation const& loc, uint32 options = 0);
+        bool TeleportToInstanceId(uint32 mapid, float x, float y, float z, float orientation, uint32 instanceId, uint32 options = 0);
+        bool TeleportToInstanceId(WorldLocation const& loc, uint32 instanceId, uint32 options = 0);
         bool TeleportToBGEntryPoint();
 
         bool HasSummonPending() const;

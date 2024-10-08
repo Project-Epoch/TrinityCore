@@ -1,7 +1,5 @@
 insert into `command` (`name`, `help`) values('list instanceid','Syntax: .list instanceid #instanceId\r\n\r\nOutput list of Players with saved #instanceId. Output Permanent (SaveID), Player Name, Location, Status and IP Address.');
 
-insert into `rbac_linked_permissions` (`id`, `linkedId`) values('196','1010');
-
 insert into `trinity_string` (`entry`, `content_default`, `content_loc1`, `content_loc2`, `content_loc3`, `content_loc4`, `content_loc5`, `content_loc6`, `content_loc7`, `content_loc8`) values('12004','Cannot list InstanceID players, does not exist!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
 insert into `trinity_string` (`entry`, `content_default`, `content_loc1`, `content_loc2`, `content_loc3`, `content_loc4`, `content_loc5`, `content_loc6`, `content_loc7`, `content_loc8`) values('12005','> %u - %s - MapID: %u X: %.2f Y: %.2f Z: %.2f - |cff1ac731ONLINE|r - %s',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
 insert into `trinity_string` (`entry`, `content_default`, `content_loc1`, `content_loc2`, `content_loc3`, `content_loc4`, `content_loc5`, `content_loc6`, `content_loc7`, `content_loc8`) values('12006','> %u - %s - Unknown Location - |cffd61111OFFLINE|r - %s',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);

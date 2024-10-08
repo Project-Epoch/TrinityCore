@@ -753,6 +753,7 @@ enum RBACPermissions
     //
     // custom permissions 1000+
     // @epoch-begin
+    RBAC_PERM_COMMAND_TELE_INSTANCE_ID                       = 1009,
     RBAC_PERM_COMMAND_LIST_INSTANCE_ID                       = 1010,
     // @epoch-end
 

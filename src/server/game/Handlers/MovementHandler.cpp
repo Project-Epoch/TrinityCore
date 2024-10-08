@@ -81,7 +81,14 @@ void WorldSession::HandleMoveWorldportAck()
         player->m_InstanceValid = true;
 
     Map* oldMap = player->GetMap();
-    Map* newMap = sMapMgr->CreateMap(loc.GetMapId(), player);
+
+    // (Custom) Force InstanceID in case GameMaster is trying to .tele instanceid
+    Map* newMap = nullptr;
+    if (player->IsGameMaster() && player->GetInstanceId())
+        newMap = sMapMgr->FindMap(loc.GetMapId(), player->GetInstanceId());
+
+    if (!newMap)
+        newMap = sMapMgr->CreateMap(loc.GetMapId(), player);
 
     if (player->IsInWorld())
     {

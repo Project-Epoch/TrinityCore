@@ -4182,16 +4182,17 @@ Map::EnterState InstanceMap::CannotEnter(Player* player)
 {
     ZoneScopedN("Map::EnterState InstanceMap::CannotEnter");
 
+    // (Custom) Check moved up because we don't care if GameMaster is AlreadyInMap. Let GM use .tele instanceid
+    // allow GM's to enter
+    if (player->IsGameMaster())
+        return Map::CannotEnter(player);
+
     if (player->GetMapRef().getTarget() == this)
     {
         TC_LOG_ERROR("maps", "InstanceMap::CannotEnter - player {} {} already in map {}, {}, {}!", player->GetName(), player->GetGUID().ToString(), GetId(), GetInstanceId(), GetSpawnMode());
         ABORT();
         return CANNOT_ENTER_ALREADY_IN_MAP;
     }
-
-    // allow GM's to enter
-    if (player->IsGameMaster())
-        return Map::CannotEnter(player);
 
     // cannot enter if the instance is full (player cap), GMs don't count
     uint32 maxPlayers = GetMaxPlayers();
@@ -4234,6 +4235,18 @@ bool InstanceMap::AddPlayerToMap(Player* player)
         // Check moved to void WorldSession::HandleMoveWorldportAckOpcode()
         //if (!CanEnter(player))
             //return false;
+
+        // (Custom) If the player is a GameMaster, skip the binding logic and checks. This allows GMs to .tele instanceid
+        if (player->IsGameMaster())
+        {
+            TC_LOG_DEBUG("maps", "InstanceMap::AddPlayerToMap GM '{}' bypasses instance binding checks for instance '{}' of map '{}'", player->GetName(), GetInstanceId(), GetMapName());
+            Map::AddPlayerToMap(player);
+
+            if (i_data)
+                i_data->OnPlayerEnter(player);
+
+            return true;
+        }
 
         // Dungeon only code
         if (IsDungeon())

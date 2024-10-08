@@ -1,0 +1,4 @@
+insert into `command` (`name`, `help`) values('tele instanceid','Syntax: .tele instanceid #instanceId\r\n\r\nTeleport player to a given instanceId.');
+
+insert into `trinity_string` (`entry`, `content_default`, `content_loc1`, `content_loc2`, `content_loc3`, `content_loc4`, `content_loc5`, `content_loc6`, `content_loc7`, `content_loc8`) values('12002','Cannot teleport to InstanceID, does not exist!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+insert into `trinity_string` (`entry`, `content_default`, `content_loc1`, `content_loc2`, `content_loc3`, `content_loc4`, `content_loc5`, `content_loc6`, `content_loc7`, `content_loc8`) values('12003','You cannot teleport to a non-instance map, use .tele instead.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
