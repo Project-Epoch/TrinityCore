@@ -1835,15 +1835,19 @@ void Unit::HandleEmoteCommand(Emote emoteId)
     if (caster && caster->GetTypeId() != TYPEID_GAMEOBJECT && (!spellInfo || !spellInfo->HasAttribute(SPELL_ATTR0_CU_BINARY_SPELL)))
         victimResistance += std::max((std::max(float(victim->GetLevelForTarget(caster)),20.0f) - std::max(float(caster->GetLevelForTarget(victim)),20.0f)) * 5.0f, 0.0f);
 
-    static uint32 const BOSS_LEVEL = 83;
-    static float const BOSS_RESISTANCE_CONSTANT = 510.0f;
-    uint32 level = std::max(victim->GetLevel(), uint8(20));
-    float resistanceConstant = 0.0f;
-
-    if (level == BOSS_LEVEL)
-        resistanceConstant = BOSS_RESISTANCE_CONSTANT;
+    //static uint32 const BOSS_LEVEL = 83;
+    //static float const BOSS_RESISTANCE_CONSTANT = 510.0f;
+    uint32 level = 0;
+    if (caster && caster->GetTypeId() != TYPEID_GAMEOBJECT)
+        level = std::max(caster->ToUnit()->GetLevel(), uint8(20));
     else
-        resistanceConstant = level * 5.0f;
+        level = std::max(victim->GetLevel(), uint8(20));
+    float resistanceConstant = level * 5.0f;
+
+    //if (level == BOSS_LEVEL)
+    //    resistanceConstant = BOSS_RESISTANCE_CONSTANT;
+    //else
+    //    resistanceConstant = level * 5.0f;
 
     //return victimResistance / (victimResistance + resistanceConstant);
     
