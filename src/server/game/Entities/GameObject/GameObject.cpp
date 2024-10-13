@@ -1935,6 +1935,11 @@ void GameObject::Use(Unit* user)
                     if (!zone_skill)
                         TC_LOG_ERROR("sql.sql", "Fishable areaId {} are not properly defined in `skill_fishing_base_level`.", subzone);
 
+                    /** @epoch-start */
+                    // Actual base skill for an area is 95 skill below the DB value. DB value is the point in which catching a fish is guaranteed.
+                    zone_skill = zone_skill - 95;
+                    /** @epoch-end */
+
                     int32 skill = player->GetSkillValue(SKILL_FISHING);
 
                     /** @epoch-start */
