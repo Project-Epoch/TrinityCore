@@ -1850,7 +1850,7 @@ void Unit::HandleEmoteCommand(Emote emoteId)
     //    resistanceConstant = level * 5.0f;
 
     //return victimResistance / (victimResistance + resistanceConstant);
-    
+
     // If resistance is lower than 20% of cap, formula (tweaked from 1.12 base) is slightly different to make the first few points more impactful
     if (victimResistance < (resistanceConstant * 0.2))
         return 0.75 * (victimResistance / resistanceConstant) + (resistanceConstant * 0.2 - victimResistance) * 0.0002;
