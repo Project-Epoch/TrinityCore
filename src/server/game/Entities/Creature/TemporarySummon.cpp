@@ -170,6 +170,32 @@ void TempSummon::Update(uint32 diff)
                 m_timer = m_lifetime;
             break;
         }
+        case TEMPSUMMON_TIMED_OOC_DESPAWN_OR_CORPSE_DESPAWN:
+        {
+            if (m_deathState == CORPSE)
+            {
+                UnSummon();
+                return;
+            }
+
+            if (m_inCombatDuration <= diff)
+            {
+                UnSummon(); // despawn if combat lasts too long
+                return;
+            }
+            else if (IsInCombat())
+                m_inCombatDuration -= diff;
+
+            if (m_timer <= diff)
+            {
+                if (!IsInCombat())
+                    UnSummon();
+                return;
+            }
+            else
+                m_timer -= diff;
+            break;
+        }
         default:
             UnSummon();
             TC_LOG_ERROR("entities.unit", "Temporary summoned creature (entry: {}) have unknown type {} of ", GetEntry(), m_type);
@@ -183,6 +209,7 @@ void TempSummon::InitStats(uint32 duration)
 
     m_timer = duration;
     m_lifetime = duration;
+    m_inCombatDuration = duration > UINT32_MAX / 2 ? UINT32_MAX : duration * 2;
 
     if (m_type == TEMPSUMMON_MANUAL_DESPAWN)
         m_type = (duration == 0) ? TEMPSUMMON_DEAD_DESPAWN : TEMPSUMMON_TIMED_DESPAWN;
