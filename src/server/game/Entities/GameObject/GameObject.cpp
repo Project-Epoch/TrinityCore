@@ -2958,7 +2958,17 @@ bool GameObject::SummonGuard(Creature* civilian, Unit* enemy, bool ignoreCooldow
     if (!ignoreCooldown && GameTime::GetGameTimeMS() < m_cooldownTime)
         return false;
     // summon 1-3 guards if !ignoreCooldown
-    int numGuards = ignoreCooldown ? 1 : rand() % 3 + 1;
+    int numGuards = 1;
+    if (!ignoreCooldown)
+    {
+        int roll = rand() % 100;
+        if (roll < 70)
+            numGuards = 1; // 70% chance for 1 guard
+        else if (roll < 90)
+            numGuards = 2; // 20% chance for 2 guards
+        else
+            numGuards = 3; // 10% chance for 3 guards
+    }
     bool summonedGuard = false;
     for (int i = 0; i < numGuards; ++i)
     {
