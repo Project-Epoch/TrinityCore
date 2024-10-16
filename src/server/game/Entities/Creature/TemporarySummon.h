@@ -64,6 +64,7 @@ class TC_GAME_API TempSummon : public Creature
         TempSummonType m_type;
         uint32 m_timer;
         uint32 m_lifetime;
+        uint32 m_inCombatDuration;
         ObjectGuid m_summonerGUID;
         bool m_canFollowOwner;
         bool m_visibleBySummonerOnly;

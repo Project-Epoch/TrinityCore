@@ -2978,7 +2978,7 @@ bool GameObject::SummonGuard(Creature* civilian, Unit* enemy, bool ignoreCooldow
         Position pos = GetNearPosition(5.0f, rand() * M_PI * 2);
         pos.SetOrientation(GetRelativeAngle(&pos)); // face away from guardpost
 
-        if (TempSummon* guard = civilian->SummonCreature(GetGOInfo()->guardpost.creatureID, pos, TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 10s)) // TODO: change this to 5min
+        if (TempSummon* guard = civilian->SummonCreature(GetGOInfo()->guardpost.creatureID, pos, TEMPSUMMON_TIMED_OOC_DESPAWN_OR_CORPSE_DESPAWN, 5min))
         {
             --m_guardCharges;
             guard->AI()->AttackStart(enemy);
