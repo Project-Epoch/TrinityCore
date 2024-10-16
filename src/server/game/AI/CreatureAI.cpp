@@ -142,8 +142,7 @@ void CreatureAI::MoveInLineOfSight(Unit* who)
         {
             if (me->IsWithinDistInMap(who, me->GetAttackDistance(who), true, false) && me->IsWithinLOSInMap(who))
             {
-                if (me->GetEntry() == 66)
-                    TC_LOG_ERROR("sql.sql", "MoveInLoS!");
+                // TC_LOG_DEBUG("scripts.ai", "CreatureAI::MoveInLineOfSight SummonGuard (who: {}) ({})", who, me->GetDebugInfo());
                 sGuardMgr->SummonGuard(me, who);
             }
         }
@@ -310,8 +309,7 @@ void CreatureAI::JustStartedThreateningMe(Unit* who)
 {
     if (me->CanSummonGuards())
     {
-        if (me->GetEntry() == 66)
-            TC_LOG_ERROR("sql.sql", "EngagementStart!");
+        // TC_LOG_DEBUG("scripts.ai", "CreatureAI::JustStartedThreateningMe SummonGuard (who: {}) ({})", who, me->GetDebugInfo());
         sGuardMgr->SummonGuard(me, who, true);
     }
 
