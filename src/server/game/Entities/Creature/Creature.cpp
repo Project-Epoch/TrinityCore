@@ -3681,8 +3681,8 @@ bool Creature::CallNearestGuard(Unit* enemy) const
         if (guard->AI() && guard->IsValidAttackTarget(enemy))
         {
             guard->AI()->AttackStart(enemy);
+            return true;
         }
-        return true;
     }
     return false;
 }
