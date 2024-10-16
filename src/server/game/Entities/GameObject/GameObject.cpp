@@ -436,6 +436,8 @@ bool GameObject::Create(ObjectGuid::LowType guidlow, uint32 name_id, Map* map, u
             break;
         case GAMEOBJECT_TYPE_GUARDPOST:
            m_guardCharges = GetGOInfo()->guardpost.charges;
+           m_invisibility.AddFlag(INVISIBILITY_TRAP);
+           m_invisibility.AddValue(INVISIBILITY_TRAP, UINT32_MAX);
            break;
         default:
             SetGoAnimProgress(animprogress);
