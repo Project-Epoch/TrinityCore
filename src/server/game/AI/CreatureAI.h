@@ -123,7 +123,7 @@ class TC_GAME_API CreatureAI : public UnitAI
         void JustEnteredCombat(Unit* /*who*/) override;
 
         // Called for reaction whenever a new non-offline unit is added to the threat list
-        virtual void JustStartedThreateningMe(Unit* who) { if (!IsEngaged()) EngagementStart(who); }
+        virtual void JustStartedThreateningMe(Unit* who);
 
         // Called for reaction when initially engaged - this will always happen _after_ JustEnteredCombat
         virtual void JustEngagedWith(Unit* /*who*/) { }

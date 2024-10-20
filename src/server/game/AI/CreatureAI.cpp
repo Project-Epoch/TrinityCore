@@ -30,6 +30,7 @@
 #include "MapReference.h"
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
+#include "GuardMgr.h"
 #include "Player.h"
 #include "SpellMgr.h"
 #include "SpellHistory.h"
@@ -132,6 +133,20 @@ void CreatureAI::MoveInLineOfSight(Unit* who)
 
     if (me->HasReactState(REACT_AGGRESSIVE) && me->CanStartAttack(who, false))
         me->EngageWithTarget(who);
+
+    if (me->CanSummonGuards() && who->IsPlayer())
+    {
+        if (!me->CanFly() && me->GetDistanceZ(who) > CREATURE_Z_ATTACK_RANGE)
+            return;
+        if (who->isTargetableForAttack() && me->IsHostileTo(who) && who->isInAccessiblePlaceFor(me))
+        {
+            if (me->IsWithinDistInMap(who, me->GetAttackDistance(who), true, false) && me->IsWithinLOSInMap(who))
+            {
+                // TC_LOG_DEBUG("scripts.ai", "CreatureAI::MoveInLineOfSight SummonGuard (who: {}) ({})", who, me->GetDebugInfo());
+                sGuardMgr->SummonGuard(me, who);
+            }
+        }
+    }
 }
 
 void CreatureAI::OnOwnerCombatInteraction(Unit* target)
@@ -288,6 +303,20 @@ void CreatureAI::EngagementStart(Unit* who)
     _isEngaged = true;
 
     me->AtEngage(who);
+}
+
+void CreatureAI::JustStartedThreateningMe(Unit* who)
+{
+    if (me->CanSummonGuards())
+    {
+        // TC_LOG_DEBUG("scripts.ai", "CreatureAI::JustStartedThreateningMe SummonGuard (who: {}) ({})", who, me->GetDebugInfo());
+        sGuardMgr->SummonGuard(me, who, true);
+    }
+
+    if (!IsEngaged())
+    {
+        EngagementStart(who);
+    }
 }
 
 void CreatureAI::EngagementOver()
@@ -513,7 +542,7 @@ void CreatureAI::Backpedal()
     float MaxRange = me->GetCollisionRadius() + target->GetCollisionRadius();
     if (! me->IsInDist(target, MaxRange))
         return;
-    
+
     me->SetFacingToObject(target);
     me->GetMotionMaster()->MoveBackpedal(target, me->GetMeleeRange(target) / 1.5);
 }

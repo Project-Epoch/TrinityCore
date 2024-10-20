@@ -33,3 +33,9 @@ void ReactorAI::UpdateAI(uint32 /*diff*/)
 
     DoMeleeAttackIfReady();
 }
+
+void ReactorAI::MoveInLineOfSight(Unit* who)
+{
+    if (me->CanSummonGuards() && who->IsPlayer())
+        CreatureAI::MoveInLineOfSight(who);
+}
