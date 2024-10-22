@@ -35,6 +35,7 @@
 #include "SpellMgr.h"
 #include "SpellHistory.h"
 #include "TemporarySummon.h"
+#include "UnitDefines.h"
 #include "Vehicle.h"
 #include "World.h"
 
@@ -134,7 +135,7 @@ void CreatureAI::MoveInLineOfSight(Unit* who)
     if (me->HasReactState(REACT_AGGRESSIVE) && me->CanStartAttack(who, false))
         me->EngageWithTarget(who);
 
-    if (me->CanSummonGuards() && who->IsPlayer())
+    if (!me->HasReactState(REACT_AGGRESSIVE) && me->CanSummonGuards() && who->IsPlayer())
     {
         if (!me->CanFly() && me->GetDistanceZ(who) > CREATURE_Z_ATTACK_RANGE)
             return;
