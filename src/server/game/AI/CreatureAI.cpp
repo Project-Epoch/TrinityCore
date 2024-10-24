@@ -143,8 +143,6 @@ void CreatureAI::MoveInLineOfSight(Unit* who)
         {
             if (me->IsWithinDistInMap(who, me->GetAttackDistance(who), true, false) && me->IsWithinLOSInMap(who))
             {
-                if (me->GetEntry() == 66)
-                    TC_LOG_ERROR("sql.sql", "MoveInLoS!");
                 sGuardMgr->SummonGuard(me, who);
             }
         }
@@ -311,8 +309,6 @@ void CreatureAI::JustStartedThreateningMe(Unit* who)
 {
     if (me->CanSummonGuards())
     {
-        if (me->GetEntry() == 66)
-            TC_LOG_ERROR("sql.sql", "EngagementStart!");
         sGuardMgr->SummonGuard(me, who, true);
     }
 
