@@ -1576,7 +1576,7 @@ namespace Trinity
     class NearestGuardPostInRangeCheck
     {
     public:
-        NearestGuardPostInRangeCheck(Creature const* obj, float range)
+        NearestGuardPostInRangeCheck(Unit const* obj, float range)
             : i_obj(obj), i_range(range) {}
         WorldObject const& GetFocusObject() const { return *i_obj; }
         bool operator()(GameObject const* go)
@@ -1594,7 +1594,7 @@ namespace Trinity
         }
         float GetLastRange() const { return i_range; }
     private:
-        Creature const* const i_obj;
+        Unit const* const i_obj;
         float  i_range;
 
         // prevent clone this object

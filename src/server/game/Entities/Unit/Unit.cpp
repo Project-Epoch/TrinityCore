@@ -14286,6 +14286,18 @@ float Unit::GetCollisionHeight() const
     return collisionHeight == 0.0f ? DEFAULT_COLLISION_HEIGHT : collisionHeight;
 }
 
+GameObject* Unit::FindNearestGuardPost(float range) const
+{
+    GameObject* guardPost = nullptr;
+
+    Trinity::NearestGuardPostInRangeCheck u_check(this, range);
+    Trinity::GameObjectLastSearcher<Trinity::NearestGuardPostInRangeCheck> searcher(this, guardPost, u_check);
+
+    Cell::VisitGridObjects(this, searcher, range);
+
+    return guardPost;
+}
+
 std::string Unit::GetDebugInfo() const
 {
     std::stringstream sstr;

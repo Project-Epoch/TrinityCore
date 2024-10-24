@@ -18,6 +18,7 @@
 #include "GuardMgr.h"
 #include "Creature.h"
 #include "CreatureAI.h"
+#include "GridNotifiers.h"
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "DBCStores.h"
@@ -188,7 +189,7 @@ void GuardMgr::SummonGuard(Creature* civilian, Unit* enemy, bool ignoreCooldown)
 
     TC_LOG_ERROR("sql.sql", "GuardMgr::SummonGuard {}", civilian->GetEntry());
 
-    bool summonedOrCalledGuard;
+    bool summonedOrCalledGuard = false;
     if (GameObject* guardPost = civilian->FindNearestGuardPost(50.0f))
     {
         summonedOrCalledGuard = guardPost->SummonGuard(civilian, enemy, ignoreCooldown);
@@ -204,5 +205,26 @@ void GuardMgr::SummonGuard(Creature* civilian, Unit* enemy, bool ignoreCooldown)
         {
             civilian->Say(textId, enemy);
         }
+    }
+}
+
+void GuardMgr::SummonGuard(Player* attackedPlayer, Unit* enemy, bool ignoreCooldown)
+{
+    if (!attackedPlayer)
+        return;
+
+    // TC_LOG_DEBUG("misc", "GuardMgr::SummonGuard Player {}", attackedPlayer->GetName());
+
+    AreaTableEntry const* area = sAreaTableStore.LookupEntry(attackedPlayer->GetAreaId());
+    if (!area || !(area->Flags & AREA_FLAG_PLAYERS_CALL_GUARDS))
+        return;
+
+    // call MoveInLineOfSight for nearby contested guards
+    Trinity::AIRelocationNotifier notifier(*enemy);
+    Cell::VisitWorldObjects(enemy, notifier, enemy->GetVisibilityRange());
+
+    if (GameObject* guardPost = attackedPlayer->FindNearestGuardPost(50.0f))
+    {
+        guardPost->SummonGuard(attackedPlayer, enemy, ignoreCooldown);
     }
 }

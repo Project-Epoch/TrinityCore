@@ -1847,6 +1847,8 @@ class TC_GAME_API Unit : public WorldObject
         // enables / disables combat interaction of this unit
         void SetIsCombatDisallowed(bool apply) { _isCombatDisallowed = apply; }
 
+        GameObject* FindNearestGuardPost(float range) const;
+
         std::string GetDebugInfo() const override;
 
     protected:

@@ -2952,7 +2952,7 @@ void GameObject::CreateModel()
     m_model = GameObjectModel::Create(std::make_unique<GameObjectModelOwnerImpl>(this), sWorld->GetDataPath());
 }
 
-bool GameObject::SummonGuard(Creature* civilian, Unit* enemy, bool ignoreCooldown)
+bool GameObject::SummonGuard(Unit* unit, Unit* enemy, bool ignoreCooldown)
 {
     ASSERT(GetGOInfo()->type == GAMEOBJECT_TYPE_GUARDPOST);
     if (!m_guardCharges)
@@ -2980,14 +2980,14 @@ bool GameObject::SummonGuard(Creature* civilian, Unit* enemy, bool ignoreCooldow
         Position pos = GetNearPosition(5.0f, rand() * M_PI * 2);
         pos.SetOrientation(GetRelativeAngle(&pos)); // face away from guardpost
 
-        if (TempSummon* guard = civilian->SummonCreature(GetGOInfo()->guardpost.creatureID, pos, TEMPSUMMON_TIMED_OOC_DESPAWN_OR_CORPSE_DESPAWN, 5min))
+        if (TempSummon* guard = unit->SummonCreature(GetGOInfo()->guardpost.creatureID, pos, TEMPSUMMON_TIMED_OOC_DESPAWN_OR_CORPSE_DESPAWN, 5min))
         {
             --m_guardCharges;
             guard->AI()->AttackStart(enemy);
 
             // return to civilian after combat
-            Position posHome = civilian->GetNearPosition(3.2f, rand() * M_PI * 2);
-            posHome.SetOrientation(civilian->GetRelativeAngle(&posHome)); // face away from civilian
+            Position posHome = unit->GetNearPosition(3.2f, rand() * M_PI * 2);
+            posHome.SetOrientation(unit->GetRelativeAngle(&posHome)); // face away from civilian
             guard->SetHomePosition(posHome);
 
             // apply cooldown after summoning first guard

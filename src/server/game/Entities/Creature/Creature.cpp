@@ -3662,18 +3662,6 @@ Creature* Creature::FindNearestFriendlyGuard(float range) const
     return guard;
 }
 
-GameObject* Creature::FindNearestGuardPost(float range) const
-{
-    GameObject* guardPost = nullptr;
-
-    Trinity::NearestGuardPostInRangeCheck u_check(this, range);
-    Trinity::GameObjectLastSearcher<Trinity::NearestGuardPostInRangeCheck> searcher(this, guardPost, u_check);
-
-    Cell::VisitGridObjects(this, searcher, range);
-
-    return guardPost;
-}
-
 bool Creature::CallNearestGuard(Unit* enemy) const
 {
     if (Creature* guard = FindNearestFriendlyGuard(30.0f))

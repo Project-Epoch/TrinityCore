@@ -51,6 +51,7 @@
 #include "GossipDef.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
+#include "GuardMgr.h"
 #include "Group.h"
 #include "GroupMgr.h"
 #include "Guild.h"
@@ -20873,6 +20874,7 @@ void Player::SetContestedPvP(Player* attackedPlayer)
     {
         AddUnitState(UNIT_STATE_ATTACK_PLAYER);
         SetFlag(PLAYER_FLAGS, PLAYER_FLAGS_CONTESTED_PVP);
+        sGuardMgr->SummonGuard(attackedPlayer, this);
         if (AreaTableEntry const* area = sAreaTableStore.LookupEntry(GetAreaId()))
         {
             if (area->Flags & AREA_FLAG_PLAYERS_CALL_GUARDS)
@@ -20888,16 +20890,8 @@ void Player::SetContestedPvP(Player* attackedPlayer)
         if (!unit->HasUnitState(UNIT_STATE_ATTACK_PLAYER))
         {
             unit->AddUnitState(UNIT_STATE_ATTACK_PLAYER);
-            if (AreaTableEntry const* area = sAreaTableStore.LookupEntry(GetAreaId()))
-            {
-                if (area->Flags & AREA_FLAG_PLAYERS_CALL_GUARDS)
-                {
-                    // call MoveInLineOfSight for nearby contested guards
-                    Trinity::AIRelocationNotifier notifier(*this);
-                    Cell::VisitWorldObjects(this, notifier, GetVisibilityRange());
-                }
-            }
-        }
+            sGuardMgr->SummonGuard(attackedPlayer, unit);
+    }
     }
 }
 

@@ -241,7 +241,7 @@ class TC_GAME_API GameObject : public WorldObject, public GridObject<GameObject>
         void SetLinkedTrap(GameObject* linkedTrap) { m_linkedTrap = linkedTrap->GetGUID(); }
 
         uint32 GetGuardCharges() const { return GetGOInfo()->type == GAMEOBJECT_TYPE_GUARDPOST ? m_guardCharges : 0; };
-        bool SummonGuard(Creature* civilian, Unit* enemy, bool ignoreCooldown = false);
+        bool SummonGuard(Unit* unit, Unit* enemy, bool ignoreCooldown = false);
 
         bool hasQuest(uint32 quest_id) const override;
         bool hasInvolvedQuest(uint32 quest_id) const override;

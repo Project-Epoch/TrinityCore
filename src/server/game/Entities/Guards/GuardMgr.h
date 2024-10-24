@@ -126,6 +126,7 @@ class GuardMgr
         static GuardMgr* instance();
         [[nodiscard]] uint32 GetTextId(uint32 factionTemplateId, uint32 areaId, uint32 displayId) const;
         void SummonGuard(Creature* civilian, Unit* enemy, bool ignoreCooldown = false);
+        void SummonGuard(Player* attackedPlayer, Unit* enemy, bool ignoreCooldown = false);
 };
 
 #define sGuardMgr GuardMgr::instance()

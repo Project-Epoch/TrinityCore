@@ -396,7 +396,6 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
 
         // Guardpost system
         Creature* FindNearestFriendlyGuard(float range) const;
-        GameObject* FindNearestGuardPost(float range) const;
         bool CallNearestGuard(Unit* enemy) const;
 
         std::string GetDebugInfo() const override;
