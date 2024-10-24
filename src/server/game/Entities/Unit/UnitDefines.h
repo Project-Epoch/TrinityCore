@@ -200,7 +200,7 @@ enum UnitFlags2 : uint32
     UNIT_FLAG2_UNK2                         = 0x00010000,
     UNIT_FLAG2_PLAY_DEATH_ANIM              = 0x00020000,   // Plays special death animation upon death
     UNIT_FLAG2_ALLOW_CHEAT_SPELLS           = 0x00040000,   // Allows casting spells with AttributesEx7 & SPELL_ATTR7_IS_CHEAT_SPELL
-    UNIT_FLAG2_UNUSED_1                     = 0x00080000,
+    UNIT_FLAG2_CALL_GUARDS                  = 0x00080000,   // Summons a guard if an opposite faction player gets near or attacks.
     UNIT_FLAG2_UNUSED_2                     = 0x00100000,
     UNIT_FLAG2_UNUSED_3                     = 0x00200000,
     UNIT_FLAG2_UNUSED_4                     = 0x00400000,
@@ -219,7 +219,7 @@ enum UnitFlags2 : uint32
                                                UNIT_FLAG2_DISABLE_PRED_STATS | UNIT_FLAG2_UNK_1 | UNIT_FLAG2_DISARM_RANGED |
                                             /* UNIT_FLAG2_REGENERATE_POWER | */ UNIT_FLAG2_RESTRICT_PARTY_INTERACTION |
                                                UNIT_FLAG2_PREVENT_SPELL_CLICK | UNIT_FLAG2_ALLOW_ENEMY_INTERACT | /* UNIT_FLAG2_UNK2 | */
-                                            /* UNIT_FLAG2_PLAY_DEATH_ANIM | */ UNIT_FLAG2_ALLOW_CHEAT_SPELLS | UNIT_FLAG2_UNUSED_1 |
+                                            /* UNIT_FLAG2_PLAY_DEATH_ANIM | */ UNIT_FLAG2_ALLOW_CHEAT_SPELLS |
                                                UNIT_FLAG2_UNUSED_2 | UNIT_FLAG2_UNUSED_3 | UNIT_FLAG2_UNUSED_4 | UNIT_FLAG2_UNUSED_5 |
                                                UNIT_FLAG2_UNUSED_6 | UNIT_FLAG2_UNUSED_7 | UNIT_FLAG2_UNUSED_8 | UNIT_FLAG2_UNUSED_9 |
                                                UNIT_FLAG2_UNUSED_10 | UNIT_FLAG2_UNUSED_11 | UNIT_FLAG2_UNUSED_12 | UNIT_FLAG2_UNUSED_13), // SKIP

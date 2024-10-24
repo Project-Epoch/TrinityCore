@@ -39,6 +39,7 @@
 #include "QueryPackets.h"
 #include "ScriptMgr.h"
 #include "SpellMgr.h"
+#include "TemporarySummon.h"
 #include "Transport.h"
 #include "UpdateFieldFlags.h"
 #include "World.h"
@@ -433,6 +434,11 @@ bool GameObject::Create(ObjectGuid::LowType guidlow, uint32 name_id, Map* map, u
                 }
             }
             break;
+        case GAMEOBJECT_TYPE_GUARDPOST:
+           m_guardCharges = GetGOInfo()->guardpost.charges;
+           m_invisibility.AddFlag(INVISIBILITY_TRAP);
+           m_invisibility.AddValue(INVISIBILITY_TRAP, UINT32_MAX);
+           break;
         default:
             SetGoAnimProgress(animprogress);
             break;
@@ -591,6 +597,17 @@ void GameObject::Update(uint32 diff)
                     m_lootState = GO_READY;
                     AddToObjectUpdateIfNeeded();
                     break;
+                case GAMEOBJECT_TYPE_GUARDPOST:
+                {
+                    if (m_guardRechargeTime <= GameTime::GetGameTime())
+                    {
+                        GameObjectTemplate const* info = GetGOInfo();
+                        if (m_guardCharges < info->guardpost.charges)
+                            ++m_guardCharges;
+                        m_guardRechargeTime = 60 * IN_MILLISECONDS + GameTime::GetGameTime();
+                    }
+                    break;
+                }
                 default:
                     m_lootState = GO_READY;                         // for other GOis same switched without delay to GO_READY
                     break;
@@ -2933,6 +2950,55 @@ private:
 void GameObject::CreateModel()
 {
     m_model = GameObjectModel::Create(std::make_unique<GameObjectModelOwnerImpl>(this), sWorld->GetDataPath());
+}
+
+bool GameObject::SummonGuard(Unit* unit, Unit* enemy, bool ignoreCooldown)
+{
+    ASSERT(GetGOInfo()->type == GAMEOBJECT_TYPE_GUARDPOST);
+    if (!m_guardCharges)
+        return false;
+    if (!ignoreCooldown && GameTime::GetGameTimeMS() < m_cooldownTime)
+        return false;
+    // summon 1-3 guards if !ignoreCooldown
+    int numGuards = 1;
+    if (!ignoreCooldown)
+    {
+        int roll = rand() % 100;
+        if (roll < 70)
+            numGuards = 1; // 70% chance for 1 guard
+        else if (roll < 90)
+            numGuards = 2; // 20% chance for 2 guards
+        else
+            numGuards = 3; // 10% chance for 3 guards
+    }
+    bool summonedGuard = false;
+    for (int i = 0; i < numGuards; ++i)
+    {
+        if (!m_guardCharges)
+            break;
+        // spawn near guardpost
+        Position pos = GetNearPosition(5.0f, rand() * M_PI * 2);
+        pos.SetOrientation(GetRelativeAngle(&pos)); // face away from guardpost
+
+        if (TempSummon* guard = unit->SummonCreature(GetGOInfo()->guardpost.creatureID, pos, TEMPSUMMON_TIMED_OOC_DESPAWN_OR_CORPSE_DESPAWN, 5min))
+        {
+            --m_guardCharges;
+            guard->AI()->AttackStart(enemy);
+
+            // return to civilian after combat
+            Position posHome = unit->GetNearPosition(3.2f, rand() * M_PI * 2);
+            posHome.SetOrientation(unit->GetRelativeAngle(&posHome)); // face away from civilian
+            guard->SetHomePosition(posHome);
+
+            // apply cooldown after summoning first guard
+            if (i == 0)
+            {
+                m_cooldownTime = GameTime::GetGameTimeMS() + 10 * IN_MILLISECONDS;
+                summonedGuard = true;
+            }
+        }
+    }
+    return summonedGuard;
 }
 
 std::string GameObject::GetDebugInfo() const

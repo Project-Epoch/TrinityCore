@@ -3649,3 +3649,28 @@ bool Creature::CanPeriodicallyCallForAssistance() const
 
     return true;
 }
+
+Creature* Creature::FindNearestFriendlyGuard(float range) const
+{
+    Creature* guard = nullptr;
+
+    Trinity::NearestFriendlyGuardInRangeCheck u_check(this, range);
+    Trinity::CreatureLastSearcher<Trinity::NearestFriendlyGuardInRangeCheck> searcher(this, guard, u_check);
+
+    Cell::VisitGridObjects(this, searcher, range);
+
+    return guard;
+}
+
+bool Creature::CallNearestGuard(Unit* enemy) const
+{
+    if (Creature* guard = FindNearestFriendlyGuard(30.0f))
+    {
+        if (guard->AI() && guard->IsValidAttackTarget(enemy))
+        {
+            guard->AI()->AttackStart(enemy);
+            return true;
+        }
+    }
+    return false;
+}

@@ -1505,6 +1505,47 @@ namespace Trinity
             NearestAssistCreatureInCreatureRangeCheck(NearestAssistCreatureInCreatureRangeCheck const&) = delete;
     };
 
+    class NearestFriendlyGuardInRangeCheck
+    {
+    public:
+        NearestFriendlyGuardInRangeCheck(Creature const* obj, float range)
+            : i_obj(obj), i_range(range) {}
+        WorldObject const& GetFocusObject() const { return *i_obj; }
+        bool operator()(Creature const* u)
+        {
+            if (u == i_obj)
+                return false;
+
+            if (!u->IsAlive())
+                return false;
+
+            if (u->IsInCombat())
+                return false;
+
+            if (!u->IsGuard())
+                return false;
+
+            if (!u->IsFriendlyTo(i_obj))
+                return false;
+
+            if (!i_obj->IsWithinDistInMap(u, i_range))
+                return false;
+
+            if (!i_obj->IsWithinLOSInMap(u))
+                return false;
+
+            i_range = i_obj->GetDistance(u);            // use found unit range as new range limit for next check
+            return true;
+        }
+        float GetLastRange() const { return i_range; }
+    private:
+        Creature const* const i_obj;
+        float  i_range;
+
+        // prevent clone this object
+        NearestFriendlyGuardInRangeCheck(NearestFriendlyGuardInRangeCheck const&);
+    };
+
     // Success at unit in range, range update for next check (this can be use with CreatureLastSearcher to find nearest creature)
     class NearestCreatureEntryWithLiveStateInObjectRangeCheck
     {
@@ -1530,6 +1571,34 @@ namespace Trinity
 
             // prevent clone this object
             NearestCreatureEntryWithLiveStateInObjectRangeCheck(NearestCreatureEntryWithLiveStateInObjectRangeCheck const&) = delete;
+    };
+
+    class NearestGuardPostInRangeCheck
+    {
+    public:
+        NearestGuardPostInRangeCheck(Unit const* obj, float range)
+            : i_obj(obj), i_range(range) {}
+        WorldObject const& GetFocusObject() const { return *i_obj; }
+        bool operator()(GameObject const* go)
+        {
+            if (go->GetGOInfo()->type != GAMEOBJECT_TYPE_GUARDPOST)
+                return false;
+
+            if (!go->GetGuardCharges())
+                return false;
+
+            if (!i_obj->IsWithinDistInMap(go, i_range))
+                return false;
+
+            return true;
+        }
+        float GetLastRange() const { return i_range; }
+    private:
+        Unit const* const i_obj;
+        float  i_range;
+
+        // prevent clone this object
+        NearestGuardPostInRangeCheck(NearestGuardPostInRangeCheck const&);
     };
 
     class AnyPlayerInObjectRangeCheck

@@ -39,6 +39,7 @@
 #include "ConditionMgr.h"
 #include "Containers.h"
 #include "CreatureAI.h"
+#include "DBCEnums.h"
 #include "DatabaseEnv.h"
 #include "DisableMgr.h"
 #include "Formulas.h"
@@ -50,6 +51,7 @@
 #include "GossipDef.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
+#include "GuardMgr.h"
 #include "Group.h"
 #include "GroupMgr.h"
 #include "Guild.h"
@@ -20872,17 +20874,14 @@ void Player::SetContestedPvP(Player* attackedPlayer)
     {
         AddUnitState(UNIT_STATE_ATTACK_PLAYER);
         SetFlag(PLAYER_FLAGS, PLAYER_FLAGS_CONTESTED_PVP);
-        // call MoveInLineOfSight for nearby contested guards
-        Trinity::AIRelocationNotifier notifier(*this);
-        Cell::VisitWorldObjects(this, notifier, GetVisibilityRange());
+        sGuardMgr->SummonGuard(attackedPlayer, this);
     }
     for (Unit* unit : m_Controlled)
     {
         if (!unit->HasUnitState(UNIT_STATE_ATTACK_PLAYER))
         {
             unit->AddUnitState(UNIT_STATE_ATTACK_PLAYER);
-            Trinity::AIRelocationNotifier notifier(*unit);
-            Cell::VisitWorldObjects(this, notifier, GetVisibilityRange());
+            sGuardMgr->SummonGuard(attackedPlayer, unit);
         }
     }
 }

@@ -240,6 +240,9 @@ class TC_GAME_API GameObject : public WorldObject, public GridObject<GameObject>
         GameObject* GetLinkedTrap();
         void SetLinkedTrap(GameObject* linkedTrap) { m_linkedTrap = linkedTrap->GetGUID(); }
 
+        uint32 GetGuardCharges() const { return GetGOInfo()->type == GAMEOBJECT_TYPE_GUARDPOST ? m_guardCharges : 0; };
+        bool SummonGuard(Unit* unit, Unit* enemy, bool ignoreCooldown = false);
+
         bool hasQuest(uint32 quest_id) const override;
         bool hasInvolvedQuest(uint32 quest_id) const override;
         bool ActivateToQuest(Player const* target) const;
@@ -360,6 +363,8 @@ class TC_GAME_API GameObject : public WorldObject, public GridObject<GameObject>
 
         ObjectGuid m_linkedTrap;
 
+        time_t m_guardRechargeTime;                        // time of next guardpost recharge
+        uint32 m_guardCharges;                              // amount of guardpost charges left
     private:
         void RemoveFromOwner();
         void SwitchDoorOrButton(bool activate, bool alternative = false);
